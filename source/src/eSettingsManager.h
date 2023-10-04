@@ -6,15 +6,20 @@ public:
 	void Init();
 
 public:
+	// Settings
+
+	bool bEnableKeyboardHotkeys;
+
 	// Debug
 	bool bEnableConsoleWindow;
 	bool bPauseOnStart;
-	int	iVerbose;
+	int	iLogLevel;
 	bool bDebug;
+
 
 	// Toggles
 	bool bDisableSignatureCheck;
-	//bool bDisableSignatureWarn;
+	bool bDisableSignatureWarn;
 	bool bDisableTOCSigCheck;
 	bool bDisableChunkSigCheck;
 	bool bPatchCurl;
@@ -23,7 +28,7 @@ public:
 
 	// Patterns
 	std::string pSigCheck;
-	//std::string pSigWarn;
+	std::string pSigWarn;
 	std::string pTocCheck;
 	std::string pChunkSigCheck;
 	std::string pChunkSigCheckFunc;

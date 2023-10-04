@@ -5,6 +5,28 @@
 void printfColor(const char* color, const char* const Format, ...);
 void SetColor(const char* color);
 
+enum ConsoleColors
+{
+	BLACK = 0,
+	BLUE,
+	GREEN,
+	AQUA,
+	RED,
+	PURPLE,
+	YELLOW,
+	WHITE,
+	GRAY,
+	LIGHTBLUE,
+	LIGHTGREEN,
+	LIGHTAQUA,
+	LIGHTRED,
+	LIGHTPURPLE,
+	LIGHTYELLOW,
+	BRIGHTWHITE,
+
+	GREY = 8, // Synonym
+};
+
 #ifndef COLORPRINT
 #define COLORPRINT
 #define printfRed(Format, ...) printfColor("\x1b[31m", Format, ## __VA_ARGS__)

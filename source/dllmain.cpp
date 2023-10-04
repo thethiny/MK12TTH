@@ -1,52 +1,19 @@
 #include "includes.h"
 #include "src/mk11.h"
 #include "src/mk11hook.h"
+#include "mk12_plugin.h"
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-
-using namespace Memory::VP;
-using namespace hook;
-
+constexpr const char * CURRENT_HOOK_VERSION = "0.2";
 
 Trampoline* GameTramp, * User32Tramp;
 
-HANDLE hConsole = NULL;
-
 void CreateConsole();
-void HooksMain();
-void SyncAwait(std::string(*)(void), const char*, bool = false);
 void SpawnError(const char*);
-void AwaitSyncs();
 void PreGameHooks();
 void ProcessSettings();
 bool OnInitializeHook();
-
-enum ConsoleColors
-{
-	BLACK = 0,
-	BLUE,
-	GREEN,
-	AQUA,
-	RED,
-	PURPLE,
-	YELLOW,
-	WHITE,
-	GRAY,
-	LIGHTBLUE,
-	LIGHTGREEN,
-	LIGHTAQUA,
-	LIGHTRED,
-	LIGHTPURPLE,
-	LIGHTYELLOW,
-	BRIGHTWHITE,
-
-
-
-	GREY = 8, // Synonym
-};
-
-#define AsyncError(text) CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)(SpawnError), text, NULL, NULL)
 
 LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
 {
@@ -75,6 +42,7 @@ LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
 
 void CreateConsole()
 {
+	FreeConsole();
 	AllocConsole();
 	FILE* fNull;
 	freopen_s(&fNull, "CONOUT$", "w", stdout);
@@ -82,165 +50,38 @@ void CreateConsole()
 		
 	std::string consoleName = "thethiny's MK1 Mod Console";
 	SetConsoleTitleA(consoleName.c_str());
-	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	HookMetadata::Console = GetStdHandle(STD_OUTPUT_HANDLE);
 	DWORD dwMode = 0;
-	GetConsoleMode(hConsole, &dwMode);
+	GetConsoleMode(HookMetadata::Console, &dwMode);
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(hConsole, dwMode);
-	printfCyan("ASIMK12 - Maintained by ");
+	SetConsoleMode(HookMetadata::Console, dwMode);
+	printfCyan("MK12TTH - Maintained by ");
 	printfInfo("@thethiny\n");
 	printfGreen("ESettingsManager::bEnableConsoleWindow = true\n");
-}
-
-
-void HooksMain()
-{
-	// Write here hooks that require game to be loaded, or are not important for game startup like patching exe stuff
-	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)AwaitSyncs, NULL, NULL, NULL); // Async Thread that will perform Sync Blocking tasks
-}
-
-void SyncAwait(std::string(*function)(void), const char* string, bool not)
-{
-	while (function().empty() ^ not);
-	std::cout << string << ": " << function() << std::endl;
-}
-
-void AwaitSyncs()
-{
-	// Nothing to Await
 }
 
 void PreGameHooks()
 {
 	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
-	if (SettingsMgr->iVerbose)
+	if (SettingsMgr->iLogLevel)
 		std::cout << "Generated Trampolines" << std::endl;
 	 MK11::IAT = ParsePEHeader();
 
 	if (SettingsMgr->bDisableSignatureCheck)
 	{
-		std::cout << "==bDisableSignatureCheck==" << std::endl;
-		if (SettingsMgr->pSigCheck.empty())
-		{
-			printfRed("pSigCheck Not Specified. Please Add Pattern to ini file!\n");
-		}
-		else
-		{
-			uint64_t* lpSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigCheck);
-			if (!lpSigCheckPattern)
-			{
-				printfError("Couldn't find SigCheck Pattern\n");
-			}
-			else
-			{
-				uint64_t hook_address = (uint64_t)lpSigCheckPattern;
-				if (SettingsMgr->iVerbose)
-					std::cout << "SigCheck Pattern found at: " << std::hex << lpSigCheckPattern << std::dec << std::endl;
-				Patch(GetGameAddr(hook_address) -0x14, (uint8_t)0xC3); // ret
-				Patch(GetGameAddr(hook_address) - 0x14 + 1 , (uint32_t)0x90909090); // Nop
-				MK11::sActiveMods.bAntiSigCheck = true;
-				printfSuccess("SigCheck Patched\n");
-			}
-		}
+		MK11::sActiveMods.bAntiSigCheck = MK1Hooks::DisableSignatureCheck();
 	}
-	//if (SettingsMgr->bDisableSignatureWarn)
-	//{
-	//	std::cout << "==bDisableSignatureWarn" << std::endl;
-	//	if (SettingsMgr->pSigWarn.empty())
-	//	{
-	//		printfRed("pSigWarn Not Specified. Please Add Pattern to ini file!\n");
-	//	}
-	//	else
-	//	{
-	//		uint64_t* lpSigWarnPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigWarn);
-	//		if (!lpSigWarnPattern)
-	//		{
-	//			printfError("Couldn't find SigWarn Pattern\n");
-	//		}
-	//		else
-	//		{
-	//			uint64_t hook_address = (uint64_t)lpSigWarnPattern;
-	//			if (SettingsMgr->iVerbose)
-	//				std::cout << "SigWarn Pattern found at: " << std::hex << lpSigWarnPattern << std::dec << std::endl;
-	//			// Shift address by -1
-	//			uint32_t offset = GetOffsetFromOpCode(hook_address + 0xA, 2, 4);
-	//			Patch(GetGameAddr(hook_address) + 0xA, 0xE9); // jmp
-	//			Patch(GetGameAddr(hook_address) + 0xA + 1, offset +1); // jmp address+1 cuz we reduced function size by 1
-	//			Patch(GetGameAddr(hook_address) + 0xA + 5, (uint8_t)0x90); // nop
-	//			MK11::sActiveMods.bAntiSigWarn = true;
-	//			printfSuccess("SigWarn Patched\n");
-	//		}
-	//	}
-	//}
+	if (SettingsMgr->bDisableSignatureWarn)
+	{
+		MK11::sActiveMods.bAntiSigWarn = MK1Hooks::DisableSignatureWarn();
+	}
 	if (SettingsMgr->bDisableChunkSigCheck)
 	{
-		bool attempt = true;
-		std::cout << "==bDisablePakChunkSigCheck==" << std::endl;
-		if (SettingsMgr->pChunkSigCheck.empty())
-		{
-			printfRed("pChunkSigCheck Not Specified. Please Add Pattern to ini file!\n");
-			attempt = false;
-		}
-		if (SettingsMgr->pChunkSigCheckFunc.empty())
-		{
-			printfRed("pChunkSigCheckFunc Not Specified. Please Add Pattern to ini file!\n");
-			attempt = false;
-		}
-		if (attempt)
-		{
-			uint64_t* lpChunkSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheck);
-			if (!lpChunkSigCheckPattern)
-			{
-				printfError("Couldn't find ChunkSigCheck Pattern\n");
-			}
-			else
-			{
-				if (SettingsMgr->iVerbose)
-					std::cout << "ChunkSigCheck Pattern found at: " << std::hex << lpChunkSigCheckPattern << std::dec << std::endl;
-			}
-			uint64_t* lpChunkSigCheckFuncPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheckFunc);
-			if (!lpChunkSigCheckFuncPattern)
-			{
-				printfError("Couldn't find ChunkSigCheckFunc Pattern\n");
-			}
-			else
-			{
-				if (SettingsMgr->iVerbose)
-					std::cout << "ChunkSigCheckFunc Pattern found at: " << std::hex << lpChunkSigCheckFuncPattern << std::dec << std::endl;
-			}
-			if (lpChunkSigCheckPattern && lpChunkSigCheckFuncPattern)
-			{
-				uint32_t FuncOffset = ((uint64_t)lpChunkSigCheckFuncPattern) - (((uint64_t)lpChunkSigCheckPattern) + 0xE + 5); // 5 is the size of the opcode, E is the offset to the opcode
-				Patch<uint32_t>(((uint64_t)lpChunkSigCheckPattern) + 0xF, FuncOffset);
-				MK11::sActiveMods.bAntiChunkSigCheck = true;
-				printfSuccess("PakChunkSigCheck Patched\n");
-			}
-		}
+		MK11::sActiveMods.bAntiChunkSigCheck = MK1Hooks::bDisableChunkSigCheck();
 	}
 	if (SettingsMgr->bDisableTOCSigCheck)
 	{
-		std::cout << "==bDisableTOCSigCheck==" << std::endl;
-		if (SettingsMgr->pTocCheck.empty())
-		{
-			printfRed("pTocCheck Not Specified. Please Add Pattern to ini file!\n");
-		}
-		else
-		{
-			uint64_t* lpTocSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pTocCheck);
-			if (!lpTocSigCheckPattern)
-			{
-				printfError("Couldn't find TocSigCheck Pattern\n");
-			}
-			else
-			{
-				uint64_t hook_address = (uint64_t)lpTocSigCheckPattern;
-				if (SettingsMgr->iVerbose)
-					std::cout << "TocSigCheck Pattern found at: " << std::hex << lpTocSigCheckPattern << std::dec << std::endl;
-				ConditionalJumpToJump(hook_address, 0x12);
-				MK11::sActiveMods.bAntiTocSigCheck = true;
-				printfSuccess("TocSigCheck Patched\n");
-			}
-		}
+		MK11::sActiveMods.bAntiTocSigCheck = MK1Hooks::bDisableTOCSigCheck();
 	}
 
 	// Temp until address
@@ -265,11 +106,9 @@ void ProcessSettings()
 	printfCyan("Parsed Settings\n");
 }
 
-
-
 void SpawnError(const char* msg)
 {
-	MessageBoxA(NULL, msg, "ASIMK12", MB_ICONEXCLAMATION);
+	MessageBoxA(NULL, msg, "MK12TTH", MB_ICONEXCLAMATION);
 }
 
 bool HandleWindowsVersion()
@@ -281,11 +120,11 @@ bool HandleWindowsVersion()
 
 	if (IsWindows7SP1OrGreater())
 	{
-		AsyncError("ASIMK1 doesn't officially support Windows 8 or 7 SP1. It may misbehave.");
+		SpawnError("ASIMK1 doesn't officially support Windows 8 or 7 SP1. It may misbehave.");
 		return true;
 	}
 
-	AsyncError("ASIMK1 doesn't support Windows 7 or Earlier. Might not work.");
+	SpawnError("ASIMK1 doesn't support Windows 7 or Earlier. Might not work.");
 	return true;
 
 	
@@ -310,13 +149,26 @@ bool OnInitializeHook()
 		return false;
 
 	if (!VerifyProcessName())
+	{
+		SpawnError("This dll is made to work only with MK12.exe");
 		return false;
+	}
 
 	SettingsMgr->Init();
 
 	if (SettingsMgr->bEnableConsoleWindow)
 	{
 		CreateConsole();
+	}
+
+	if (SettingsMgr->bEnableKeyboardHotkeys)
+	{
+		if (!(HookMetadata::KeyboardProcHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, HookMetadata::CurrentDllModule, GetCurrentThreadId())))
+		{
+			char x[100];
+			sprintf(x, "Failed To Hook Keyboard FN: 0x%X", GetLastError());
+			MessageBox(NULL, x, "Error", MB_ICONERROR);
+		}
 	}
 
 	if (SettingsMgr->bPauseOnStart)
@@ -326,31 +178,158 @@ bool OnInitializeHook()
 
 	ProcessSettings(); // Parse Settings
 	PreGameHooks(); // Queue Blocker
-	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)HooksMain, NULL, NULL, NULL);
 
 	return true;
 }
 
+// Plugin Stuff
+
+const char* MK12HookPlugin::GetPluginName()
+{
+	return "MK12TTH";
+}
+
+const char* MK12HookPlugin::GetPluginProject()
+{
+	return "MK12HOOK";
+}
+
+const char* MK12HookPlugin::GetPluginTabName()
+{
+	return "TT Hook";
+}
+
+void MK12HookPlugin::OnInitialize(HMODULE hMod)
+{
+	if (hMod == HookMetadata::CurrentDllModule || hMod == NULL) // Called from DLL Entry
+	{
+		std::cout << "Called from DLL Entry" << std::endl;
+		if (!OnInitializeHook())
+			return;
+	}
+	else
+	{
+		std::cout << "Called as EHP Plugin" << std::endl;
+		if (MK12HOOKSDK::IsOK())
+			return;
+
+		MK12HOOKSDK::Initialize(hMod);
+	}
+}
+
+void MK12HookPlugin::OnShutdown()
+{
+	if (HookMetadata::KeyboardProcHook) // Will be unloaded once by DLL, and once by EHP.
+	{
+		UnhookWindowsHookEx(HookMetadata::KeyboardProcHook);
+		HookMetadata::KeyboardProcHook = nullptr;
+	}
+}
+
+void MK12HookPlugin::OnFrameTick()
+{
+	// Things like async calls and polling tasks
+}
+
+void MK12HookPlugin::OnFightStartup()
+{
+	// not implemented yet
+}
+
+char* GetVersionedHookName()
+{
+	static char tabText[512];
+	static bool bPrecalc = false;
+
+	if (bPrecalc)
+		return tabText;
+
+	std::strcpy(tabText, MK12HookPlugin::GetPluginName());
+	std::strcat(tabText, " Version ");
+	std::strcat(tabText, CURRENT_HOOK_VERSION);
+	bPrecalc = true;
+	return tabText;
+}
+
+void MK12HookPlugin::TabFunction()
+{
+	if (!MK12HOOKSDK::IsOK())
+		return;
+
+	static int counter = 0;
+	MK12HOOKSDK::ImGui_Text(GetVersionedHookName());
+
+	if (MK12HOOKSDK::ImGui_CollapsingHeader("Patches"))
+	{
+
+		bool toggles[] = {
+			MK11::sActiveMods.bAntiSigCheck,
+			MK11::sActiveMods.bAntiChunkSigCheck,
+			MK11::sActiveMods.bAntiTocSigCheck,
+		};
+		MK12HOOKSDK::ImGui_Checkbox("Pak Signature", &toggles[0]);
+		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[0]);
+		MK12HOOKSDK::ImGui_Checkbox("TOC Signature", &toggles[0]);
+
+		//if (MK12HOOKSDK::ImGui_Button("button"))
+		//	counter++;
+	}
+	/*if (MK12HOOKSDK::ImGui_CollapsingHeader("Input"))
+	{
+		MK12HOOKSDK::ImGui_InputInt("InputInt", &counter);
+
+
+		static float flt = 1.0f;
+
+		MK12HOOKSDK::ImGui_InputFloat("InputFloat", &flt);
+
+		MK12HOOKSDK::ImGui_Separator();
+
+		static char comboBuffer[256] = {};
+
+		MK12HOOKSDK::ImGui_InputText("InputText", comboBuffer, sizeof(comboBuffer));
+
+		static const char* comboContent[3] = {
+			"One",
+			"Two",
+			"Three",
+		};
+
+		if (MK12HOOKSDK::ImGui_BeginCombo("Combo", comboBuffer))
+		{
+			for (int n = 0; n < 3; n++)
+			{
+				bool is_selected = (comboBuffer == comboContent[n]);
+				if (MK12HOOKSDK::ImGui_Selectable(comboContent[n], is_selected))
+					sprintf_s(comboBuffer, comboContent[n]);
+				if (is_selected)
+					MK12HOOKSDK::ImGui_SetItemDefaultFocus();
+
+			}
+			MK12HOOKSDK::ImGui_EndCombo();
+		}
+	}
+	if (MK12HOOKSDK::ImGui_CollapsingHeader("Color"))
+	{
+		static float color[4] = {};
+		MK12HOOKSDK::ImGui_ColorEdit4("RGB pick", color);
+	}*/
+
+}
+
+// Dll Entry
+
 bool APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpRes)
 {
-	HHOOK hook_ = nullptr;
+	HookMetadata::CurrentDllModule = hModule;
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
-		if (!OnInitializeHook())
-			break;
-		if (!(hook_ = SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, hModule, GetCurrentThreadId())))
-		{
-			char x[100];
-			sprintf(x, "Failed To Hook Keyboard FN: 0x%X", GetLastError());
-			MessageBox(NULL, x, "Error", MB_ICONERROR);
-		}
-		break;
+		MK12HookPlugin::OnInitialize(hModule);
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
 	case DLL_PROCESS_DETACH:
-		if (hook_)
-			UnhookWindowsHookEx(hook_);
+		MK12HookPlugin::OnShutdown();
 		break;
 	}
 	return true;

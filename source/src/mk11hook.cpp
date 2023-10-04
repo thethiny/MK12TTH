@@ -1,4 +1,5 @@
 #include "mk11hook.h"
+#include "../includes.h"
 
 
 MK1Functions::ReadFString*			MK1Functions::MK1ReadFString;
@@ -133,4 +134,131 @@ ArgTypes GetArgType(const char* arg_type)
 	return ArgTypes::ARGTYPE_NONE;
 }
 
-#define shortFunc(func, str) func(arg, arg3, str)
+namespace HookMetadata {
+	HHOOK KeyboardProcHook		= nullptr;
+	HMODULE CurrentDllModule	= NULL;
+	HANDLE Console				= NULL;
+}
+
+// Hooks
+using namespace Memory::VP;
+using namespace hook;
+
+bool MK1Hooks::DisableSignatureCheck()
+{
+	std::cout << "==bDisableSignatureCheck==" << std::endl;
+	if (SettingsMgr->pSigCheck.empty())
+	{
+		printfRed("pSigCheck Not Specified. Please Add Pattern to ini file!\n");
+		return false;
+	}
+		
+	uint64_t* lpSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigCheck);
+	if (!lpSigCheckPattern)
+	{
+		printfError("Couldn't find SigCheck Pattern\n");
+		return false;
+	}
+		
+	uint64_t hook_address = (uint64_t)lpSigCheckPattern;
+	if (SettingsMgr->iLogLevel)
+		std::cout << "SigCheck Pattern found at: " << std::hex << lpSigCheckPattern << std::dec << std::endl;
+	Patch(GetGameAddr(hook_address) - 0x14, (uint8_t)0xC3); // ret
+	Patch(GetGameAddr(hook_address) - 0x14 + 1, (uint32_t)0x90909090); // Nop
+				
+	printfSuccess("SigCheck Patched\n");
+
+	return true;
+}
+
+bool MK1Hooks::DisableSignatureWarn()
+{
+	std::cout << "==bDisableSignatureWarn" << std::endl;
+	if (SettingsMgr->pSigWarn.empty())
+	{
+		printfRed("pSigWarn Not Specified. Please Add Pattern to ini file!\n");
+		return false;
+	}
+		
+	uint64_t* lpSigWarnPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigWarn);
+	if (!lpSigWarnPattern)
+	{
+		printfError("Couldn't find SigWarn Pattern\n");
+		return false;
+	}
+	uint64_t hook_address = (uint64_t)lpSigWarnPattern;
+	if (SettingsMgr->iLogLevel)
+		std::cout << "SigWarn Pattern found at: " << std::hex << lpSigWarnPattern << std::dec << std::endl;
+
+	// Shift address by -1
+	ConditionalJumpToJump(hook_address, 0xA);
+	printfSuccess("SigWarn Patched\n");
+
+	return true;
+}
+
+bool MK1Hooks::bDisableChunkSigCheck()
+{
+	std::cout << "==bDisablePakChunkSigCheck==" << std::endl;
+	if (SettingsMgr->pChunkSigCheck.empty())
+	{
+		printfRed("pChunkSigCheck Not Specified. Please Add Pattern to ini file!\n");
+		return false;
+	}
+	if (SettingsMgr->pChunkSigCheckFunc.empty())
+	{
+		printfRed("pChunkSigCheckFunc Not Specified. Please Add Pattern to ini file!\n");
+		return false;
+	}
+
+	uint64_t* lpChunkSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheck);
+	if (!lpChunkSigCheckPattern)
+	{
+		printfError("Couldn't find ChunkSigCheck Pattern\n");
+		return false;
+	}
+	if (SettingsMgr->iLogLevel)
+		std::cout << "ChunkSigCheck Pattern found at: " << std::hex << lpChunkSigCheckPattern << std::dec << std::endl;
+
+	uint64_t* lpChunkSigCheckFuncPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheckFunc);
+	if (!lpChunkSigCheckFuncPattern)
+	{
+		printfError("Couldn't find ChunkSigCheckFunc Pattern\n");
+		return false;
+	}
+	if (SettingsMgr->iLogLevel)
+		std::cout << "ChunkSigCheckFunc Pattern found at: " << std::hex << lpChunkSigCheckFuncPattern << std::dec << std::endl;
+
+	uint32_t FuncOffset = ((uint64_t)lpChunkSigCheckFuncPattern) - (((uint64_t)lpChunkSigCheckPattern) + 0xE + 5); // 5 is the size of the opcode, E is the offset to the opcode
+	Patch<uint32_t>(((uint64_t)lpChunkSigCheckPattern) + 0xF, FuncOffset);
+	printfSuccess("PakChunkSigCheck Patched\n");
+
+	return true;
+		
+}
+
+bool MK1Hooks::bDisableTOCSigCheck()
+{
+	std::cout << "==bDisableTOCSigCheck==" << std::endl;
+	if (SettingsMgr->pTocCheck.empty())
+	{
+		printfRed("pTocCheck Not Specified. Please Add Pattern to ini file!\n");
+		return false;
+	}
+
+	uint64_t* lpTocSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pTocCheck);
+	if (!lpTocSigCheckPattern)
+	{
+		printfError("Couldn't find TocSigCheck Pattern\n");
+		return false;
+	}
+		
+	uint64_t hook_address = (uint64_t)lpTocSigCheckPattern;
+	if (SettingsMgr->iLogLevel)
+		std::cout << "TocSigCheck Pattern found at: " << std::hex << lpTocSigCheckPattern << std::dec << std::endl;
+
+	ConditionalJumpToJump(hook_address, 0x12);
+	printfSuccess("TocSigCheck Patched\n");
+
+	return true;		
+}

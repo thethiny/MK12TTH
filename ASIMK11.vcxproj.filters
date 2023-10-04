@@ -31,6 +31,9 @@
     <Filter Include="Resource Files\Utils">
       <UniqueIdentifier>{0743fe0a-778f-4333-b10d-5e593bb95e2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MK12SDK">
+      <UniqueIdentifier>{9e920532-4fdd-452b-b722-767ecd2bb285}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\dllmain.cpp">
@@ -48,9 +51,6 @@
     <ClCompile Include="source\src\mk11.cpp">
       <Filter>Source Files\MK11</Filter>
     </ClCompile>
-    <ClCompile Include="source\src\mk11hook.cpp">
-      <Filter>Source Files\MK11</Filter>
-    </ClCompile>
     <ClCompile Include="source\src\mk11utils.cpp">
       <Filter>Source Files\MK11</Filter>
     </ClCompile>
@@ -64,6 +64,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\src\MK12Unlocker.cpp">
+      <Filter>Source Files\MK11</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mk12sdk\sdk.cpp">
+      <Filter>MK12SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mk11hook.cpp">
       <Filter>Source Files\MK11</Filter>
     </ClCompile>
   </ItemGroup>
@@ -92,9 +98,6 @@
     <ClInclude Include="source\src\mk11.h">
       <Filter>Header Files\MK11</Filter>
     </ClInclude>
-    <ClInclude Include="source\src\mk11hook.h">
-      <Filter>Header Files\MK11</Filter>
-    </ClInclude>
     <ClInclude Include="source\src\mk11utils.h">
       <Filter>Header Files\MK11</Filter>
     </ClInclude>
@@ -111,6 +114,15 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="source\src\MK12Unlocker.h">
+      <Filter>Header Files\MK11</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mk12sdk\sdk.h">
+      <Filter>MK12SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mk12_plugin.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mk11hook.h">
       <Filter>Header Files\MK11</Filter>
     </ClInclude>
   </ItemGroup>

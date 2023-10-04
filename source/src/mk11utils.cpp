@@ -128,7 +128,7 @@ HMODULE AwaitHModule(const char* name, uint64_t timeout)
 		}
 		toAwait = GetModuleHandle(name);	
 	}
-	if (SettingsMgr->iVerbose)
+	if (SettingsMgr->iLogLevel)
 		std::cout << "Obtained Handle for " << name << std::endl;
 	return toAwait;
 }
@@ -162,7 +162,7 @@ uint64_t HookPattern(std::string Pattern, const char* PatternName, void* HookPro
 		if (lpPattern != NULL)
 		{
 			SetColorGreen();
-			if (SettingsMgr->iVerbose)
+			if (SettingsMgr->iLogLevel)
 				std::cout << PatternName << " Pattern found at: " << std::hex << lpPattern << std::endl;
 			ResetColors();
 		}
@@ -180,12 +180,12 @@ uint64_t HookPattern(std::string Pattern, const char* PatternName, void* HookPro
 	{
 		uint64_t FuncEntry = GetDestinationFromOpCode(lpPattern + PatternOffset); // Already relative to game address so GetGameAddr is unnecessary
 		*Entry = FuncEntry;
-		if (SettingsMgr->iVerbose)
+		if (SettingsMgr->iLogLevel)
 			std::cout << PatternName << " Function Entry found at " << FuncEntry << std::endl;
 	}
 	
 	uint64_t hook_address = lpPattern + PatternOffset;
-	if (SettingsMgr->iVerbose)
+	if (SettingsMgr->iLogLevel)
 		std::cout << "Injecting at " << hook_address << std::endl;
 	InjectHook(hook_address, HookProc, PatchType);
 	
@@ -254,13 +254,13 @@ void SetCheatPattern(std::string pattern, std::string name, uint64_t** lpPattern
 	if (!pattern.empty())
 	{
 		SetColorCyan();
-		if (SettingsMgr->iVerbose)
+		if (SettingsMgr->iLogLevel)
 			std::cout << "Searching for " << name << ": " << pattern << std::endl;
 		*lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
 		if (*lpPattern != nullptr)
 		{
 			SetColorGreen();
-			if (SettingsMgr->iVerbose)
+			if (SettingsMgr->iLogLevel)
 				std::cout << "Found at: " << std::hex << *lpPattern << std::dec << std::endl;
 		}
 		else

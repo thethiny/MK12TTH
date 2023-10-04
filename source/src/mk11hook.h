@@ -9,3 +9,16 @@ namespace MK1Functions {
 	typedef	__int64		(__fastcall ReadFString)(__int64, __int64);
 	extern ReadFString* MK1ReadFString;
 }
+
+namespace HookMetadata {
+	extern HHOOK KeyboardProcHook;
+	extern HMODULE CurrentDllModule;
+	extern HANDLE Console;
+}
+
+namespace MK1Hooks {
+	bool DisableSignatureCheck();
+	bool DisableSignatureWarn();
+	bool bDisableChunkSigCheck();
+	bool bDisableTOCSigCheck();
+}
