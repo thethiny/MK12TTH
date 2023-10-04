@@ -1,0 +1,8 @@
+Build
+Binaries
+.vs
+__pycache__
+*_Test
+*.hint
+desktop.ini
+out
