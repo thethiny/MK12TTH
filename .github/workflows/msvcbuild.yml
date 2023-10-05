@@ -45,10 +45,10 @@ jobs:
       run: |
         $name = "${{ env.PROJECT_NAME }}"
         $version = "${{ env.PROJECT_VERSION }}"
-        $versionedName = "${name} v${version}"
-        echo "Packing $name files into $versionedName.zip"
+        $versionedName = "${name}_v${version}"
+        echo "Packing $name files into `"$versionedName.zip`""
         mv .\source\sample.ini .\${name}.ini
-        Compress-Archive -Path .\${name}.ini, .\out\Release\Binaries\${name}.ehp, dsound.dll -DestinationPath ${versionedName}.zip
+        Compress-Archive -Path .\${name}.ini, .\out\Release\Binaries\${name}.ehp, dsound.dll -DestinationPath "${versionedName}.zip"
         echo "bundle_file=${versionedName}.zip" >> $env:GITHUB_OUTPUT
       env:
         PROJECT_NAME: ${{ steps.version.outputs.project_name }}
@@ -58,7 +58,7 @@ jobs:
       id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        files: .\${{ env.RELEASE_FILE }}
+        files: ./${{ env.RELEASE_FILE }}
         name: ${{env.PROJECT_NAME}} Version ${{ env.PROJECT_VERSION }}
         tag_name: v${{ env.PROJECT_VERSION }}
       env:
