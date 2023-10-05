@@ -43,5 +43,7 @@ To load modded files, create a folder called `Packhunk99` in the content directo
     pChunkSigCheckFunc = 48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 41 56 41 57 48 83 EC 20 48 8D 59 08 49 63 F9 48 8B F1 49 8B E8 48 8B CB 44 0F B6 F2
 
 ```
+You can find the [sample ini file](sample.ini) in this repo
 
-Download Coming Soon
+## Download
+[Download Here](https://github.com/thethiny/MK12TTH/releases)
