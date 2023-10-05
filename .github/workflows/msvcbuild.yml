@@ -1,0 +1,67 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+    - "**.cpp" # Only when code changes
+    - "**.h"
+  workflow_dispatch: # Allow manual runs
+
+jobs:
+  build:
+    runs-on: windows-2019
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up MSVC environment
+      uses: microsoft/setup-msbuild@v1
+
+    - name: Build ASIMK12
+      run: msbuild ASIMK12.sln /p:Configuration=Release /p:Platform=x64
+      working-directory: ${{ github.workspace }}
+
+    - name: Get current version
+      id: version
+      run: |
+        $VERSION=Select-String -Path .\dllmain.cpp -Pattern "constexpr .* CURRENT_HOOK_VERSION ?="
+        $VERSION=[regex]::Match($VERSION, '\d+(\.\d+){1,}').Value
+        echo "current_version=$VERSION\n" >> $env:GITHUB_OUTPUT
+        echo "project_name=MK12TTH\n" >> $env:GITHUB_OUTPUT
+
+    - name: Download Latest dsound.dll # Can be changed later to retrieve from file
+      id: loader_downloader
+      run: |
+        Invoke-RestMethod -Uri "https://api.github.com/repos/thethiny/MK1ProxyDll/releases/latest" | 
+        Select-Object -ExpandProperty assets | 
+        ForEach-Object {Invoke-WebRequest -Uri $_.browser_download_url -OutFile $_.name}
+
+    - name: Create Release Zip
+      id: zip
+      run: |
+        $name = "${{ env.PROJECT_NAME }}"
+        $version = "${{ env.PROJECT_VERSION }}"
+        $versionedName = "${name} v${version}"
+        echo "Packing $name files into $versionedName.zip"
+        mv .\sample.ini .\${name}.ini
+        Compress-Archive -Path .\${name}.ini, .\out\Debug\Binaries\${name}.ehp, dsound.dll -DestinationPath ${versionedName}.zip
+        echo "bundle_file=${versionedName}.zip" >> $env:GITHUB_OUTPUT
+      env:
+        PROJECT_NAME: ${{ steps.version.outputs.project_name }}
+        PROJECT_VERSION: ${{ steps.version.outputs.current_version }}
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: .\${{ env.RELEASE_FILE }}
+        name: ${{env.PROJECT_NAME}} Version ${{ env.PROJECT_VERSION }}
+        tag_name: v${{ env.PROJECT_VERSION }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PROJECT_NAME: ${{ steps.version.outputs.project_name }}
+        PROJECT_VERSION: ${{ steps.version.outputs.current_version }}
+        RELEASE_FILE: ${{ steps.zip.outputs.bundle_file }}
