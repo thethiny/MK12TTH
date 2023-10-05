@@ -27,7 +27,7 @@ jobs:
     - name: Get current version
       id: version
       run: |
-        $VERSION=Select-String -Path .\dllmain.cpp -Pattern "constexpr .* CURRENT_HOOK_VERSION ?="
+        $VERSION=Select-String -Path .\source\dllmain.cpp -Pattern "constexpr .* CURRENT_HOOK_VERSION ?="
         $VERSION=[regex]::Match($VERSION, '\d+(\.\d+){1,}').Value
         echo "current_version=$VERSION\n" >> $env:GITHUB_OUTPUT
         echo "project_name=MK12TTH\n" >> $env:GITHUB_OUTPUT
@@ -46,7 +46,7 @@ jobs:
         $version = "${{ env.PROJECT_VERSION }}"
         $versionedName = "${name} v${version}"
         echo "Packing $name files into $versionedName.zip"
-        mv .\sample.ini .\${name}.ini
+        mv .\source\sample.ini .\${name}.ini
         Compress-Archive -Path .\${name}.ini, .\out\Release\Binaries\${name}.ehp, dsound.dll -DestinationPath ${versionedName}.zip
         echo "bundle_file=${versionedName}.zip" >> $env:GITHUB_OUTPUT
       env:
