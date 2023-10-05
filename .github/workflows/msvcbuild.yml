@@ -29,8 +29,9 @@ jobs:
       run: |
         $VERSION=Select-String -Path .\source\dllmain.cpp -Pattern "constexpr .* CURRENT_HOOK_VERSION ?="
         $VERSION=[regex]::Match($VERSION, '\d+(\.\d+){1,}').Value
-        echo "current_version=$VERSION\n" >> $env:GITHUB_OUTPUT
-        echo "project_name=MK12TTH\n" >> $env:GITHUB_OUTPUT
+        echo "current_version=$VERSION" >> $env:GITHUB_OUTPUT
+        echo "project_name=MK12TTH" >> $env:GITHUB_OUTPUT
+        echo "Project Version is $VERSION"
 
     - name: Download Latest dsound.dll # Can be changed later to retrieve from file
       id: loader_downloader
