@@ -1,34 +1,34 @@
-#include "mk11hook.h"
-#include "../includes.h"
+#include "mk12hook.h"
+#include "mkutils.h"
 
 
-MK1Functions::ReadFString*			MK1Functions::MK1ReadFString;
+MK12Functions::ReadFString*			MK12Functions::MK1ReadFString;
 
-HANDLE __stdcall MK1Functions::CreateFileProxy(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+HANDLE __stdcall MK12Functions::CreateFileProxy(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 {
-	if (lpFileName)
-	{
-		//std::wstring fileName = lpFileName;
-		wchar_t* wcFileName = (wchar_t*)lpFileName;
-		std::wstring fileName(wcFileName, wcslen(wcFileName));
-		if (!wcsncmp(wcFileName, L"..", 2))
-		{
-			std::wstring wsSwapFolder = L"MKSwap";
-			std::wstring newFileName = L"..\\" + wsSwapFolder + fileName.substr(2, fileName.length() - 2);
-			if (std::filesystem::exists(newFileName.c_str()))
-			{
-				wprintf(L"Loading %s from %s\n", wcFileName, wsSwapFolder.c_str());
-				MK11::vSwappedFiles.push_back(wcFileName);
-				return CreateFileW(newFileName.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-			}
-		}
+	//if (lpFileName)
+	//{
+	//	//std::wstring fileName = lpFileName;
+	//	wchar_t* wcFileName = (wchar_t*)lpFileName;
+	//	std::wstring fileName(wcFileName, wcslen(wcFileName));
+	//	if (!wcsncmp(wcFileName, L"..", 2))
+	//	{
+	//		std::wstring wsSwapFolder = L"MKSwap";
+	//		std::wstring newFileName = L"..\\" + wsSwapFolder + fileName.substr(2, fileName.length() - 2);
+	//		if (std::filesystem::exists(newFileName.c_str()))
+	//		{
+	//			wprintf(L"Loading %s from %s\n", wcFileName, wsSwapFolder.c_str());
+	//			MK12::vSwappedFiles.push_back(wcFileName);
+	//			return CreateFileW(newFileName.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	//		}
+	//	}
 
-	}
+	//}
 
 	return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
-__int64 MK1Functions::ReadFStringProxy(__int64 rcx, __int64 rdx)
+__int64 MK12Functions::ReadFStringProxy(__int64 rcx, __int64 rdx)
 {
 	uint32_t* RCXArray = (uint32_t*) rcx;
 	uint64_t* R8Array = (uint64_t*)(0x14788f648);
@@ -42,7 +42,7 @@ __int64 MK1Functions::ReadFStringProxy(__int64 rcx, __int64 rdx)
 	char* szFString = (char*)rsi;
 	char* szBPClass = (char*)(r8[6]);
 	printfYellow("szBPClass: %s\nszFString: %s\n", szBPClass, szFString);
-	return MK1Functions::MK1ReadFString(rcx, rdx);
+	return MK12Functions::MK1ReadFString(rcx, rdx);
 }
 
 std::map<int, const char*> CURL_MAP
@@ -144,7 +144,7 @@ namespace HookMetadata {
 using namespace Memory::VP;
 using namespace hook;
 
-bool MK1Hooks::DisableSignatureCheck()
+bool MK12Hooks::DisableSignatureCheck()
 {
 	std::cout << "==bDisableSignatureCheck==" << std::endl;
 	if (SettingsMgr->pSigCheck.empty())
@@ -171,7 +171,7 @@ bool MK1Hooks::DisableSignatureCheck()
 	return true;
 }
 
-bool MK1Hooks::DisableSignatureWarn()
+bool MK12Hooks::DisableSignatureWarn()
 {
 	std::cout << "==bDisableSignatureWarn" << std::endl;
 	if (SettingsMgr->pSigWarn.empty())
@@ -197,7 +197,7 @@ bool MK1Hooks::DisableSignatureWarn()
 	return true;
 }
 
-bool MK1Hooks::bDisableChunkSigCheck()
+bool MK12Hooks::bDisableChunkSigCheck()
 {
 	std::cout << "==bDisablePakChunkSigCheck==" << std::endl;
 	if (SettingsMgr->pChunkSigCheck.empty())
@@ -237,7 +237,7 @@ bool MK1Hooks::bDisableChunkSigCheck()
 		
 }
 
-bool MK1Hooks::bDisableTOCSigCheck()
+bool MK12Hooks::bDisableTOCSigCheck()
 {
 	std::cout << "==bDisableTOCSigCheck==" << std::endl;
 	if (SettingsMgr->pTocCheck.empty())

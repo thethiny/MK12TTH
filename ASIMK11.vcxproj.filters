@@ -13,14 +13,8 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\MK11">
-      <UniqueIdentifier>{3ec9f235-9336-422d-9322-a38311ebc9e8}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Utils">
       <UniqueIdentifier>{2a176353-d0e3-4c0b-8ba3-e0d426bd2989}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\MK11">
-      <UniqueIdentifier>{5d6b45de-de39-4626-96ca-d8bc4b453bc9}</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files\Utils">
       <UniqueIdentifier>{f9c1e2c3-38a6-4c70-ad20-b7061aeb25fa}</UniqueIdentifier>
@@ -33,6 +27,12 @@
     </Filter>
     <Filter Include="MK12SDK">
       <UniqueIdentifier>{9e920532-4fdd-452b-b722-767ecd2bb285}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\MK12">
+      <UniqueIdentifier>{5d6b45de-de39-4626-96ca-d8bc4b453bc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MK12">
+      <UniqueIdentifier>{3ec9f235-9336-422d-9322-a38311ebc9e8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -48,12 +48,6 @@
     <ClCompile Include="source\utils\Patterns.cpp">
       <Filter>Resource Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="source\src\mk11.cpp">
-      <Filter>Source Files\MK11</Filter>
-    </ClCompile>
-    <ClCompile Include="source\src\mk11utils.cpp">
-      <Filter>Source Files\MK11</Filter>
-    </ClCompile>
     <ClCompile Include="source\src\eSettingsManager.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
@@ -64,13 +58,19 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\src\MK12Unlocker.cpp">
-      <Filter>Source Files\MK11</Filter>
+      <Filter>Source Files\MK12</Filter>
     </ClCompile>
     <ClCompile Include="source\mk12sdk\sdk.cpp">
       <Filter>MK12SDK</Filter>
     </ClCompile>
-    <ClCompile Include="source\src\mk11hook.cpp">
-      <Filter>Source Files\MK11</Filter>
+    <ClCompile Include="source\src\mkutils.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mk12hook.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mk12.cpp">
+      <Filter>Source Files\MK12</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -95,12 +95,6 @@
     <ClInclude Include="source\utils\Trampoline.h">
       <Filter>Resource Files\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="source\src\mk11.h">
-      <Filter>Header Files\MK11</Filter>
-    </ClInclude>
-    <ClInclude Include="source\src\mk11utils.h">
-      <Filter>Header Files\MK11</Filter>
-    </ClInclude>
     <ClInclude Include="source\src\eSettingsManager.h">
       <Filter>Header Files\Utils</Filter>
     </ClInclude>
@@ -114,16 +108,19 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="source\src\MK12Unlocker.h">
-      <Filter>Header Files\MK11</Filter>
+      <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\mk12sdk\sdk.h">
       <Filter>MK12SDK</Filter>
     </ClInclude>
-    <ClInclude Include="source\mk12_plugin.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="source\src\mkutils.h">
+      <Filter>Header Files\MK12</Filter>
     </ClInclude>
-    <ClInclude Include="source\src\mk11hook.h">
-      <Filter>Header Files\MK11</Filter>
+    <ClInclude Include="source\src\mk12hook.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mk12.h">
+      <Filter>Header Files\MK12</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

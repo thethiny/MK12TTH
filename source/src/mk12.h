@@ -1,5 +1,4 @@
 #pragma once
-#include "mk11utils.h"
 #include <cppython.h>
 
 //enum PLAYER_NUM
@@ -23,10 +22,10 @@ enum MOD_HOOK_STATUS
 	NOT_FOUND					,
 };
 
-namespace MK11 {
+namespace MK12 {
 
 	// Structs
-	struct IntroStruct {
+	/*struct IntroStruct {
 		char PName[100]				{ 0 };
 		char PName2[100]			{ 0 };
 		char PChar[2]				{ 0 };
@@ -37,22 +36,22 @@ namespace MK11 {
 	struct CharacterStruct {
 		std::string name;
 		uint8_t intros=0;
-	};
+	};*/
 
 	struct ActiveMods {
-		bool bAntiCheatEngine		= false;
+		//bool bAntiCheatEngine		= false;
 		bool bAntiSigCheck			= false;
 		bool bAntiChunkSigCheck		= false;
 		bool bAntiSigWarn			= false;
 		bool bAntiTocSigCheck		= false;
-		bool bModLoader				= false;
-		bool bCurl					= false;
+		//bool bModLoader				= false;
+		//bool bCurl					= false;
 	};
 
-	struct CheatsStruct {
+	/*struct CheatsStruct {
 		uint64_t* lpMercy, * lpGround, * lpBrut, * lpBrutB, * lpMeteor, * lpDizzy, *lpFatality, *lpFatCombo, *lpNoBlock, *lpFatalBlow;
 		bool bMercy = false, bGround = false, bBrut = false, bBrutB = false, bMeteor = false, bDizzy = false, bFatality = false, bFatCombo = false, bNoBlock = false, bFatalBlow = false;
-	};
+	};*/
 
 	struct LibFuncStruct {
 		std::string FullName;
@@ -148,7 +147,7 @@ namespace MK11 {
 
 	
 	// Vars
-	extern std::vector<CharacterStruct>			sCharacters;
+	//extern std::vector<CharacterStruct>			sCharacters;
 	extern uint8_t								ulCharactersCount;
 	extern uint64_t*							lpGameVersion;
 	extern uint64_t*							lpGameVersionFull;
@@ -156,10 +155,10 @@ namespace MK11 {
 	extern LibMap								IAT;
 	extern std::map<uint64_t, HTTPPostStruct*>	CurlObjectMap;
 	// StructVars
-	extern IntroStruct							sIntroStruct;
-	extern IntroStruct							sIntroStruct2;
+	//extern IntroStruct							sIntroStruct;
+	//extern IntroStruct							sIntroStruct2;
 	extern ActiveMods							sActiveMods;
-	extern CheatsStruct							sCheatsStruct;
+	//extern CheatsStruct							sCheatsStruct;
 	extern LibMapsStruct						sLFS;
 	extern UserKeysStruct						sUserKeys;
 	extern GameReadyState						sGameState;
@@ -173,7 +172,7 @@ namespace MK11 {
 	std::string GetGameVersion();
 	std::string GetGameVersionFull();
 	void PopulateCharList();
-	bool operator==(const CharacterStruct& s1, std::string s2);
+	//bool operator==(const CharacterStruct& s1, std::string s2);
 	// LFS
 	LibFuncStruct ParseLibFunc(CPPython::string);
 	void ParseLibFunc(LibFuncStruct&);

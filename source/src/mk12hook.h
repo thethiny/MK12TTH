@@ -1,7 +1,7 @@
 #pragma once
-#include "mk11.h"
+#include "../includes.h"
 
-namespace MK1Functions {
+namespace MK12Functions {
 	HANDLE __stdcall	CreateFileProxy(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 
 	// FString
@@ -16,7 +16,7 @@ namespace HookMetadata {
 	extern HANDLE Console;
 }
 
-namespace MK1Hooks {
+namespace MK12Hooks {
 	bool DisableSignatureCheck();
 	bool DisableSignatureWarn();
 	bool bDisableChunkSigCheck();

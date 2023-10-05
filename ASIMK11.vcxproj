@@ -20,9 +20,9 @@
     <ClCompile Include="source\IniReader.cpp" />
     <ClCompile Include="source\mk12sdk\sdk.cpp" />
     <ClCompile Include="source\src\eSettingsManager.cpp" />
-    <ClCompile Include="source\src\mk11.cpp" />
-    <ClCompile Include="source\src\mk11hook.cpp" />
-    <ClCompile Include="source\src\mk11utils.cpp" />
+    <ClCompile Include="source\src\mk12.cpp" />
+    <ClCompile Include="source\src\mk12hook.cpp" />
+    <ClCompile Include="source\src\mkutils.cpp" />
     <ClCompile Include="source\src\MK12Unlocker.cpp" />
     <ClCompile Include="source\utils\CPPython\pystring.cpp" />
     <ClCompile Include="source\utils\Patterns.cpp" />
@@ -34,11 +34,10 @@
     <ClInclude Include="source\includes.h" />
     <ClInclude Include="source\IniReader.h" />
     <ClInclude Include="source\mk12sdk\sdk.h" />
-    <ClInclude Include="source\mk12_plugin.h" />
     <ClInclude Include="source\src\eSettingsManager.h" />
-    <ClInclude Include="source\src\mk11.h" />
-    <ClInclude Include="source\src\mk11hook.h" />
-    <ClInclude Include="source\src\mk11utils.h" />
+    <ClInclude Include="source\src\mk12.h" />
+    <ClInclude Include="source\src\mk12hook.h" />
+    <ClInclude Include="source\src\mkutils.h" />
     <ClInclude Include="source\src\MK12Unlocker.h" />
     <ClInclude Include="source\utils\CPPython\cppython.h" />
     <ClInclude Include="source\utils\CPPython\pystring.h" />

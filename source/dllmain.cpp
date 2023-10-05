@@ -1,11 +1,12 @@
 #include "includes.h"
-#include "src/mk11.h"
-#include "src/mk11hook.h"
-#include "mk12_plugin.h"
+#include "src/mkutils.h"
+#include "src/mk12.h"
+#include "src/mk12hook.h"
+#include "mk12sdk/sdk.h"
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.2";
+constexpr const char * CURRENT_HOOK_VERSION = "0.2.1";
 
 Trampoline* GameTramp, * User32Tramp;
 
@@ -65,23 +66,23 @@ void PreGameHooks()
 	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
 	if (SettingsMgr->iLogLevel)
 		std::cout << "Generated Trampolines" << std::endl;
-	 MK11::IAT = ParsePEHeader();
+	 MK12::IAT = ParsePEHeader();
 
 	if (SettingsMgr->bDisableSignatureCheck)
 	{
-		MK11::sActiveMods.bAntiSigCheck = MK1Hooks::DisableSignatureCheck();
+		MK12::sActiveMods.bAntiSigCheck = MK12Hooks::DisableSignatureCheck();
 	}
 	if (SettingsMgr->bDisableSignatureWarn)
 	{
-		MK11::sActiveMods.bAntiSigWarn = MK1Hooks::DisableSignatureWarn();
+		MK12::sActiveMods.bAntiSigWarn = MK12Hooks::DisableSignatureWarn();
 	}
 	if (SettingsMgr->bDisableChunkSigCheck)
 	{
-		MK11::sActiveMods.bAntiChunkSigCheck = MK1Hooks::bDisableChunkSigCheck();
+		MK12::sActiveMods.bAntiChunkSigCheck = MK12Hooks::bDisableChunkSigCheck();
 	}
 	if (SettingsMgr->bDisableTOCSigCheck)
 	{
-		MK11::sActiveMods.bAntiTocSigCheck = MK1Hooks::bDisableTOCSigCheck();
+		MK12::sActiveMods.bAntiTocSigCheck = MK12Hooks::bDisableTOCSigCheck();
 	}
 
 	// Temp until address
@@ -98,10 +99,10 @@ void ProcessSettings()
 	SettingsMgr->iVKMenuInfo	= StringToVK(SettingsMgr->hkInfo);
 
 	// DLL Procs
-	MK11::sLFS.ModLoader		= MK11::ParseLibFunc(SettingsMgr->szModLoader);
-	MK11::sLFS.AntiCheatEngine	= MK11::ParseLibFunc(SettingsMgr->szAntiCheatEngine);
-	MK11::sLFS.CurlSetOpt		= MK11::ParseLibFunc(SettingsMgr->szCurlSetOpt);
-	MK11::sLFS.CurlPerform		= MK11::ParseLibFunc(SettingsMgr->szCurlPerform);
+	MK12::sLFS.ModLoader		= MK12::ParseLibFunc(SettingsMgr->szModLoader);
+	MK12::sLFS.AntiCheatEngine	= MK12::ParseLibFunc(SettingsMgr->szAntiCheatEngine);
+	MK12::sLFS.CurlSetOpt		= MK12::ParseLibFunc(SettingsMgr->szCurlSetOpt);
+	MK12::sLFS.CurlPerform		= MK12::ParseLibFunc(SettingsMgr->szCurlPerform);
 
 	printfCyan("Parsed Settings\n");
 }
@@ -263,9 +264,9 @@ void MK12HookPlugin::TabFunction()
 	{
 
 		bool toggles[] = {
-			MK11::sActiveMods.bAntiSigCheck,
-			MK11::sActiveMods.bAntiChunkSigCheck,
-			MK11::sActiveMods.bAntiTocSigCheck,
+			MK12::sActiveMods.bAntiSigCheck,
+			MK12::sActiveMods.bAntiChunkSigCheck,
+			MK12::sActiveMods.bAntiTocSigCheck,
 		};
 		MK12HOOKSDK::ImGui_Checkbox("Pak Signature", &toggles[0]);
 		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[0]);

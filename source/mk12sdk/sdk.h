@@ -6,11 +6,15 @@ typedef __int64 FGGameInfo;
 
 enum PLAYER_NUM
 {
-	PLAYER1,
+	INVALID_PLAYER_NUM			= 0xFFFFFFFF,
+	PLAYER1						= 0x0,
 	PLAYER2,
 	PLAYER3,
 	PLAYER4,
 	MAX_PLAYERS,
+	CPU_PLAYER					= 0x5,
+	NOT_CPU_PLAYER				= 0x6,
+	BACKGROUND_PLAYER			= 0x7,
 };
 
 #include <Windows.h>
@@ -40,3 +44,32 @@ public:
 	static void Initialize(HMODULE hMod);
 	static bool IsOK();
 };
+
+#define PLUGIN_API __declspec(dllexport)
+
+namespace MK12HookPlugin {
+	// Plugin name to use when loading and printing errors to log
+	extern "C" PLUGIN_API const char* GetPluginName();
+
+	// Hook project name that this plugin is compatible with
+	extern "C" PLUGIN_API const char* GetPluginProject();
+
+	// GUI tab name that will be used in the Plugins section
+	extern "C" PLUGIN_API const char* GetPluginTabName();
+
+	// Initialization
+	extern "C" PLUGIN_API void OnInitialize(HMODULE hMod);
+
+	// Shutdown
+	extern "C" PLUGIN_API void OnShutdown();
+
+	// Called every game tick
+	extern "C" PLUGIN_API void OnFrameTick();
+
+	// Called on match/fight start
+	extern "C" PLUGIN_API void OnFightStartup();
+
+	// Tab data for menu, remove this if you don't want a plugin tab
+	extern "C" PLUGIN_API void TabFunction();
+
+}
