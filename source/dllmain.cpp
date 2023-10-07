@@ -6,7 +6,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.2.1";
+constexpr const char * CURRENT_HOOK_VERSION = "0.2.2";
 
 Trampoline* GameTramp, * User32Tramp;
 
@@ -269,8 +269,8 @@ void MK12HookPlugin::TabFunction()
 			MK12::sActiveMods.bAntiTocSigCheck,
 		};
 		MK12HOOKSDK::ImGui_Checkbox("Pak Signature", &toggles[0]);
-		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[0]);
-		MK12HOOKSDK::ImGui_Checkbox("TOC Signature", &toggles[0]);
+		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[1]);
+		MK12HOOKSDK::ImGui_Checkbox("TOC Signature", &toggles[2]);
 
 		//if (MK12HOOKSDK::ImGui_Button("button"))
 		//	counter++;
