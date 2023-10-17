@@ -9,9 +9,15 @@ What is it used for? It's used to modify game functions to make them do whatever
 - Anti Pak Chunk Signature Patch. Optional, allows you to delete `.sig` files, since the game still loads the `.sig` files and runs checks against them on load, but will only give a warning. However, some large files require a `.sig` file due to the warning assuming they're there, so this Patch disables this warning.
 
 ### How to use:
-Download the Latest MK12TTH version, and select the mods you want in the provided ini file. When a game updates, you need to change the addresses in the `[Addresses]` section of the ini, or the patches in the `[Patterns]` section. The updated addresses/patterns will be provided by me.
+Download the Latest MK12TTH version, and select the mods you want in the provided ini file. When a game updates, you might need to change the patches in the [Patterns] section. The updated patterns will be provided by me below, and in the downloaded file.
+The zip file will contain 3 files. MK12TTH.ehp, MK12TTH.ini, and dsound.dll. You need to place the files into your game's folder, next to SDL2.dll. `MK1Folder/MK12/Binaries/Win64/`.
 
-To load modded files, create a folder called `Packhunk99` in the content directory `MK1 Folder/MK12/Content/Paks`, and inside it create a new folder with the mod you're planning to install (optional). If the mod was a texture/model/utoc/ucas file, then place it in `Paks` directly, since they need to be loaded **last**, and MK1 loads folders **first**.
+To load modded files, create a folder called Pakchunk99 in the content directory `MK1Folder/MK12/Content/Paks`, and inside it create a new folder with the mod you're planning to install (optional). If the mod was a texture/model/utoc/ucas file, then place it in Paks directly, since they need to be loaded last, and MK1 loads folders first.
+
+### Ermaccer's MK1Hook Compatibility:
+This mod is designed to be compatible with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook). When the hook is detected to be present, MK12TTH becomes a plugin instead of a standalone mod. If you intend to use the 2 together, then use the dsound.dll from Ermaccer's MK1Hook and not the one provided in the downloaded zip file.
+#### _NOTE: The current version of MK1Hook (0.3) doesn't support mod patches, therefore using the 2 hooks together is not currently possible. Wait for un update from me on when they will work together!_
+#### _NOTE2: MK1Hook (0.4) will support mod patches._
 
 ### All Ini Settings
 ```ini
