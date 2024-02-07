@@ -18,6 +18,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+      with:
+        submodules: 'true'
+        # token: ${{ secrets.GITHUB_TOKEN }} # Removed since the repos it checks out are public
 
     - name: Set up MSVC environment
       uses: microsoft/setup-msbuild@v1
