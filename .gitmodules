@@ -1,0 +1,3 @@
+[submodule "source/utils/CPPython"]
+	path = source/utils/CPPython
+	url = git@github.com:thethiny/CPPython.git
