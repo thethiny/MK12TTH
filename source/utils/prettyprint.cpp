@@ -12,6 +12,12 @@ void printfColor(const char* color, const char* const Format, ...)
 	ResetColors();
 }
 
+void printfColorNl(const char* color, const char* const Format, ...)
+{
+	printfColor(color, Format);
+	printf("\n");
+}
+
 void SetColor(const char* color)
 {
 	printf(color);

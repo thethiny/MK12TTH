@@ -3,6 +3,7 @@
 #include <string>
 
 void printfColor(const char* color, const char* const Format, ...);
+void printfColorNl(const char* color, const char* const Format, ...);
 void SetColor(const char* color);
 
 enum ConsoleColors
@@ -34,10 +35,10 @@ enum ConsoleColors
 #define printfYellow(Format, ...) printfColor("\x1b[33m", Format, ## __VA_ARGS__)
 #define printfBlue(Format, ...) printfColor("\x1b[34m", Format, ## __VA_ARGS__)
 #define printfCyan(Format, ...) printfColor("\x1b[36m", Format, ## __VA_ARGS__)
-#define printfError(Format, ...) printfColor("\x1b[41m", Format, ## __VA_ARGS__)
-#define printfSuccess(Format, ...) printfColor("\x1b[42m\x1b[30m", Format, ## __VA_ARGS__)
-#define printfWarning(Format, ...) printfColor("\x1b[43m\x1b[30m", Format, ## __VA_ARGS__)
-#define printfInfo(Format, ...) printfColor("\x1b[46m\x1b[30m", Format, ## __VA_ARGS__)
+#define printfError(Format, ...) printfColorNl("\x1b[41m", Format, ## __VA_ARGS__)
+#define printfSuccess(Format, ...) printfColorNl("\x1b[42m\x1b[30m", Format, ## __VA_ARGS__)
+#define printfWarning(Format, ...) printfColorNl("\x1b[43m\x1b[30m", Format, ## __VA_ARGS__)
+#define printfInfo(Format, ...) printfColorNl("\x1b[46m\x1b[30m", Format, ## __VA_ARGS__)
 
 #define SetColorRed() SetColor("\x1b[31m")
 #define SetColorGreen() SetColor("\x1b[32m")

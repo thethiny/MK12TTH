@@ -38,12 +38,23 @@ jobs:
         echo "project_name=MK12TTH" >> $env:GITHUB_OUTPUT
         echo "Project Version is $VERSION"
 
-    - name: Download Latest dsound.dll # Can be changed later to retrieve from file
+    # Download dsound from MK1ProxyDll
+    # - name: Download Latest dsound.dll # Can be changed later to retrieve from file
+    #   id: loader_downloader
+    #   run: |
+    #     Invoke-RestMethod -Uri "https://api.github.com/repos/thethiny/MK1ProxyDll/releases/latest" | 
+    #     Select-Object -ExpandProperty assets | 
+    #     ForEach-Object {Invoke-WebRequest -Uri $_.browser_download_url -OutFile $_.name}
+
+    - name: Download ASI Loader dsound.dll # Can be changed later to retrieve from file
       id: loader_downloader
       run: |
-        Invoke-RestMethod -Uri "https://api.github.com/repos/thethiny/MK1ProxyDll/releases/latest" | 
+        Invoke-RestMethod -Uri "https://api.github.com/repos/ermaccer/MK1Hook/releases/latest" | 
         Select-Object -ExpandProperty assets | 
-        ForEach-Object {Invoke-WebRequest -Uri $_.browser_download_url -OutFile $_.name}
+        ForEach-Object { 
+          Invoke-WebRequest -Uri $_.browser_download_url -OutFile $_.name
+          Expand-Archive -Path $_.name -DestinationPath .
+        }
 
     - name: Create Release Zip
       id: zip

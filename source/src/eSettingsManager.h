@@ -1,5 +1,6 @@
 #pragma once
 #include<string>
+#include "..\IniReader.h"
 
 class eSettingsManager {
 public:
@@ -15,6 +16,7 @@ public:
 	bool bPauseOnStart;
 	int	iLogLevel;
 	bool bDebug;
+	bool bAllowNonMK;
 
 
 	// Toggles
@@ -22,7 +24,10 @@ public:
 	bool bDisableSignatureWarn;
 	bool bDisableTOCSigCheck;
 	bool bDisableChunkSigCheck;
+	bool bDisablePakTOCCheck;
 	bool bPatchCurl;
+	bool bFNameToStrHook;
+	bool bUNameGetter;
 
 	// Addresses
 
@@ -30,8 +35,14 @@ public:
 	std::string pSigCheck;
 	std::string pSigWarn;
 	std::string pTocCheck;
+	std::string pPakTocCheck;
 	std::string pChunkSigCheck;
 	std::string pChunkSigCheckFunc;
+	std::string pUNameObjGetPat;
+	std::string pFPathLoadPat;
+	std::string pFPath2LoadPat;
+	std::string pFPathCLoadPat;
+	std::string pEndpointLoader;
 
 
 	// Menu Section
@@ -52,9 +63,36 @@ public:
 	std::string szCurlPerform;
 
 	//Private Server
-	std::string szMITMUrl;
-	bool bMITM;
+	std::string szServerUrl;
+	bool bEnableServerProxy;
+
+	// Announcer Mod
+	struct {
+		bool bEnable;
+		std::string szDefault;
+		std::string szLiuKang;
+		std::string szGeras;
+		std::string szJohnnyCage;
+		std::string szShangTsung;
+		std::string szSindel;
+		std::string szSubZero;
+		std::string szOmniMan;
+	} AnnouncerSwap;
 
 };
 
+class eFirstRunManager
+{
+public:
+	void Init();
+	void Save();
+
+public:
+	bool bPaidModWarned;
+
+private:
+	CIniReader* ini;
+};
+
 extern eSettingsManager* SettingsMgr;
+extern eFirstRunManager* FirstRunMgr;

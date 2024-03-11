@@ -5,6 +5,8 @@
 using namespace Memory::VP;
 using namespace hook;
 
+LibMap IATable;
+
 // Address Utilities
 
 int64 GetGameEntryPoint()
@@ -122,14 +124,14 @@ HMODULE AwaitHModule(const char* name, uint64_t timeout)
 			std::chrono::duration<double> now = std::chrono::system_clock::now() - start;
 			if (now.count()*1000 > timeout)
 			{
-				std::cout << "No Handle " << name << std::endl;
+				printf("No Handle %s\n", name);
 				return NULL;
 			}
 		}
 		toAwait = GetModuleHandle(name);	
 	}
 	if (SettingsMgr->iLogLevel)
-		std::cout << "Obtained Handle for " << name << std::endl;
+		printf("Obtained Handle for %s\n", name);
 	return toAwait;
 }
 
@@ -161,16 +163,12 @@ uint64_t HookPattern(std::string Pattern, const char* PatternName, void* HookPro
 		lpPattern = (uint64_t)FindPattern(GetModuleHandleA(NULL), Pattern);
 		if (lpPattern != NULL)
 		{
-			SetColorGreen();
 			if (SettingsMgr->iLogLevel)
-				std::cout << PatternName << " Pattern found at: " << std::hex << lpPattern << std::endl;
-			ResetColors();
+				printfSuccess("%s Pattern found at %llx", PatternName, lpPattern);
 		}
 		else
 		{
-			SetColorRed();
-			std::cout << "Couldn't find pattern. " << PatternName << " Disabled" << std::endl;
-			ResetColors();
+			printfError("Couldn't find pattern. %s Disabled", PatternName);
 			return lpPattern;
 		}
 	}
@@ -181,12 +179,12 @@ uint64_t HookPattern(std::string Pattern, const char* PatternName, void* HookPro
 		uint64_t FuncEntry = GetDestinationFromOpCode(lpPattern + PatternOffset); // Already relative to game address so GetGameAddr is unnecessary
 		*Entry = FuncEntry;
 		if (SettingsMgr->iLogLevel)
-			std::cout << PatternName << " Function Entry found at " << FuncEntry << std::endl;
+			printf("%s Function Entry found at %llx", PatternName, FuncEntry);
 	}
 	
 	uint64_t hook_address = lpPattern + PatternOffset;
 	if (SettingsMgr->iLogLevel)
-		std::cout << "Injecting at " << hook_address << std::endl;
+		printf("Injecting at %llx", hook_address);
 	InjectHook(hook_address, HookProc, PatchType);
 	
 	ResetColors();
@@ -253,22 +251,18 @@ void SetCheatPattern(std::string pattern, std::string name, uint64_t** lpPattern
 {
 	if (!pattern.empty())
 	{
-		SetColorCyan();
 		if (SettingsMgr->iLogLevel)
-			std::cout << "Searching for " << name << ": " << pattern << std::endl;
+			printfInfo("Searching for %s: %s", name.c_str(), pattern.c_str());
 		*lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
 		if (*lpPattern != nullptr)
 		{
-			SetColorGreen();
 			if (SettingsMgr->iLogLevel)
-				std::cout << "Found at: " << std::hex << *lpPattern << std::dec << std::endl;
+				printfSuccess("Found at: %p", *lpPattern);
 		}
 		else
 		{
-			SetColorRed();
-			std::cout << name << " Not found >> Disabled." << std::endl;
+			printfError("%s Not Found >> Disabled.", name.c_str());
 		}
-		ResetColors();
 	}
 }
 
@@ -405,4 +399,139 @@ bool IsBase(char c, int base)
 {
 	std::string alpha = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/";
 	return alpha.substr(0, base).find(c) != -1;
+}
+
+
+LibFuncStruct ParseLibFunc(CPPython::string path)
+{
+	LibFuncStruct LFS;
+	auto vars = path.rsplit(".", 1);
+
+	if (vars.size() != 2)
+		//RaiseException("Incorrect Argument", -1);
+		return LFS;
+
+	LFS.FullName = path;
+	LFS.LibName = vars[0].lower();
+	LFS.ProcName = vars[1];
+
+	LFS.LibName = CPPython::string(LFS.LibName).endswith(".dll") || CPPython::string(LFS.LibName).endswith(".exe") ? LFS.LibName : LFS.LibName + ".dll";
+
+	LFS.bIsValid = true;
+
+	return LFS;
+}
+
+void ParseLibFunc(LibFuncStruct& LFS)
+{
+	LFS = ParseLibFunc(LFS.FullName);
+}
+
+uint64_t* GetLibProcFromNT(const LibFuncStruct& LFS)
+{
+	return LFS.bIsValid ? (uint64_t*)IATable[LFS.LibName][LFS.ProcName] : nullptr;
+}
+
+void PrintErrorProcNT(const LibFuncStruct& LFS, uint8_t bMode)
+{
+	switch (bMode)
+	{
+	case 0:
+		printfError("Couldn't patch %s!\n", LFS.ProcName); break;
+	case 1:
+		printfError("Couldn't find %s in %s!\n", LFS.ProcName, LFS.LibName); break;
+	case 2:
+		printfError("Couldn't patch %s!\n", LFS.LibName); break;
+	default:
+		printfError("Couldn't patch %s::%s!\n", LFS.LibName, LFS.ProcName);
+	}
+}
+
+/**
+ * Patch a function from its `call` opcode to point to a proxy to the called function
+ *
+ * @param GameTramp A Trampoline that lives in the game's code space
+ * @param CallAddr The address to the `call` opcode
+ * @param JumpAddrSize The Size of the Address in the opcode
+ * @param ProxyFunctionAddr The address of the Proxy Function
+ * @param PatchType CALL or JUMP, defaults to CALL
+ *
+ * @return The address of the Game Function that was proxied as a `uint64_t*`
+ */
+uint64_t* MakeProxyFromOpCode(Trampoline* GameTramp, uint64_t CallAddr, uint8_t JumpAddrSize, void* ProxyFunctionAddr, PatchTypeEnum PatchType) // Jump size is either 4 or 8
+{
+	CallAddr = GetGameAddr(CallAddr);
+	uint8_t callOpcSize = JumpAddrSize >> 2;
+	uint8_t funcLen = callOpcSize + JumpAddrSize;
+	uint64_t CalledFuncAddr = GetDestinationFromOpCode(CallAddr, callOpcSize, funcLen, JumpAddrSize);
+
+	Memory::VP::InjectHook(CallAddr, GameTramp->Jump(ProxyFunctionAddr), PatchType);
+	return (uint64_t*)CalledFuncAddr;
+}
+
+namespace RegisterHacks {
+
+	MoveToRegister* MoveToRAX;
+	MoveToRegister* MoveToRBX;
+	MoveToRegister* MoveToRCX;
+	MoveToRegister* MoveToRDX;
+	MoveToRegister* MoveToR8;
+	MoveToRegister* MoveToR9;
+	MoveToRegister* MoveToR10;
+	MoveToRegister* MoveToR11;
+	MoveToRegister* MoveToR12;
+	MoveToRegister* MoveToR13;
+	MoveToRegister* MoveToR14;
+	MoveToRegister* MoveToR15;
+
+	bool			bIsEnabled = false;
+
+	void RegisterHacks::EnableRegisterHacks()
+	{
+		if (bIsEnabled)
+			return;
+		printf("Enabling Register Hack Functions\n");
+		uint8_t* CallSpace = new uint8_t[4*12 + 1]; // 12 is registers count, 1 is ret
+		DWORD oldProtect;
+		VirtualProtect(CallSpace, 4*12 + 1, PAGE_EXECUTE_READWRITE, &oldProtect);
+
+		uint32_t ASMs[] = {
+			0xC3C88948, // RAX
+			0xC3CB8948,
+			0xC3C98948,
+			0xC3CA8948,
+			0xC3C88949, // R8
+			0xC3C98949,
+			0xC3CA8949,
+			0xC3CB8949,
+			0xC3CC8949,
+			0xC3CD8949,
+			0xC3CE8949,
+			0xC3CF8949,
+		};
+
+		MoveToRegister** Funcs[] = {
+			&MoveToRAX,
+			&MoveToRBX,
+			&MoveToRCX,
+			&MoveToRDX,
+			&MoveToR8,
+			&MoveToR9,
+			&MoveToR10,
+			&MoveToR11,
+			&MoveToR12,
+			&MoveToR13,
+			&MoveToR14,
+			&MoveToR15,
+		};
+
+		for (uint64_t i = 0; i < 12; i++)
+		{
+			uint8_t* addr = CallSpace + (i * 4);
+			memcpy(CallSpace + (i * 4), ASMs + i, 4);
+			*Funcs[i] = (MoveToRegister*)addr;
+		}
+
+		bIsEnabled = true;
+	}
 }

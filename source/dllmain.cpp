@@ -6,7 +6,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.2.2";
+constexpr const char * CURRENT_HOOK_VERSION = "0.2.3";
 
 Trampoline* GameTramp, * User32Tramp;
 
@@ -45,10 +45,11 @@ void CreateConsole()
 {
 	FreeConsole();
 	AllocConsole();
+
 	FILE* fNull;
 	freopen_s(&fNull, "CONOUT$", "w", stdout);
 	freopen_s(&fNull, "CONOUT$", "w", stderr);
-		
+
 	std::string consoleName = "thethiny's MK1 Mod Console";
 	SetConsoleTitleA(consoleName.c_str());
 	HookMetadata::Console = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -56,8 +57,9 @@ void CreateConsole()
 	GetConsoleMode(HookMetadata::Console, &dwMode);
 	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 	SetConsoleMode(HookMetadata::Console, dwMode);
+
 	printfCyan("MK12TTH - Maintained by ");
-	printfInfo("@thethiny\n");
+	printfInfo("@thethiny");
 	printfGreen("ESettingsManager::bEnableConsoleWindow = true\n");
 }
 
@@ -65,25 +67,58 @@ void PreGameHooks()
 {
 	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
 	if (SettingsMgr->iLogLevel)
-		std::cout << "Generated Trampolines" << std::endl;
-	 MK12::IAT = ParsePEHeader();
+		printf("Generated Trampolines\n");
+	 IATable = ParsePEHeader();	 
+
+	 if (false)
+	 {
+		 std::cout << "Test" << std::endl;
+		 auto adddddr = 0x14230B620;
+		 Memory::VP::InjectHook(adddddr, GameTramp->Jump(MK12::Remake::GetArgBoolByNameWrapper), PATCH_JUMP); // Function not implemented properly
+		 std::cout << "DONE" << std::endl;
+	 }
 
 	if (SettingsMgr->bDisableSignatureCheck)
 	{
-		MK12::sActiveMods.bAntiSigCheck = MK12Hooks::DisableSignatureCheck();
+		HookMetadata::sActiveMods.bAntiSigCheck			= MK12Hook::Hooks::DisableSignatureCheck();
 	}
 	if (SettingsMgr->bDisableSignatureWarn)
 	{
-		MK12::sActiveMods.bAntiSigWarn = MK12Hooks::DisableSignatureWarn();
+		HookMetadata::sActiveMods.bAntiSigWarn			= MK12Hook::Hooks::DisableSignatureWarn();
 	}
 	if (SettingsMgr->bDisableChunkSigCheck)
 	{
-		MK12::sActiveMods.bAntiChunkSigCheck = MK12Hooks::bDisableChunkSigCheck();
+		HookMetadata::sActiveMods.bAntiChunkSigCheck	= MK12Hook::Hooks::DisableChunkSigCheck();
 	}
 	if (SettingsMgr->bDisableTOCSigCheck)
 	{
-		MK12::sActiveMods.bAntiTocSigCheck = MK12Hooks::bDisableTOCSigCheck();
+		HookMetadata::sActiveMods.bAntiTocSigCheck		= MK12Hook::Hooks::DisableTOCSigCheck();
 	}
+	if (SettingsMgr->bDisablePakTOCCheck)
+	{
+		HookMetadata::sActiveMods.bAntiPakTocCheck		= MK12Hook::Hooks::DisablePakTOCCheck();
+	}
+	if (SettingsMgr->bFNameToStrHook)
+	{
+		RegisterHacks::EnableRegisterHacks();
+		HookMetadata::sActiveMods.bFPathIdLoader		= MK12Hook::Hooks::FNameToStrWithIdLoader(GameTramp);
+		HookMetadata::sActiveMods.bFPathNoIdLoader		= MK12Hook::Hooks::FNameToStrNoIdLoader(GameTramp);
+		HookMetadata::sActiveMods.bFPathCommonLoader	= MK12Hook::Hooks::FNameToStrCommonLoader(GameTramp);
+	}
+	if (SettingsMgr->bUNameGetter)
+	{
+		HookMetadata::sActiveMods.UNameTableGetter		= MK12Hook::Hooks::UNameTableGetter();
+		MK12Hook::Hooks::OverrideFNameToWStrFuncs(GameTramp);
+	}
+	if (SettingsMgr->AnnouncerSwap.bEnable)
+	{
+		int swaps = MK12Hook::Mods::AnnouncerSwap();
+	}
+	if (SettingsMgr->bEnableServerProxy)
+	{
+		HookMetadata::sActiveMods.bGameEndpointSwap		= MK12Hook::Hooks::OverrideGameEndpointsData(GameTramp);
+	}
+
 
 	// Temp until address
 	/*MK1Functions::MK1ReadFString = (MK1Functions::ReadFString*)(uint64_t*)GetGameAddr(0x22956D0);
@@ -94,15 +129,15 @@ void PreGameHooks()
 void ProcessSettings()
 {
 	// KeyBinds
-	SettingsMgr->iVKCheats		= StringToVK(SettingsMgr->hkCheats);
-	SettingsMgr->iVKMenuToggle	= StringToVK(SettingsMgr->hkMenu);
-	SettingsMgr->iVKMenuInfo	= StringToVK(SettingsMgr->hkInfo);
+	SettingsMgr->iVKCheats				= StringToVK(SettingsMgr->hkCheats);
+	SettingsMgr->iVKMenuToggle			= StringToVK(SettingsMgr->hkMenu);
+	SettingsMgr->iVKMenuInfo			= StringToVK(SettingsMgr->hkInfo);
 
 	// DLL Procs
-	MK12::sLFS.ModLoader		= MK12::ParseLibFunc(SettingsMgr->szModLoader);
-	MK12::sLFS.AntiCheatEngine	= MK12::ParseLibFunc(SettingsMgr->szAntiCheatEngine);
-	MK12::sLFS.CurlSetOpt		= MK12::ParseLibFunc(SettingsMgr->szCurlSetOpt);
-	MK12::sLFS.CurlPerform		= MK12::ParseLibFunc(SettingsMgr->szCurlPerform);
+	HookMetadata::sLFS.ModLoader		= ParseLibFunc(SettingsMgr->szModLoader);
+	HookMetadata::sLFS.AntiCheatEngine	= ParseLibFunc(SettingsMgr->szAntiCheatEngine);
+	HookMetadata::sLFS.CurlSetOpt		= ParseLibFunc(SettingsMgr->szCurlSetOpt);
+	HookMetadata::sLFS.CurlPerform		= ParseLibFunc(SettingsMgr->szCurlPerform);
 
 	printfCyan("Parsed Settings\n");
 }
@@ -131,31 +166,33 @@ bool HandleWindowsVersion()
 	
 }
 
-bool VerifyProcessName()
-{
-	std::string expected_process("MK12.exe");
-	std::string process_name = GetProcessName();
-	if (process_name != expected_process)
-	{
-		return false;
+#include <string>
 
+inline bool VerifyProcessName() {
+	std::string expected_process = "mk12.exe";
+	std::string process_name = GetProcessName();
+
+	for (size_t i = 0; i < process_name.length(); ++i) {
+		process_name[i] = std::tolower(process_name[i]);
 	}
-	return true;
+
+	return (process_name == expected_process);
 }
+
 
 bool OnInitializeHook()
 {
+	FirstRunMgr->Init();
+	SettingsMgr->Init();
 
 	if (!HandleWindowsVersion())
 		return false;
 
-	if (!VerifyProcessName())
+	if (!SettingsMgr->bAllowNonMK && !VerifyProcessName())
 	{
 		SpawnError("This dll is made to work only with MK12.exe");
 		return false;
 	}
-
-	SettingsMgr->Init();
 
 	if (SettingsMgr->bEnableConsoleWindow)
 	{
@@ -174,6 +211,8 @@ bool OnInitializeHook()
 
 	if (SettingsMgr->bPauseOnStart)
 	{
+		std::cout << "Current cOut Log Level" << SettingsMgr->iLogLevel << std::endl;
+		printf("Current stdOut Log Level -> %d\n", SettingsMgr->iLogLevel);
 		MessageBoxA(0, "Freezing Game Until OK", ":)", MB_ICONINFORMATION);
 	}
 
@@ -200,22 +239,13 @@ const char* MK12HookPlugin::GetPluginTabName()
 	return "TT Hook";
 }
 
-void MK12HookPlugin::OnInitialize(HMODULE hMod)
+void MK12HookPlugin::OnInitialize()
 {
-	if (hMod == HookMetadata::CurrentDllModule || hMod == NULL) // Called from DLL Entry
-	{
-		std::cout << "Called from DLL Entry" << std::endl;
-		if (!OnInitializeHook())
-			return;
-	}
-	else
-	{
-		std::cout << "Called as EHP Plugin" << std::endl;
-		if (MK12HOOKSDK::IsOK())
-			return;
+	if (MK12HOOKSDK::IsOK())
+		return;
 
-		MK12HOOKSDK::Initialize(hMod);
-	}
+	printfInfo("Called as an EHP Plugin");
+	MK12HOOKSDK::Initialize();
 }
 
 void MK12HookPlugin::OnShutdown()
@@ -264,16 +294,40 @@ void MK12HookPlugin::TabFunction()
 	{
 
 		bool toggles[] = {
-			MK12::sActiveMods.bAntiSigCheck,
-			MK12::sActiveMods.bAntiChunkSigCheck,
-			MK12::sActiveMods.bAntiTocSigCheck,
+			HookMetadata::sActiveMods.bAntiSigCheck,
+			HookMetadata::sActiveMods.bAntiChunkSigCheck,
+			HookMetadata::sActiveMods.bAntiTocSigCheck,
+			HookMetadata::sActiveMods.bFPathIdLoader,
 		};
 		MK12HOOKSDK::ImGui_Checkbox("Pak Signature", &toggles[0]);
 		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[1]);
 		MK12HOOKSDK::ImGui_Checkbox("TOC Signature", &toggles[2]);
+		MK12HOOKSDK::ImGui_Checkbox("FString - Announcer", &toggles[3]);
 
 		//if (MK12HOOKSDK::ImGui_Button("button"))
 		//	counter++;
+	}
+	MK12HOOKSDK::ImGui_Separator();
+
+	if (HookMetadata::sActiveMods.UNameTableGetter)
+	{
+		if (MK12HOOKSDK::ImGui_CollapsingHeader("UE4"))
+		{
+			MK12HOOKSDK::ImGui_Text("UNameTable");
+
+			bool bIsNameInit = MK12::UMainNameTable->IsInitialized;
+			int iNameTablesCount = MK12::UNameTable->TablesCount;
+			int iNameTablesSize = MK12::UNameTable->ProbTablesSize;
+
+			MK12HOOKSDK::ImGui_Checkbox("Is UName Initialized", &bIsNameInit);
+			MK12HOOKSDK::ImGui_InputInt("UName Tables Count", &iNameTablesCount);
+			MK12HOOKSDK::ImGui_InputInt("UName Tables Size", &iNameTablesSize);
+
+		}
+	}
+	else
+	{
+		MK12HOOKSDK::ImGui_Text("UName Object Not Patched - UName Info Disabled");
 	}
 	/*if (MK12HOOKSDK::ImGui_CollapsingHeader("Input"))
 	{
@@ -326,7 +380,9 @@ bool APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpRes)
 	switch (reason)
 	{
 	case DLL_PROCESS_ATTACH:
-		MK12HookPlugin::OnInitialize(hModule);
+		//MK12HookPlugin::OnInitialize(hModule);
+		printfInfo("On Attach Initialize");
+		OnInitializeHook();
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
 	case DLL_PROCESS_DETACH:
