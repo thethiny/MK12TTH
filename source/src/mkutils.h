@@ -12,6 +12,7 @@
 #define			RVAtoLP( base, offset )		((PBYTE)base + offset)
 #define			FuncMap						std::map<std::string, ULONGLONG>
 #define			LibMap						std::map<std::string, FuncMap>
+#define			FNAME_STR(FName)			MK12::FNameFunc::ToStr(*FName)
 typedef			__int64						int64;
 
 int64			GetGameEntryPoint();

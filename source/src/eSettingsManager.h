@@ -28,6 +28,11 @@ public:
 	bool bPatchCurl;
 	bool bFNameToStrHook;
 	bool bUNameGetter;
+	bool bGetFightMetadata;
+	bool bSerializeSecretFights;
+	bool bEnableStringSwap;
+	bool bEnableFloydTracking;
+	bool bEnableProfileGetter;
 
 	// Addresses
 
@@ -43,6 +48,12 @@ public:
 	std::string pFPath2LoadPat;
 	std::string pFPathCLoadPat;
 	std::string pEndpointLoader;
+	std::string pProfileGetter;
+	//Floyd
+	std::string pSecretFightCondPat;
+	std::string pGetChallengesFromHash;
+	std::string pGetFloydHashInputString;
+	std::string pGetFloydHashInputString2;
 
 
 	// Menu Section

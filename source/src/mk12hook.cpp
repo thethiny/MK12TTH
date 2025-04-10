@@ -1,12 +1,14 @@
 #include "mk12hook.h"
 
 
-HookMetadata::ActiveMods			HookMetadata::sActiveMods;
+HookMetadata::ActiveMods			HookMetadata::ActiveModsMap;
 HookMetadata::CheatsStruct			HookMetadata::sCheatsStruct;
 HookMetadata::LibMapsStruct			HookMetadata::sLFS;
 HookMetadata::UserKeysStruct		HookMetadata::sUserKeys;
 HookMetadata::GameReadyState		HookMetadata::sGameState;
 HookMetadata::SwapTable				HookMetadata::FSwapTable;
+HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
+HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
 
 
@@ -54,11 +56,16 @@ namespace MK12Hook::Proxies {
 	}
 
 	//const char* SubzeroFatality = "/Game/Disk/Char/SubZero/Cine/Fatality/Roster/A/FatalityA.FatalityA";
-	const char* SubzeroFatality = "/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_ShangTsung.SWGP_Announcer-SWTC_ANNO_ShangTsung";
-	const uint16_t SubzeroFatalitySize = (uint16_t)strlen(SubzeroFatality);
+	//const char* SubzeroFatality = "/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_ShangTsung.SWGP_Announcer-SWTC_ANNO_ShangTsung";
+	//const uint16_t SubzeroFatalitySize = (uint16_t)strlen(SubzeroFatality);
 	/*MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/DLC/REL_OmniMan/Shared/Cine/Fatality/Fatality.Fatality");*/
 	// MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/Disk/Char/SubZero/Cine/Fatality/Roster/B/FatalityB.FatalityB"); // See if the issue is the size therefore another function needs to be hooked
-	MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_SubZero.SWGP_Announcer-SWTC_ANNO_SubZero"); // See if the issue is the size therefore another function needs to be hooked
+	//MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_SubZero.SWGP_Announcer-SWTC_ANNO_SubZero"); // See if the issue is the size therefore another function needs to be hooked
+	/*const char* AcidBubblesModifierName = "/Game/DLC/REL_SeasonOfDragon/Modifiers/GlobalModifiers/Acid/AcidSkullIntervalGlobalModifier.AcidSkullIntervalGlobalModifier";*/
+	/*MK12::FName* ToastyModifierName = MK12::FNameFunc::FromStr("/Game/DLC/REL_SeasonOfSoulEater/Shared/UI/Libraries/UIModifiers/Toasty.Toasty");*/
+	/*const char* ToastyModifierName = "/Game/DLC/REL_SeasonOfSoulEater/Modifiers/GlobalModifiers/Fire/ToastyGlobalModifier.ToastyGlobalModifier";*/
+	//const char* OriginalModifierName =	"/Game/Disk/Shared/Game/GeneratedScripts/Modifiers/Acid/AcidSkullModifier.AcidSkullModifier";
+	//const char* NewModifierName =		"/Game/Disk/Shared/Game/GeneratedScripts/Modifiers/Fire/ToastyModifier.ToastyModifier";
 
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
@@ -92,6 +99,10 @@ namespace MK12Hook::Proxies {
 	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
 		const char* name = MK12::FNameFunc::ToStr(Name);
+		if (containsCaseInsensitive(name, "skin007_pal004"))
+		{
+			printf("DEBUGME");
+		}
 		MK12::FName* swap = HookMetadata::FSwapTable.get(name);
 		if (swap == nullptr)
 		{
@@ -106,16 +117,17 @@ namespace MK12Hook::Proxies {
 		return swap;
 	}
 
-	wchar_t** OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t*& strAddr)
+	wchar_t** OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t** EndpointAddress)
 	{
 		CPPython::string ServerUrl = SettingsMgr->szServerUrl;
 
-		if (HookMetadata::sActiveMods.bGameEndpointSwap && !ServerUrl.empty())
+		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"] && !ServerUrl.empty())
 		{
 			ServerUrl = ServerUrl.strip("/");
-
+			
 			int StringLength = (ServerUrl.size() + 1) * 2;
 			std::wstring wServerUrl = std::wstring(ServerUrl.begin(), ServerUrl.end());
+
 			wprintf(L"Replacing endpoint \"%s\" with \"%s\"!\n", obj.ValuePointer, wServerUrl.c_str());
 
 			obj.ValuePointer = new wchar_t[StringLength];
@@ -124,11 +136,235 @@ namespace MK12Hook::Proxies {
 			obj.ValueLength = ServerUrl.size() + 1; // Characters count in str and not wstr
 			obj.ValueLength8BAligned = (obj.ValueLength + 7) & (~7);
 
+			MK12::GetEndpointKeyValue(obj, EndpointAddress);
+			return &obj.ValuePointer;
 		}
 
-		wchar_t** returned_value = MK12::GetEndpointKeyValue(obj, strAddr);
-		return returned_value;
+		return MK12::GetEndpointKeyValue(obj, EndpointAddress);
 
+	}
+
+	MK12::TArray<uint32_t>* GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2)
+	{ // Use hash to create 10 challenges
+
+		printf("Floyd Shuffle Seed: %llX\n", (uint64_t)ShuffleSeed);
+		MK12::TArray<uint32_t>* ReturnedArrayLocation = MK12::GenerateFloydCluesFromHash(ArrayLocation, ShuffleSeed, unk, unk2); // 8 bytes location and 4 bytes count
+
+		if (ReturnedArrayLocation && ReturnedArrayLocation->Data) {
+
+			// Store the data
+			uint32_t newUserProfileHash = (uint32_t)(ShuffleSeed >> 32);
+			uint32_t newFloydEncounters = (uint32_t)(ShuffleSeed & 0xFFFFFFFF);
+
+			if (newFloydEncounters > HookMetadata::CurrentFloydInfo.FloydEncounters)
+			{
+				HookMetadata::CurrentFloydInfo.Clues.clear();
+
+				for (uint8_t i = 0; i < ReturnedArrayLocation->ElementsCount; i++)
+				{
+					HookMetadata::CurrentFloydInfo.Clues.push_back((uint8_t)ReturnedArrayLocation->Data[i] + 1);
+				}
+
+				HookMetadata::CurrentFloydInfo.UserProfileHash = newUserProfileHash;
+				HookMetadata::CurrentFloydInfo.FloydEncounters = newFloydEncounters;
+			}
+
+			printf("Floyd Challenges: ");
+			for (int32_t i = 0; i < ReturnedArrayLocation->ElementsCount; ++i) {
+				printf("%i ", (uint32_t)ReturnedArrayLocation->Data[i]+1);
+			}
+			printf("\n");
+		}
+		else {
+			printfError("Couldn't Read Floyd Challenges!\n");
+		}
+
+		return ReturnedArrayLocation;
+	}
+
+	uint32_t CustomCityHashProxy(wchar_t** StringToHash)
+	{ // Hash the floyd string
+		if (StringToHash && *StringToHash) {
+			printf("StringToHash: %ls\n", *StringToHash); // %ls for wchar_t*
+
+			CPPython::string str(*StringToHash);
+			std::vector<CPPython::string> parts = str.split("/");
+
+			if (!parts.empty() && !HookMetadata::UserProfileInfo.OfflineProfileId)
+			{
+				std::vector<CPPython::string> pipeParts = parts[0].split("|");
+
+				if (pipeParts.size() >= 2)
+				{
+					delete[] HookMetadata::UserProfileInfo.OfflineProfileId;
+
+					size_t len = pipeParts[1].size() + 1;
+					HookMetadata::UserProfileInfo.OfflineProfileId = new wchar_t[len];
+					mbstowcs(HookMetadata::UserProfileInfo.OfflineProfileId, pipeParts[1].c_str(), len);
+
+					if (SettingsMgr->iLogLevel)
+						printf("OfflineProfileId extracted: %ls\n", HookMetadata::UserProfileInfo.OfflineProfileId);
+				}
+				else
+				{
+					if (SettingsMgr->iLogLevel)
+						printf("OfflineProfileId not found. Single User Profile only.\n");
+				}
+			}
+			if (parts.size() == 2 && !HookMetadata::UserProfileInfo.HydraId)
+			{
+				delete[] HookMetadata::UserProfileInfo.HydraId;
+
+				size_t len = parts[1].size() + 1;
+				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len];
+				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len);
+				if (SettingsMgr->iLogLevel)
+					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
+			}
+			else if (parts.size() >= 3 && !HookMetadata::UserProfileInfo.WBId)
+			{
+				delete[] HookMetadata::UserProfileInfo.HydraId;
+				delete[] HookMetadata::UserProfileInfo.WBId;
+
+				size_t len1 = parts[1].size() + 1;
+				size_t len2 = parts[2].size() + 1;
+
+				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len1];
+				HookMetadata::UserProfileInfo.WBId = new wchar_t[len2];
+
+				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len1);
+				mbstowcs(HookMetadata::UserProfileInfo.WBId, parts[2].c_str(), len2);
+
+				if (SettingsMgr->iLogLevel)
+				{
+					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
+					printf("WBId extracted: %ls\n", HookMetadata::UserProfileInfo.WBId);
+				}
+
+			}
+			else {
+				if (SettingsMgr->iLogLevel)
+					printf("Offline Mode Floyd String Hash Detected!");
+			}
+		}
+		else
+		{
+			printfError("StringToHash Is Empty!\n");
+		}
+		
+		uint32_t HashResult = MK12::CustomCityHash(StringToHash);
+		printf("HashResult: %X\n", (uint32_t)HashResult);
+
+		return HashResult;
+	}
+
+
+	wchar_t* MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...)
+	{
+		va_list args;
+		va_start(args, Format);
+
+		wchar_t* arg0 = va_arg(args, wchar_t*);
+		wchar_t* arg1 = va_arg(args, wchar_t*);
+		wchar_t* arg2 = va_arg(args, wchar_t*);
+
+		va_end(args);
+
+		auto SafeStringCopy = [](const wchar_t* src) -> wchar_t* {
+			if (!src) return nullptr;
+			size_t len = wcslen(src) + 1;
+			wchar_t* copy = new wchar_t[len];
+			wcscpy(copy, src);
+			return copy;
+			};
+
+		delete[] HookMetadata::UserProfileInfo.Platform;
+		delete[] HookMetadata::UserProfileInfo.PlatformId;
+		delete[] HookMetadata::UserProfileInfo.SaveKey;
+
+		HookMetadata::UserProfileInfo.Platform = SafeStringCopy(arg0);
+		HookMetadata::UserProfileInfo.PlatformId = SafeStringCopy(arg1);
+		HookMetadata::UserProfileInfo.SaveKey = SafeStringCopy(arg2);
+
+		if (SettingsMgr->iLogLevel)
+			printf("Stored Profile Info:\nPlatform: %ws\nPlatformId: %ws\nSaveKey: %ws\n", arg0, arg1, arg2);
+
+		// Now call real function with full argsCopy
+		return MK12::MKWScanf(ResultString, Format, arg0, arg1, arg2);
+	}
+
+
+
+	MK12::FKlassicLadderSecretFightData* SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData* mSecretFightData)
+	{
+		printf("Found the index @ %p\n", mSecretFightData);
+ 		MK12::UKlassicTowerSecretFightData* mKlassicTowerSecretFightInstance = (MK12::UKlassicTowerSecretFightData*)(((uint64_t)(mSecretFightData)) - MK12::KlassicTowerSecretFightDataOffset);
+		printf("Found the parent index @ %p\n", mKlassicTowerSecretFightInstance);
+
+		MK12::FKlassicLadderSecretFightData* mSecretFightDataRet = MK12::SetupSecretFightConditions(mSecretFightData);
+
+		if (!SettingsMgr->bSerializeSecretFights || !HookMetadata::ActiveModsMap["UNameTableGetter"])
+			return mSecretFightData;
+
+		if (mKlassicTowerSecretFightInstance)
+		{
+			MK12::FMissionBuildStep_KlassicTowerSecretFight& secretFightRules = mKlassicTowerSecretFightInstance->mSecretFightRulesBuildStep;
+
+			printf("Floyd mDifficultyMaps: ");
+			for (int i = 0; i < secretFightRules.mDifficultyMap.ElementsCount; i++) {
+				printf("%02X ", secretFightRules.mDifficultyMap.Data[i]);
+			}
+			printf("\n");
+		}
+
+
+		char FightingStatCondition[]		= "LadderSecretFightCondition_FightingStatCondition";
+		char MultiFightingStatCondition[]	= "LadderSecretFightCondition_MultiFightingStatCondition";
+		char MoveTraceCondition[]			= "LadderSecretFightCondition_MoveTraceConditions";
+		char ProfileStatCondition[]			= "LadderSecretFightCondition_ProfileStatCondition";
+
+		// Start deserialization
+		for (int i = 0; i < mSecretFightData->mConditions.ElementsCount; i++)
+		{
+			MK12::FKlassicLadderSecretFightCondition* CurrentCondition = MK12::TArrayHelpers::index<MK12::FKlassicLadderSecretFightCondition>(mSecretFightData->mConditions, i);
+			MK12::FName* ScriptType = MK12::NameTableIndexToFName(&CurrentCondition->StructPtrType->ScriptClass);
+			printf("Floyd Challenge %d - %s\n\tType %s\n", CurrentCondition->Index, MK12::EnumMaps::FloydChallengeMap[CurrentCondition->Index].c_str(), FNAME_STR(ScriptType));
+			if (!CurrentCondition->enable)
+			{
+				printf("Disabled!");
+				continue;
+			}
+
+			if (strncmp(ScriptType->Name, FightingStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			{
+				MK12::FLadderSecretFightCondition_FightingStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_FightingStatCondition*>(CurrentCondition->StructPtrInstance);
+				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
+			}
+			else if (strncmp(ScriptType->Name, MultiFightingStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			{
+				MK12::FLadderSecretFightCondition_MultiFightingStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_MultiFightingStatCondition*>(CurrentCondition->StructPtrInstance);
+				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
+			}
+			else if (strncmp(ScriptType->Name, MoveTraceCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			{
+				MK12::FLadderSecretFightCondition_MoveTraceConditions* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_MoveTraceConditions*>(CurrentCondition->StructPtrInstance);
+				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
+			}
+			else if (strncmp(ScriptType->Name, ProfileStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			{
+				MK12::FLadderSecretFightCondition_ProfileStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_ProfileStatCondition*>(CurrentCondition->StructPtrInstance);
+				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
+			}
+
+			if (!CurrentCondition->CanCheckDuringFight)
+			{
+				printf("* Notification pops up after the match!\n");
+			}
+			printf("\n");
+		}
+
+
+		return mSecretFightDataRet;
 	}
 };
 
@@ -555,7 +791,7 @@ namespace MK12Hook::Hooks {
 			printfYellow("Overriding FNameToWStr disabled::UNameGetter Disabled!\n");
 			return false;
 		}
-		if (!HookMetadata::sActiveMods.UNameTableGetter)
+		if (!HookMetadata::ActiveModsMap["UNameTableGetter"])
 		{
 			printfError("Overriding FNameToWStr disabled::UNameGetter Not found!");
 			return false;
@@ -565,7 +801,7 @@ namespace MK12Hook::Hooks {
 		{
 			if (SettingsMgr->bFNameToStrHook)
 			{
-				if (HookMetadata::sActiveMods.bFPathIdLoader)
+				if (HookMetadata::ActiveModsMap["bFPathIdLoader"])
 				{
 					printfYellow("Failed to override FNameToWStrId, but Proxy Loader is working.\n");
 				}
@@ -578,7 +814,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrWithIdStart), GameTramp->Jump(MK12::Remake::FNameInfoToWStringWithId), PATCH_JUMP);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::sActiveMods.bFPathIdLoader)
+			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
 				printfYellow("FNameToWStrId replacing Proxy Loader\n");
 			else
 				printfSuccess("Overrided FNameToWStrId skipping Proxy Loader");
@@ -588,7 +824,7 @@ namespace MK12Hook::Hooks {
 		{
 			if (SettingsMgr->bFNameToStrHook)
 			{
-				if (HookMetadata::sActiveMods.bFPathNoIdLoader)
+				if (HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
 				{
 					printfYellow("Failed to override FNameToWStrNoId, but Proxy Loader is working.\n");
 				}
@@ -601,7 +837,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrNoIdStart), GameTramp->Jump(MK12::Remake::FNameInfoToWStringNoId), PATCH_JUMP);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::sActiveMods.bFPathNoIdLoader)
+			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
 				printfYellow("FNameToWStrNoId replacing Proxy Loader\n");
 			else
 				printfSuccess("Overrided FNameToWStrNoId skipping Proxy Loader");
@@ -611,7 +847,7 @@ namespace MK12Hook::Hooks {
 		{
 			if (SettingsMgr->bFNameToStrHook)
 			{
-				if (HookMetadata::sActiveMods.bFPathCommonLoader)
+				if (HookMetadata::ActiveModsMap["bFPathCommonLoader"])
 				{
 					printfYellow("Failed to override FNameToWStrCommon, but Proxy Loader is working.\n");
 				}
@@ -624,7 +860,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrCommonStart), GameTramp->Jump(MK12::Remake::FNameInfoToWString), PATCH_JUMP);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::sActiveMods.bFPathCommonLoader)
+			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathCommonLoader"])
 				printfYellow("FNameToWStrCommon replacing Proxy Loader\n");
 			else
 				printfSuccess("Overrided FNameToWStrCommon skipping Proxy Loader");
@@ -658,13 +894,199 @@ namespace MK12Hook::Hooks {
 
 		uint64_t call_address = ((uint64_t)lpPattern) + 0x00;
 		if (SettingsMgr->iLogLevel)
-			printf("EndpointLoader Pattern Found at: %p", lpPattern);
+			printf("EndpointLoader Pattern Found at: %p\n", lpPattern);
 
 		MakeProxyFromOpCode(GameTramp, call_address, (uint8_t)4, MK12Hook::Proxies::OverrideGameEndpoint, &MK12::GetEndpointKeyValue, PATCH_CALL);
 
 		printfSuccess("EndpointLoader Proxied");
 
 		return true;
+	}
+
+	bool ProfileGetterHooks(Trampoline* GameTramp)
+	{
+		printf("\n==ProfileGetterHooks==\n");
+
+		std::string pattern = SettingsMgr->pProfileGetter;
+		if (pattern.empty())
+		{
+			printfError("pProfileGetter Not Specified. Please Add Pattern to ini file!");
+			return false;
+		}
+
+		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
+		if (!lpPattern)
+		{
+			printfError("Couldn't find MK::wscanf Pattern");
+			return false;
+		}
+
+		uint64_t CallAddr = ((uint64_t)lpPattern) + 30;
+
+		MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
+		if (SettingsMgr->iLogLevel)
+			printf("MK::wscanf Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::GenerateFloydCluesFromHash);
+
+
+		if (SettingsMgr->iLogLevel)
+			printf("MK::wscanf  Pattern Found at: %p\n", lpPattern);
+
+		printfSuccess("Profile Getter Patched");
+		return true;
+		
+	}
+
+	int FloydTrackingHooks(Trampoline* GameTramp)
+	{
+		printf("\n==FloydTrackingHooks==\n");
+
+		int HooksCtr = 0;
+		int ExpectedHooksCtr = 0;
+
+		std::string pattern = SettingsMgr->pGetChallengesFromHash;
+		ExpectedHooksCtr++;
+		if (pattern.empty())
+		{
+			printfError("pGetChallengesFromHash Not Specified. Please Add Pattern to ini file!");
+		}
+		else
+		{
+			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
+			if (!lpPattern)
+			{
+				printfError("Couldn't find GetChallengesFromHash Pattern");
+			}
+			else
+			{
+				uint64_t CallAddr = ((uint64_t)lpPattern) + 14;
+
+				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::GenerateFloydCluesFromHashProxy, &MK12::GenerateFloydCluesFromHash, PATCH_CALL);
+				if (SettingsMgr->iLogLevel)
+					printf("GetChallengesFromHash Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::GenerateFloydCluesFromHash);
+
+				HooksCtr++;
+
+				if (SettingsMgr->iLogLevel)
+					printf("GetChallengesFromHash Pattern Found at: %p\n", lpPattern);
+			}
+			
+		}
+
+		pattern = SettingsMgr->pGetFloydHashInputString;
+		ExpectedHooksCtr++;
+		if (pattern.empty())
+		{
+			printfError("pGetFloydHashInputString Not Specified. Please Add Pattern to ini file!");
+		}
+		else
+		{
+
+			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
+
+			if (!lpPattern)
+			{
+				printfError("Couldn't find GetFloydHashInputString Pattern");
+				false;
+			}
+			else
+			{
+				uint64_t CallAddr = ((uint64_t)lpPattern) + 11;
+
+				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
+				if (SettingsMgr->iLogLevel)
+					printf("GetFloydHashInputString Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::CustomCityHash);
+
+				HooksCtr++;
+
+				if (SettingsMgr->iLogLevel)
+					printf("GetFloydHashInputString Pattern Found at: %p\n", lpPattern);
+			}
+
+
+		}
+
+		pattern = SettingsMgr->pGetFloydHashInputString2;
+		ExpectedHooksCtr++;
+		if (pattern.empty())
+		{
+			printfError("pGetFloydHashInputString2 Not Specified. Please Add Pattern to ini file!");
+		}
+		else
+		{
+
+			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
+
+			if (!lpPattern)
+			{
+				printfError("Couldn't find GetFloydHashInputString Pattern");
+				false;
+			}
+			else
+			{
+				uint64_t CallAddr = ((uint64_t)lpPattern) + 11;
+
+				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
+				if (SettingsMgr->iLogLevel)
+					printf("GetFloydHashInputString Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::CustomCityHash);
+
+				HooksCtr++;
+
+				if (SettingsMgr->iLogLevel)
+					printf("GetFloydHashInputString Pattern Found at: %p\n", lpPattern);
+			}
+
+
+		}
+
+		if (HooksCtr == ExpectedHooksCtr)
+			printfSuccess("Floyd Tracking On");
+		else if (HooksCtr)
+			printfWarning("Not all Floyd Trackers functioning!");
+		else
+			printfError("Floyd Tracking not working!");
+
+		return HooksCtr;
+	}
+
+	bool ExtractFightMetadataFromSecretFightSetupStage(Trampoline* GameTramp)
+	{
+		printf("\n==ExtractFightMetadataFromSecretFightSetupStage==\n");
+		std::string pattern = SettingsMgr->pSecretFightCondPat;
+		if (pattern.empty())
+		{
+			printfError("pSecretFightCondPat Not Specified. Please Add Pattern to ini file!");
+			return false;
+		}
+
+		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
+		if (!lpPattern)
+		{
+			printfError("Couldn't find SecretFightConditionSetup Pattern");
+			false;
+		}
+
+		if (SettingsMgr->iLogLevel)
+			printf("SecretFightConditionSetup Pattern Found at: %p\n", lpPattern);
+
+		//uint64_t CallAddr = ((uint64_t)lpPattern) + 0x17;
+		uint64_t CallAddr = ((uint64_t)lpPattern) + 77;
+
+		//uint8_t SecretFightDataOffset = *((uint8_t*)(CallAddr - 0x5)); // Should point to 0x70
+		//MK12::KlassicTowerSecretFightDataOffset = GetOffsetFromOpCode((uint64_t)lpPattern, -0x5, 1);
+		//MK12::KlassicTowerSecretFightDataOffset = GetOffsetFromOpCode((uint64_t)lpPattern, +56, 1); // 0x80
+		MK12::KlassicTowerSecretFightDataOffset = 0x80;
+
+		MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::SetupSecretFightConditionsProxy, &MK12::SetupSecretFightConditions, PATCH_JUMP);
+
+		if (SettingsMgr->iLogLevel)
+		{
+			printf("SecretFightConditionSetup Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::SetupSecretFightConditions);
+		}
+
+		printfSuccess("SecretFightConditionSetup Proxied");
+
+		return true;
+
 	}
 
 };
@@ -699,7 +1121,7 @@ namespace MK12Hook::Mods {
 			printfError("No FPath Swapper has been loaded. Make sure bFPathLoader is enabled.");
 			return false;
 		}
-		if (!HookMetadata::sActiveMods.bFPathIdLoader)
+		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
 		{
 			printfError("No FPath Swapper has been loaded. FNameToStrWithIdLoader Patching was unsuccessful.");
 			return false;
@@ -723,8 +1145,109 @@ namespace MK12Hook::Mods {
 		}
 
 		printfYellow("%d Announcers swapped.\n", count);
+		int iDebugSwap = 0;
+
+		//HookMetadata::FSwapTable.insert(Proxies::OriginalModifierName, Proxies::NewModifierName);
+		//{
+		//	const char* a1 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char.BP_SubZero_Skin007_A_Char_C";
+		//	const char* a2 = "/Game/Disk/Char/SubZero/Skin/002/Blueprint/BP_SubZero_Skin002_A_Char.BP_SubZero_Skin002_A_Char_C";
+		//	//const char* a2 = "/Game/DLC/REL_T1000/Char/SubZero/Skin/009/Blueprint/BP_SubZero_Skin009_A_Char.BP_SubZero_Skin009_A_Char_C";
+		//	HookMetadata::FSwapTable.insert(a1, a2);
+		//	iDebugSwap++;
+		//}
+		//{
+		//	const char* a1 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char";
+		//	const char* a2 = "/Game/Disk/Char/SubZero/Skin/002/Blueprint/BP_SubZero_Skin002_A_Char";
+		//	HookMetadata::FSwapTable.insert(a1, a2);
+		//	iDebugSwap++;
+		//}
+		/*{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Palette/SetA/Blueprint/BP_T1000_Skin001_Pal001.BP_T1000_Skin001_Pal001_C";
+			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Palette/SetA/Blueprint/BP_SubZero_Skin007_Pal002.BP_SubZero_Skin007_Pal002_C";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}
+		{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Palette/SetA/Blueprint/BP_T1000_Skin001_Pal001";
+			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Palette/SetA/Blueprint/BP_SubZero_Skin007_Pal002";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}
+		{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Blueprint/BP_T1000_Skin001_A_Char";
+			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}
+		{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Blueprint/BP_T1000_Skin001_A_Char.BP_T1000_Skin001_A_Char_C";
+			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char.BP_SubZero_Skin007_A_Char_C";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}
+		{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Template/Blueprint/BP_T1000_CharSelect_Anim.BP_T1000_CharSelect_Anim_C";
+			const char* a2 = "/Game/Disk/Char/SubZero/Template/Blueprint/BP_SubZero_CharSelect_Anim.BP_SubZero_CharSelect_Anim_C";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}
+		{
+			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Template/Blueprint/BP_T1000_CharSelect_Anim";
+			const char* a2 = "/Game/Disk/Char/SubZero/Template/Blueprint/BP_SubZero_CharSelect_Anim";
+			HookMetadata::FSwapTable.insert(a1, a2);
+			iDebugSwap++;
+		}*/
+		//printfYellow("DEBUG swapped %d.\n", iDebugSwap);
+
+
 		
 		return count;
+	}
+	int StringSwaps()
+	{
+		printf("\n==Swapping Strings==\n");
+		if (!SettingsMgr->bFNameToStrHook)
+		{
+			printfError("No FPath Swapper has been loaded. Make sure bFPathLoader is enabled.");
+			return -1;
+		}
+		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("No FPath Swapper has been loaded. FNameToStrWithIdLoader Patching was unsuccessful.");
+			return -1;
+		}
+		if (HookMetadata::ActiveModsMap["UNameTableGetter"])
+		{
+			printfError("Currently using String Swaps with `bUNameGetter` set to `true` is not supported. Only `bFPathLoader` must be `true`.");
+			return -1;
+		}
+
+		std::ifstream file("string_swaps.txt");
+
+		CPPython::string line;
+		int iSwapsAmount = 0;
+
+		if (!file.is_open()) {
+			printfError("Failed to open string_swaps.txt\n");
+			return -1;
+		}
+
+		while (std::getline(file, line)) {
+			CPPython::string stripped_line = line.strip();
+			auto parts = stripped_line.split("->");
+
+			if (parts.size() == 2) {
+				CPPython::string a1 = parts[0].strip(" ");
+				CPPython::string a2 = parts[1].strip(" ");
+				HookMetadata::FSwapTable.insert(a1.c_str(), a2.c_str());
+				std::cout << "Inserted: " << a1 << " -> " << a2 << std::endl;
+				iSwapsAmount++;
+			}
+		}
+
+		file.close();
+		std::cout << "Total swaps applied: " << iSwapsAmount << std::endl;
+		return iSwapsAmount;
 	}
 }
 
@@ -732,5 +1255,4 @@ namespace HookMetadata {
 	HHOOK KeyboardProcHook = nullptr;
 	HMODULE CurrentDllModule = NULL;
 	HANDLE Console = NULL;
-
 };

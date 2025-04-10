@@ -37,6 +37,7 @@
     <ClInclude Include="source\src\eSettingsManager.h" />
     <ClInclude Include="source\src\mk12.h" />
     <ClInclude Include="source\src\mk12hook.h" />
+    <ClInclude Include="source\src\mk12_enums.h" />
     <ClInclude Include="source\src\mkutils.h" />
     <ClInclude Include="source\src\MK12Unlocker.h" />
     <ClInclude Include="source\utils\CPPython\cppython.h" />
@@ -54,7 +55,7 @@
     <ProjectGuid>{FADD6970-890B-4323-906F-074AB498A5FD}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>thethinyHooks</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>ASIMK12</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

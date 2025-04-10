@@ -6,7 +6,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.2.3";
+constexpr const char * CURRENT_HOOK_VERSION = "0.3.0";
 
 Trampoline* GameTramp, * User32Tramp;
 
@@ -70,59 +70,63 @@ void PreGameHooks()
 		printf("Generated Trampolines\n");
 	 IATable = ParsePEHeader();	 
 
-	 if (false)
-	 {
-		 std::cout << "Test" << std::endl;
-		 auto adddddr = 0x14230B620;
-		 Memory::VP::InjectHook(adddddr, GameTramp->Jump(MK12::Remake::GetArgBoolByNameWrapper), PATCH_JUMP); // Function not implemented properly
-		 std::cout << "DONE" << std::endl;
-	 }
 
 	if (SettingsMgr->bDisableSignatureCheck)
 	{
-		HookMetadata::sActiveMods.bAntiSigCheck			= MK12Hook::Hooks::DisableSignatureCheck();
+		HookMetadata::ActiveModsMap["bAntiSigCheck"]		= MK12Hook::Hooks::DisableSignatureCheck();
 	}
 	if (SettingsMgr->bDisableSignatureWarn)
 	{
-		HookMetadata::sActiveMods.bAntiSigWarn			= MK12Hook::Hooks::DisableSignatureWarn();
+		HookMetadata::ActiveModsMap["bAntiSigWarn"]			= MK12Hook::Hooks::DisableSignatureWarn();
 	}
 	if (SettingsMgr->bDisableChunkSigCheck)
 	{
-		HookMetadata::sActiveMods.bAntiChunkSigCheck	= MK12Hook::Hooks::DisableChunkSigCheck();
+		HookMetadata::ActiveModsMap["bAntiChunkSigCheck"]	= MK12Hook::Hooks::DisableChunkSigCheck();
 	}
 	if (SettingsMgr->bDisableTOCSigCheck)
 	{
-		HookMetadata::sActiveMods.bAntiTocSigCheck		= MK12Hook::Hooks::DisableTOCSigCheck();
+		HookMetadata::ActiveModsMap["bAntiTocSigCheck"]		= MK12Hook::Hooks::DisableTOCSigCheck();
 	}
 	if (SettingsMgr->bDisablePakTOCCheck)
 	{
-		HookMetadata::sActiveMods.bAntiPakTocCheck		= MK12Hook::Hooks::DisablePakTOCCheck();
+		HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
 	}
 	if (SettingsMgr->bFNameToStrHook)
 	{
 		RegisterHacks::EnableRegisterHacks();
-		HookMetadata::sActiveMods.bFPathIdLoader		= MK12Hook::Hooks::FNameToStrWithIdLoader(GameTramp);
-		HookMetadata::sActiveMods.bFPathNoIdLoader		= MK12Hook::Hooks::FNameToStrNoIdLoader(GameTramp);
-		HookMetadata::sActiveMods.bFPathCommonLoader	= MK12Hook::Hooks::FNameToStrCommonLoader(GameTramp);
+		HookMetadata::ActiveModsMap["bFPathIdLoader"]		= MK12Hook::Hooks::FNameToStrWithIdLoader(GameTramp);
+		HookMetadata::ActiveModsMap["bFPathNoIdLoader"]		= MK12Hook::Hooks::FNameToStrNoIdLoader(GameTramp);
+		HookMetadata::ActiveModsMap["bFPathCommonLoader"]	= MK12Hook::Hooks::FNameToStrCommonLoader(GameTramp);
 	}
 	if (SettingsMgr->bUNameGetter)
 	{
-		HookMetadata::sActiveMods.UNameTableGetter		= MK12Hook::Hooks::UNameTableGetter();
+		HookMetadata::ActiveModsMap["UNameTableGetter"]		= MK12Hook::Hooks::UNameTableGetter();
 		MK12Hook::Hooks::OverrideFNameToWStrFuncs(GameTramp);
 	}
 	if (SettingsMgr->AnnouncerSwap.bEnable)
 	{
 		int swaps = MK12Hook::Mods::AnnouncerSwap();
 	}
+	if (SettingsMgr->bEnableStringSwap)
+	{
+		int swaps = MK12Hook::Mods::StringSwaps();
+	}
 	if (SettingsMgr->bEnableServerProxy)
 	{
-		HookMetadata::sActiveMods.bGameEndpointSwap		= MK12Hook::Hooks::OverrideGameEndpointsData(GameTramp);
+		HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData(GameTramp);
 	}
-
-
-	// Temp until address
-	/*MK1Functions::MK1ReadFString = (MK1Functions::ReadFString*)(uint64_t*)GetGameAddr(0x22956D0);
-	InjectHook(GetGameAddr(0x22954E7), GameTramp->Jump(MK1Functions::ReadFStringProxy), PATCH_CALL);*/
+	if (SettingsMgr->bGetFightMetadata)
+	{
+		HookMetadata::ActiveModsMap["bFightMetadata"]		= MK12Hook::Hooks::ExtractFightMetadataFromSecretFightSetupStage(GameTramp);
+	}
+	if (SettingsMgr->bEnableFloydTracking)
+	{
+		HookMetadata::ActiveModsMap["bFloydTracking"]		= MK12Hook::Hooks::FloydTrackingHooks(GameTramp);
+	}
+	if (SettingsMgr->bEnableProfileGetter)
+	{
+		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks(GameTramp);
+	}
 	
 }
 
@@ -292,24 +296,39 @@ void MK12HookPlugin::TabFunction()
 
 	if (MK12HOOKSDK::ImGui_CollapsingHeader("Patches"))
 	{
+		std::vector<std::pair<std::string, bool>> toggles = {
+			{ "Pak Signature",				HookMetadata::ActiveModsMap["bAntiSigCheck"] },
+			{ "Chunk Signature",			HookMetadata::ActiveModsMap["bAntiChunkSigCheck"] },
+			{ "TOC Signature",				HookMetadata::ActiveModsMap["bAntiTocSigCheck"] },
+			{ "Pak TOC Signature",			HookMetadata::ActiveModsMap["bAntiPakTocCheck"] },
+			{ "Signature Warning",			HookMetadata::ActiveModsMap["bAntiSigWarn"] },
 
-		bool toggles[] = {
-			HookMetadata::sActiveMods.bAntiSigCheck,
-			HookMetadata::sActiveMods.bAntiChunkSigCheck,
-			HookMetadata::sActiveMods.bAntiTocSigCheck,
-			HookMetadata::sActiveMods.bFPathIdLoader,
+			{ "FString - ID Loader",		HookMetadata::ActiveModsMap["bFPathIdLoader"] },
+			{ "FString - No ID Loader",		HookMetadata::ActiveModsMap["bFPathNoIdLoader"] },
+			{ "FString - Common Loader",	HookMetadata::ActiveModsMap["bFPathCommonLoader"] },
+
+			{ "UName Table Getter",			HookMetadata::ActiveModsMap["UNameTableGetter"] },
+
+			{ "Fight Metadata Extraction",	HookMetadata::ActiveModsMap["bFightMetadata"] },
+
+			{ "Floyd Tracking",				HookMetadata::ActiveModsMap["bFloydTracking"] },
+			{ "Profile Getter" ,			HookMetadata::ActiveModsMap["bProfileGetter"]},
+
+			{ "Game Endpoint Swap",			HookMetadata::ActiveModsMap["bGameEndpointSwap"] }
 		};
-		MK12HOOKSDK::ImGui_Checkbox("Pak Signature", &toggles[0]);
-		MK12HOOKSDK::ImGui_Checkbox("Chunk Signature", &toggles[1]);
-		MK12HOOKSDK::ImGui_Checkbox("TOC Signature", &toggles[2]);
-		MK12HOOKSDK::ImGui_Checkbox("FString - Announcer", &toggles[3]);
 
-		//if (MK12HOOKSDK::ImGui_Button("button"))
-		//	counter++;
+
+		for (std::vector<std::pair<std::string, bool>>::iterator it = toggles.begin(); it != toggles.end(); ++it)
+		{
+			const std::string& label = it->first;
+			bool tempValue = it->second; // read-only copy
+			MK12HOOKSDK::ImGui_Checkbox(label.c_str(), &tempValue);
+		}
 	}
+
 	MK12HOOKSDK::ImGui_Separator();
 
-	if (HookMetadata::sActiveMods.UNameTableGetter)
+	if (HookMetadata::ActiveModsMap["UNameTableGetter"])
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("UE4"))
 		{
@@ -329,6 +348,114 @@ void MK12HookPlugin::TabFunction()
 	{
 		MK12HOOKSDK::ImGui_Text("UName Object Not Patched - UName Info Disabled");
 	}
+
+	if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
+	{
+		char buffer[512];
+		snprintf(buffer, sizeof(buffer), "Game Server: %s", SettingsMgr->szServerUrl.c_str());
+		MK12HOOKSDK::ImGui_Text(buffer);
+	}
+	else
+	{
+		MK12HOOKSDK::ImGui_Text("Game Server: Default");
+	}
+
+	if (HookMetadata::ActiveModsMap["bFloydTracking"])
+	{
+		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Challenges"))
+		{
+			char buffer[512];
+
+			snprintf(buffer, sizeof(buffer), "Profile Hash: %08X", HookMetadata::CurrentFloydInfo.UserProfileHash);
+			MK12HOOKSDK::ImGui_Text(buffer);
+
+			snprintf(buffer, sizeof(buffer), "Floyd Encounters: %d", (int32_t)HookMetadata::CurrentFloydInfo.FloydEncounters);
+			MK12HOOKSDK::ImGui_Text(buffer);
+
+			if (!HookMetadata::CurrentFloydInfo.Clues.empty())
+			{
+				std::vector<uint8_t> sortedClues = HookMetadata::CurrentFloydInfo.Clues;
+				std::sort(sortedClues.begin(), sortedClues.end());
+
+				buffer[0] = '\0'; // Clear buffer
+
+				strncat(buffer, "Challenges: ", sizeof(buffer) - strlen(buffer) - 1);
+
+				for (size_t i = 0; i < sortedClues.size(); ++i)
+				{
+					char temp[16]; // only need tiny buffer now
+					snprintf(temp, sizeof(temp), "%u ", sortedClues[i]);
+					strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
+				}
+
+				MK12HOOKSDK::ImGui_Text(buffer);
+			}
+			else
+			{
+				MK12HOOKSDK::ImGui_Text("No Floyd clues generated yet.");
+			}
+		}
+	}
+	else
+	{
+		MK12HOOKSDK::ImGui_Text("Floyd Tracking is not enabled");
+	}
+
+	if (HookMetadata::ActiveModsMap["bProfileGetter"])
+	{
+		if (MK12HOOKSDK::ImGui_CollapsingHeader("Profile Information"))
+		{
+			char buffer[512];
+
+			// Platform
+			if (HookMetadata::UserProfileInfo.Platform)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.Platform);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("Platform", buffer, sizeof(buffer));
+
+			// PlatformId
+			if (HookMetadata::UserProfileInfo.PlatformId)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.PlatformId);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("PlatformId", buffer, sizeof(buffer));
+
+			// SaveKey
+			if (HookMetadata::UserProfileInfo.SaveKey)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.SaveKey);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("SaveKey", buffer, sizeof(buffer));
+
+			// HydraId
+			if (HookMetadata::UserProfileInfo.HydraId)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.HydraId);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("HydraId", buffer, sizeof(buffer));
+
+			// WBId
+			if (HookMetadata::UserProfileInfo.WBId)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.WBId);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("WBId", buffer, sizeof(buffer));
+
+			// OfflineProfileId
+			if (HookMetadata::UserProfileInfo.OfflineProfileId)
+				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.OfflineProfileId);
+			else
+				buffer[0] = '\0';
+			MK12HOOKSDK::ImGui_InputText("OfflineProfileId", buffer, sizeof(buffer));
+		}
+	}
+	else
+	{
+		MK12HOOKSDK::ImGui_Text("Profile Info Extraction is not enabled");
+	}
+
+
 	/*if (MK12HOOKSDK::ImGui_CollapsingHeader("Input"))
 	{
 		MK12HOOKSDK::ImGui_InputInt("InputInt", &counter);
@@ -381,10 +508,13 @@ bool APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpRes)
 	{
 	case DLL_PROCESS_ATTACH:
 		//MK12HookPlugin::OnInitialize(hModule);
-		printfInfo("On Attach Initialize");
+		printfInfo("Initializing MK12TTH");
 		OnInitializeHook();
+		break;
 	case DLL_THREAD_ATTACH:
+		break;
 	case DLL_THREAD_DETACH:
+		break;
 	case DLL_PROCESS_DETACH:
 		MK12HookPlugin::OnShutdown();
 		break;

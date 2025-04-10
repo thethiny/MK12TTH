@@ -64,7 +64,12 @@ jobs:
         $versionedName = "${name}_v${version}"
         echo "Packing $name files into `"$versionedName.zip`""
         mv .\source\sample.ini .\${name}.ini
-        Compress-Archive -Path .\${name}.ini, .\out\Release\Binaries\${name}.ehp, dsound.dll -DestinationPath "${versionedName}.zip"
+        Compress-Archive -Path `
+          .\${name}.ini, `
+          .\out\Release\Binaries\${name}.ehp, `
+          .\out\Release\Binaries\asi\${name}.asi, `
+          dsound.dll `
+          -DestinationPath "${versionedName}.zip"
         echo "bundle_file=${versionedName}.zip" >> $env:GITHUB_OUTPUT
       env:
         PROJECT_NAME: ${{ steps.version.outputs.project_name }}

@@ -13,8 +13,8 @@ void eFirstRunManager::Init()
 
 	if (!bPaidModWarned)
 	{
+		Save(); // Save before displaying message box since some users complaining about a crash
 		MessageBoxA(0, "Please note that MK12TTH is a free modding tool that is meant to be used with free content.\nIf you have paid for anything, ask for a refund.", "MK12TTH Installed", MB_ICONEXCLAMATION);
-		Save();
 	}
 }
 
@@ -46,6 +46,11 @@ void eSettingsManager::Init()
 	bPatchCurl					= ini.ReadBoolean	("Patches",				"bPatchCurl",				false);
 	bFNameToStrHook				= ini.ReadBoolean	("Patches",				"bFPathLoader",				false);
 	bUNameGetter				= ini.ReadBoolean	("Patches",				"bUNameGetter",				false);
+	bGetFightMetadata			= ini.ReadBoolean	("Patches",				"bGetFightMetadata",		false);
+	bSerializeSecretFights		= ini.ReadBoolean	("Patches",				"bSerializeSecretFights",	false);
+	bEnableStringSwap			= ini.ReadBoolean	("Patches",				"bEnableStringSwap",		false);
+	bEnableFloydTracking		= ini.ReadBoolean	("Patches",				"bEnableFloydTracking",		false);
+	bEnableProfileGetter		= ini.ReadBoolean	("Patches",				"bEnableProfileGetter",		false);
 
 	// Patches.AntiCheat
 	bDisableSignatureCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureCheck",	true);
@@ -67,6 +72,12 @@ void eSettingsManager::Init()
 	pFPath2LoadPat				= ini.ReadString	("Patterns",			"pFPath2LoadPat",			"");
 	pFPathCLoadPat				= ini.ReadString	("Patterns",			"pFPathCLoadPat",			"");
 	pEndpointLoader				= ini.ReadString	("Patterns",			"pEndpointLoader",			"");
+	pProfileGetter				= ini.ReadString	("Patterns",			"pProfileGetter",			"");
+	// Floyd
+	pSecretFightCondPat			= ini.ReadString	("Patterns.Floyd",		"pSecretFightCondPat",		"");
+	pGetChallengesFromHash		= ini.ReadString	("Patterns.Floyd",		"pGetChallengesFromHash",	"");
+	pGetFloydHashInputString	= ini.ReadString	("Patterns.Floyd",		"pGetFloydHashInputString",	"");
+	pGetFloydHashInputString2	= ini.ReadString	("Patterns.Floyd",		"pGetFloydHashInputString2","");
 
 
 	// Keybinds

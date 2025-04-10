@@ -122,6 +122,9 @@
     <ClInclude Include="source\src\mk12.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
+    <ClInclude Include="source\src\mk12_enums.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

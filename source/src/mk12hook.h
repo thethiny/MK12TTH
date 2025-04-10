@@ -2,15 +2,20 @@
 #include "../includes.h"
 #include "../utils/Trampoline.h"
 #include <unordered_map>
+#include <fstream>
 #include "mk12.h"
 #include "mkutils.h"
 
 namespace MK12Hook {
 	namespace Proxies {
-		__int64			__fastcall	ReadFString(__int64, __int64);
-		MK12::FName*	__fastcall	ReadFNameToWStr(MK12::FName&, char*);
-		HANDLE			__stdcall	CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-		wchar_t**		__fastcall	OverrideGameEndpoint(MK12::JSONEndpointValue, wchar_t*&);
+		__int64									__fastcall	ReadFString(__int64, __int64);
+		MK12::FName*							__fastcall	ReadFNameToWStr(MK12::FName&, char*);
+		HANDLE									__stdcall	CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+		wchar_t**								__fastcall	OverrideGameEndpoint(MK12::JSONEndpointValue, wchar_t**);
+		MK12::FKlassicLadderSecretFightData*	__fastcall	SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData*);
+		MK12::TArray<uint32_t>*					__fastcall	GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2);
+		uint32_t								__fastcall	CustomCityHashProxy(wchar_t** StringToHash);
+		wchar_t*								__fastcall	MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...);
 	};
 
 	namespace Hooks {
@@ -25,28 +30,20 @@ namespace MK12Hook {
 		bool FNameToStrCommonLoader(Trampoline*);
 		bool OverrideFNameToWStrFuncs(Trampoline*);
 		bool OverrideGameEndpointsData(Trampoline*);
+		bool ExtractFightMetadataFromSecretFightSetupStage(Trampoline*);
+		bool ProfileGetterHooks(Trampoline* GameTramp);
+		int	 FloydTrackingHooks(Trampoline* GameTramp);
 	};
 
 	namespace Mods {
 		int AnnouncerSwap();
+		int StringSwaps();
 	}
 }
 
 namespace HookMetadata { //Namespace for helpers for game functions
-	struct ActiveMods {
-		bool bAntiSigCheck		= false;
-		bool bAntiChunkSigCheck = false;
-		bool bAntiSigWarn		= false;
-		bool bAntiTocSigCheck	= false;
-		bool bAntiPakTocCheck	= false;
 
-		bool bFPathIdLoader		= false;
-		bool bFPathNoIdLoader	= false;
-		bool bFPathCommonLoader = false;
-		bool UNameTableGetter	= false;
-
-		bool bGameEndpointSwap	= false;
-	};
+	typedef std::unordered_map<std::string, bool> ActiveMods;
 
 	struct LibMapsStruct {
 		LibFuncStruct ModLoader;
@@ -137,8 +134,23 @@ namespace HookMetadata { //Namespace for helpers for game functions
 		uint64_t size() { return count; }
 	};
 
+	struct FloydCluesInfo {
+		std::vector<uint8_t> Clues;
+		uint32_t UserProfileHash = 0;
+		uint32_t FloydEncounters = 0;
+	};
 
-	extern ActiveMods			sActiveMods;
+	struct ProfileInfo {
+		wchar_t* Platform = nullptr;
+		wchar_t* PlatformId = nullptr;
+		wchar_t* OfflineProfileId = nullptr;
+		wchar_t* SaveKey = nullptr;
+		wchar_t* HydraId = nullptr;
+		wchar_t* WBId = nullptr;
+	};
+
+
+	extern ActiveMods			ActiveModsMap;
 	extern LibMapsStruct		sLFS;
 	extern CheatsStruct			sCheatsStruct;
 	extern UserKeysStruct		sUserKeys;
@@ -147,5 +159,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	extern HANDLE				Console;
 	extern GameReadyState		sGameState;
 	extern SwapTable			FSwapTable;
+	extern FloydCluesInfo		CurrentFloydInfo;
+	extern ProfileInfo			UserProfileInfo;
 	
 };
