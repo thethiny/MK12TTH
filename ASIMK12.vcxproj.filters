@@ -1,0 +1,132 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Utils">
+      <UniqueIdentifier>{2a176353-d0e3-4c0b-8ba3-e0d426bd2989}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils">
+      <UniqueIdentifier>{f9c1e2c3-38a6-4c70-ad20-b7061aeb25fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\IniReader">
+      <UniqueIdentifier>{aeea746e-ee98-421d-bd5f-4a5002ec22fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\Utils">
+      <UniqueIdentifier>{0743fe0a-778f-4333-b10d-5e593bb95e2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MK12SDK">
+      <UniqueIdentifier>{9e920532-4fdd-452b-b722-767ecd2bb285}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\MK12">
+      <UniqueIdentifier>{5d6b45de-de39-4626-96ca-d8bc4b453bc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MK12">
+      <UniqueIdentifier>{3ec9f235-9336-422d-9322-a38311ebc9e8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\dllmain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utils\CPPython\pystring.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IniReader.cpp">
+      <Filter>Resource Files\IniReader</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utils\Patterns.cpp">
+      <Filter>Resource Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\eSettingsManager.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utils\prettyprint.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\MK12Unlocker.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\mk12sdk\sdk.cpp">
+      <Filter>MK12SDK</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mkutils.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mk12hook.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\mk12.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="source\utils\CPPython\cppython.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\CPPython\pystring.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\includes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\IniReader.h">
+      <Filter>Resource Files\IniReader</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\MemoryMgr.h">
+      <Filter>Resource Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\Patterns.h">
+      <Filter>Resource Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\Trampoline.h">
+      <Filter>Resource Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\eSettingsManager.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\prettyprint.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="framework.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\MK12Unlocker.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\mk12sdk\sdk.h">
+      <Filter>MK12SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mkutils.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mk12hook.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mk12.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\mk12_enums.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint" />
+  </ItemGroup>
+</Project>
