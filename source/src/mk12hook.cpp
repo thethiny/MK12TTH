@@ -1068,7 +1068,7 @@ namespace MK12Hook::Hooks {
 		if (!lpPattern)
 		{
 			printfError("Couldn't find SecretFightConditionSetup Pattern");
-			false;
+			return false;
 		}
 
 		if (SettingsMgr->iLogLevel)
