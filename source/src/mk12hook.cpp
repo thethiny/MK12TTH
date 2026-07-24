@@ -1151,8 +1151,8 @@ namespace MK12Hook::Mods {
 			if (strcmp(AllAnnouncerStrings[i]->c_str(), AllAnnouncerNames[i]) == 0) // No Swap
 				continue;
 			
-			sprintf(CurAnnoString, AnnouncerSwapString, AllAnnouncerNames[i], AllAnnouncerNames[i]);
-			sprintf(SwapAnnoString, AnnouncerSwapString, AllAnnouncerStrings[i]->c_str(), AllAnnouncerStrings[i]->c_str());
+			snprintf(CurAnnoString, sizeof(CurAnnoString), AnnouncerSwapString, AllAnnouncerNames[i], AllAnnouncerNames[i]);
+			snprintf(SwapAnnoString, sizeof(SwapAnnoString), AnnouncerSwapString, AllAnnouncerStrings[i]->c_str(), AllAnnouncerStrings[i]->c_str());
 			HookMetadata::FSwapTable.insert(CurAnnoString, SwapAnnoString);
 			count++;
 		}
