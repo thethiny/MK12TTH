@@ -6,7 +6,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.3.0";
+constexpr const char * CURRENT_HOOK_VERSION = "0.3.1";
 
 Trampoline* GameTramp, * User32Tramp;
 
