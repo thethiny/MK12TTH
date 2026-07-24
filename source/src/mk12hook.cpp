@@ -480,7 +480,7 @@ namespace MK12Hook::Hooks {
 		printf("\n==DisableSignatureCheck==\n");
 		if (SettingsMgr->pSigCheck.empty())
 		{
-			printfRed("pSigCheck Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pSigCheck Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -507,7 +507,7 @@ namespace MK12Hook::Hooks {
 		printf("\n==DisableSignatureWarn==\n");
 		if (SettingsMgr->pSigWarn.empty())
 		{
-			printfRed("pSigWarn Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pSigWarn Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -533,12 +533,12 @@ namespace MK12Hook::Hooks {
 		printf("\n==DisablePakChunkSigCheck==\n");
 		if (SettingsMgr->pChunkSigCheck.empty())
 		{
-			printfRed("pChunkSigCheck Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pChunkSigCheck Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 		if (SettingsMgr->pChunkSigCheckFunc.empty())
 		{
-			printfRed("pChunkSigCheckFunc Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pChunkSigCheckFunc Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -573,7 +573,7 @@ namespace MK12Hook::Hooks {
 		printf("\n==DisableTOCSigCheck==\n");
 		if (SettingsMgr->pTocCheck.empty())
 		{
-			printfRed("pTocCheck Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pTocCheck Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -599,7 +599,7 @@ namespace MK12Hook::Hooks {
 		printf("\n==DisablePakTOCCheck==\n");
 		if (SettingsMgr->pPakTocCheck.empty())
 		{
-			printfRed("pPakTocCheck Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pPakTocCheck Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -626,7 +626,7 @@ namespace MK12Hook::Hooks {
 		std::string pattern = SettingsMgr->pFPathLoadPat;
 		if (pattern.empty())
 		{
-			printfRed("pFPathLoadPat Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pFPathLoadPat Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -666,7 +666,7 @@ namespace MK12Hook::Hooks {
 		std::string pattern = SettingsMgr->pFPath2LoadPat;
 		if (pattern.empty())
 		{
-			printfRed("pFPath2LoadPat Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pFPath2LoadPat Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -746,7 +746,7 @@ namespace MK12Hook::Hooks {
 		std::string pattern = SettingsMgr->pUNameObjGetPat;
 		if (pattern.empty())
 		{
-			printfRed("pUNameObjGetPat Not Specified. Please Add Pattern to ini file!\n");
+			printfError("pUNameObjGetPat Not Specified. Please Add Pattern to ini file!\n");
 			return false;
 		}
 
@@ -801,12 +801,12 @@ namespace MK12Hook::Hooks {
 
 		if (!SettingsMgr->bUNameGetter)
 		{
-			printfYellow("Overriding FNameToWStr disabled::UNameGetter Disabled!\n");
+			printfWarning("Overriding FNameToWStr disabled: bUNameGetter is not enabled in ini!\n");
 			return false;
 		}
 		if (!HookMetadata::ActiveModsMap["UNameTableGetter"])
 		{
-			printfError("Overriding FNameToWStr disabled::UNameGetter Not found!");
+			printfError("Overriding FNameToWStr disabled: UNameTableGetter pattern failed!");
 			return false;
 		}
 			
@@ -878,6 +878,12 @@ namespace MK12Hook::Hooks {
 			else
 				printfSuccess("Overrided FNameToWStrCommon skipping Proxy Loader");
 		}
+
+		bool anyOverride = MK12::ReadFNameToWStrWithIdStart || MK12::ReadFNameToWStrNoIdStart || MK12::ReadFNameToWStrCommonStart;
+		if (anyOverride)
+			printfSuccess("FNameToWStr Override Active");
+		else
+			printfWarning("FNameToWStr Override: No function starts found, falling back to Proxy Loaders");
 
 		return true;
 	}
@@ -1259,7 +1265,7 @@ namespace MK12Hook::Mods {
 		}
 
 		file.close();
-		std::cout << "Total swaps applied: " << iSwapsAmount << std::endl;
+		printfYellow("%d Strings swapped.\n", iSwapsAmount);
 		return iSwapsAmount;
 	}
 }
