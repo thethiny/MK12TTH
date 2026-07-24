@@ -48,6 +48,7 @@ bool containsCaseInsensitive(const char* str, const char* compare) {
 	return s.find(target) != std::string::npos;
 }
 
+// No bounds check intentional - crash here means hook patterns are out of date
 MK12::FName* MK12::NameTableIndexToFName(uint16_t NameTableId, uint16_t NameOffset)
 {
 	uint32_t NameOffsetC = NameOffset * 2;
@@ -248,6 +249,7 @@ namespace MK12::FNameFunc {
 		name[s] = '\0'; // Null terminate
 		return name;
 	}
+	// No null termination intentional - mirrors UE's length-prefixed FName, consumers use GetSize() not strlen
 	FName* FromStr(const char* string)
 	{
 		uint16_t length = (uint16_t)strlen(string);

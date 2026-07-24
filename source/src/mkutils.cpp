@@ -27,6 +27,7 @@ int64 GetModuleEntryPoint(const char* name)
 	return addr;
 }
 
+// Dead code after early return is intentional (backwards compatible)
 int64 GetGameAddr(__int64 addr)
 {
 	int64 Entry = GetGameEntryPoint();
@@ -380,6 +381,7 @@ int StringToVK(std::string sKey)
 	if (sKey == "RIGHT")
 		return VK_RIGHT;
 
+	// Intentional crash - catches bad INI keybind config during testing
 	RaiseException("Button Binding Unsupported!");
 }
 

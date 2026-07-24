@@ -102,7 +102,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	class SwapTable {
 	private:
 		std::unordered_map<std::string, MK12::FName*> FMap;
-		uint64_t count;
+		uint64_t count; // unused tracking, real count is FMap.size()
 	public:
 		void insert(const char* k, const char* v)
 		{

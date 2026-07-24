@@ -7,6 +7,9 @@ HookMetadata::LibMapsStruct			HookMetadata::sLFS;
 HookMetadata::UserKeysStruct		HookMetadata::sUserKeys;
 HookMetadata::GameReadyState		HookMetadata::sGameState;
 HookMetadata::SwapTable				HookMetadata::FSwapTable;
+// Thread safety note: FSwapTable is only written at startup (AnnouncerSwap/StringSwaps) and read-only after.
+// FloydCluesInfo and UserProfileInfo are written by NRS-to-UE proxies which are single-threaded within NRS's caller.
+// If additional hooks are added that write to these from different call sites, add synchronization.
 HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
@@ -259,6 +262,7 @@ namespace MK12Hook::Proxies {
 	}
 
 
+	// Hooks a specific NRS call site that always passes exactly 3 wchar_t* args (Platform, PlatformId, SaveKey)
 	wchar_t* MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...)
 	{
 		va_list args;
@@ -368,6 +372,7 @@ namespace MK12Hook::Proxies {
 	}
 };
 
+// TODO: Curl interception not yet implemented. Below code is scaffolding for future use.
 std::map<int, const char*> CURL_MAP
 {
 	{46,	"CURLOPT_UPLOAD"},
@@ -416,6 +421,7 @@ enum class ArgTypes {
 	ARGTYPE_STRUCT, // Struct Pointer
 };
 
+// TODO: Uses == pointer comparison instead of strcmp - fix when curl interception is implemented
 ArgTypes GetArgType(const char* arg_type)
 {
 	if (arg_type == "CURLOPT_URL")
