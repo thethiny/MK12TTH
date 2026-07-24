@@ -1,8 +1,47 @@
 #include "eSettingsManager.h"
 #include <Windows.h>
 
-eSettingsManager* SettingsMgr = new eSettingsManager();
-eFirstRunManager* FirstRunMgr = new eFirstRunManager;
+eSettingsManager*		SettingsMgr			= new eSettingsManager();
+eFirstRunManager*		FirstRunMgr			= new eFirstRunManager;
+eCachedPatternsManager*	CachedPatternsMgr	= new eCachedPatternsManager;
+__int64 eCachedPatternsManager::GameAddr = reinterpret_cast<__int64>(GetModuleHandle(nullptr));
+
+void eCachedPatternsManager::Init(uint64_t Hash, const char* version)
+{
+	ini = new CIniReader("PatternsCache.cache");
+	if (Hash)
+	{
+		size_t totalLen = 8 + 1 + strlen(version) + 1;
+		char* hashStr = new char[totalLen];
+		sprintf_s(hashStr, totalLen, "%08X.%s", (uint32_t)(Hash >> 32), version);
+		eCachedPatternsManager::Hash = hashStr;
+	}
+	else
+		eCachedPatternsManager::Hash = nullptr;
+}
+
+void eCachedPatternsManager::Save(char* key, uint64_t offset)
+{
+	if (Hash)
+	{
+		if (offset > GameAddr)
+		{
+			offset -= GameAddr;
+		}
+		ini->WriteInteger(Hash, key, offset);
+	}
+}
+
+uint64_t eCachedPatternsManager::Load(char* key)
+{
+	if (Hash)
+	{
+		uint64_t result = ini->ReadInteger(Hash, key, 0);
+		if (result)
+			return result + GameAddr;
+	}
+	return 0;
+}
 
 static DWORD WINAPI PaidModWarningThread(LPVOID)
 {

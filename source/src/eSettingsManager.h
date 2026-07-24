@@ -105,5 +105,21 @@ private:
 	CIniReader* ini;
 };
 
+class eCachedPatternsManager
+{
+private:
+	char* Hash = nullptr;
+	CIniReader* ini;
+	static __int64 GameAddr;
+
+public:
+	void Init(uint64_t Hash, const char* version);
+	void Save(char* key, uint64_t offset);
+	uint64_t Load(char* key);
+
+	~eCachedPatternsManager() { if (Hash) delete[] Hash; }
+};
+
 extern eSettingsManager* SettingsMgr;
 extern eFirstRunManager* FirstRunMgr;
+extern eCachedPatternsManager* CachedPatternsMgr;

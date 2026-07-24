@@ -43,6 +43,8 @@ void			RaiseException(const char*, int64_t = 1);
 bool			IsHex(char);
 bool			IsBase(char c, int = 16);
 
+uint64_t		HashTextSectionOfHost();
+
 static void DummyVoidFunc() {}
 static void* DummyPtrFunc(...) { return nullptr; }
 

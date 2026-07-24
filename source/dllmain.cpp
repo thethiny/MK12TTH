@@ -231,6 +231,10 @@ bool OnInitializeHook()
 	}
 
 	ProcessSettings(); // Parse Settings
+
+	uint64_t EXEHash = HashTextSectionOfHost();
+	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION);
+
 	PreGameHooks(); // Queue Blocker
 
 	return true;
