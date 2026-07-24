@@ -68,7 +68,7 @@ void PreGameHooks()
 	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
 	if (SettingsMgr->iLogLevel)
 		printf("Generated Trampolines\n");
-	 IATable = ParsePEHeader();	 
+	 IATable = ParsePEHeader();
 
 
 	if (SettingsMgr->bDisableSignatureCheck)
@@ -91,6 +91,13 @@ void PreGameHooks()
 	{
 		HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
 	}
+
+	if (!GameTramp)
+	{
+		printfError("Failed to create Trampoline! Proxy hooks disabled.");
+		return;
+	}
+
 	if (SettingsMgr->bFNameToStrHook)
 	{
 		RegisterHacks::EnableRegisterHacks();
@@ -127,7 +134,7 @@ void PreGameHooks()
 	{
 		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks(GameTramp);
 	}
-	
+
 }
 
 void ProcessSettings()
