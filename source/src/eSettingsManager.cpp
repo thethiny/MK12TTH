@@ -4,6 +4,12 @@
 eSettingsManager* SettingsMgr = new eSettingsManager();
 eFirstRunManager* FirstRunMgr = new eFirstRunManager;
 
+static DWORD WINAPI PaidModWarningThread(LPVOID)
+{
+	MessageBoxA(0, "Please note that MK12TTH is a free modding tool that is meant to be used with free content.\nIf you have paid for anything, ask for a refund.", "MK12TTH Installed", MB_ICONEXCLAMATION);
+	return 0;
+}
+
 void eFirstRunManager::Init()
 {
 	ini = new CIniReader("tt_state.ini");
@@ -13,8 +19,8 @@ void eFirstRunManager::Init()
 
 	if (!bPaidModWarned)
 	{
-		Save(); // Save before displaying message box since some users complaining about a crash
-		MessageBoxA(0, "Please note that MK12TTH is a free modding tool that is meant to be used with free content.\nIf you have paid for anything, ask for a refund.", "MK12TTH Installed", MB_ICONEXCLAMATION);
+		Save();
+		CreateThread(NULL, 0, PaidModWarningThread, NULL, 0, NULL);
 	}
 }
 
