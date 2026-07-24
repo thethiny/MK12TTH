@@ -48,6 +48,55 @@ uint64_t		HashTextSectionOfHost();
 static void DummyVoidFunc() {}
 static void* DummyPtrFunc(...) { return nullptr; }
 
+class PatternFinder
+{
+private:
+	uint64_t address = 0;
+
+public:
+	PatternFinder() = default;
+	PatternFinder(const std::string pattern) { *this = pattern; }
+	operator uint64_t () { return address; }
+	operator uint64_t* () { return (uint64_t*)address; }
+	operator __int64() { return __int64(address); }
+	operator bool() { return bool(address); }
+	PatternFinder& operator+=(const uint64_t b) { address += b; return *this; }
+	PatternFinder& operator=(const std::string pattern)
+	{
+		uint64_t returned = CachedPatternsMgr->Load((char*)pattern.c_str());
+
+		if (returned)
+			address = returned;
+		else
+		{
+			address = (uint64_t)FindPattern(pattern);
+			CachedPatternsMgr->Save((char*)pattern.c_str(), address);
+		}
+
+		return *this;
+	}
+	PatternFinder operator+(const int b) {
+		PatternFinder obj;
+		obj.address = this->address + b;
+		return obj;
+	}
+	PatternFinder operator-(const int b) {
+		PatternFinder obj;
+		obj.address = this->address - b;
+		return obj;
+	}
+	PatternFinder operator+(const uint64_t b) {
+		PatternFinder obj;
+		obj.address = this->address + b;
+		return obj;
+	}
+	PatternFinder operator-(const uint64_t b) {
+		PatternFinder obj;
+		obj.address = this->address - b;
+		return obj;
+	}
+};
+
 uint64_t* MakeProxyFromOpCode(Trampoline* GameTramp, uint64_t CallAddr, uint8_t JumpAddrSize, void* ProxyFunctionAddr, PatchTypeEnum PatchType = PATCH_CALL);
 template <typename T> void MakeProxyFromOpCode(Trampoline* GameTramp, uint64_t CallAddr, uint8_t JumpAddrSize, void* ProxyFunctionAddr, T** ProxyFuncPtr, PatchTypeEnum PatchType = PATCH_CALL);
 
