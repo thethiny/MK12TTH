@@ -1,3 +1,4 @@
+// TODO: Capture user's access token through curl hook. Wire up with CURL interception when implemented.
 #pragma once
 #include "../includes.h"
 

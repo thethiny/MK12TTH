@@ -26,6 +26,7 @@
     <ClCompile Include="source\src\GamePatchManager.cpp" />
     <ClCompile Include="source\src\MK12Unlocker.cpp" />
     <ClCompile Include="source\utils\CPPython\pystring.cpp" />
+    <ClCompile Include="source\utils\ProcessPatch.cpp" />
     <ClCompile Include="source\utils\Patterns.cpp" />
     <ClCompile Include="source\utils\prettyprint.cpp" />
   </ItemGroup>

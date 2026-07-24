@@ -116,7 +116,7 @@ namespace MK12 { // Namespace for game functions / structs
 			wchar_t* Unknown; //20
 			char* Body; //28
 			int32_t BodySize; //30
-			int32_t Unknown2; //30
+			int32_t Unknown2; //34
 			uint64_t Unknown3;
 			uint64_t Unknown4;
 			char* HTTPEndpoint;
@@ -351,11 +351,8 @@ namespace MK12 { // Namespace for game functions / structs
 
 	
 	// Vars
-	extern uint8_t										ulCharactersCount;
 	extern uint64_t*									lpGameVersion;
 	extern uint64_t*									lpGameVersionFull;
-	extern std::vector<std::wstring>					vSwappedFiles;
-	extern std::map<uint64_t, CURL::HTTPPostStruct*>	CurlObjectMap;
 	extern UNameTableStruct*							UNameTable;
 	extern UNameTableMainStruct*						UMainNameTable;
 
@@ -368,7 +365,6 @@ namespace MK12 { // Namespace for game functions / structs
 
 	// Game Functions
 	// FString
-	typedef			__int64							(__fastcall ReadFStringType)					(__int64, __int64);
 	typedef			void							(__fastcall FNameToWStrType)					(FName&, char*);
 	typedef			__int64							(__fastcall	InitializeNameTableType)			(UNameTableStruct&);
 	// JSONEndpoint
@@ -405,7 +401,6 @@ namespace MK12 { // Namespace for game functions / structs
 	}
 
 	// externs
-	extern ReadFStringType*								ReadFString;
 	extern FNameToWStrType*								FNameToWStr;
 	extern InitializeNameTableType*						InitializeNameTable;
 	extern uint64_t*									ReadFNameToWStrNoIdStart;

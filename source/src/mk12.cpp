@@ -4,14 +4,11 @@
 
 uint64_t*							MK12::lpGameVersionFull			= nullptr;
 uint64_t*							MK12::lpGameVersion				= nullptr;
-uint8_t								MK12::ulCharactersCount;
-std::vector<std::wstring>			MK12::vSwappedFiles;
 
 MK12::UNameTableStruct*				MK12::UNameTable;
 MK12::UNameTableMainStruct*			MK12::UMainNameTable;
 
 // Game Functions
-MK12::ReadFStringType*					MK12::ReadFString;
 MK12::FNameToWStrType*					MK12::FNameToWStr;
 MK12::InitializeNameTableType*			MK12::InitializeNameTable;
 uint64_t*								MK12::ReadFNameToWStrNoIdStart		= nullptr;
@@ -196,6 +193,7 @@ bool __fastcall MK12::Remake::GetArgBoolByName(uint64_t *thisPtr, wchar_t* ArgNa
 	return 0;
 }
 
+// TODO: lpGameVersion is never assigned. Need a pattern scan to resolve where the game stores its version string.
 std::string MK12::GetGameVersion()
 {
 	if (!lpGameVersion)

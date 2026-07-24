@@ -8,9 +8,7 @@
 
 namespace MK12Hook {
 	namespace Proxies {
-		__int64									__fastcall	ReadFString(__int64, __int64);
 		MK12::FName*							__fastcall	ReadFNameToWStr(MK12::FName&, char*);
-		HANDLE									__stdcall	CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 		wchar_t**								__fastcall	OverrideGameEndpoint(MK12::JSONEndpointValue, wchar_t**);
 		MK12::FKlassicLadderSecretFightData*	__fastcall	SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData*);
 		MK12::TArray<uint32_t>*					__fastcall	GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2);
@@ -28,9 +26,9 @@ namespace MK12Hook {
 		bool FNameToStrWithIdLoader();
 		bool FNameToStrNoIdLoader();
 		bool FNameToStrCommonLoader();
-		bool OverrideFNameToWStrFuncs(Trampoline*);
+		bool OverrideFNameToWStrFuncs();
 		bool OverrideGameEndpointsData();
-		bool ExtractFightMetadataFromSecretFightSetupStage(Trampoline*);
+		bool ExtractFightMetadataFromSecretFightSetupStage();
 		bool ProfileGetterHooks();
 		int	 FloydTrackingHooks();
 	};

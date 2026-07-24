@@ -1,5 +1,6 @@
 #pragma once
 #include<string>
+#include<unordered_map>
 #include "..\IniReader.h"
 
 class eSettingsManager {
@@ -108,16 +109,26 @@ private:
 class eCachedPatternsManager
 {
 private:
-	char* Hash = nullptr;
+	char* HashKey = nullptr;
 	CIniReader* ini;
 	static __int64 GameAddr;
+	std::unordered_map<std::string, uint64_t> Cache;
+	bool bAutoFlush = true;
+
+	void FlushEntry(const std::string& key, uint64_t value);
 
 public:
-	void Init(uint64_t Hash, const char* version);
-	void Save(char* key, uint64_t offset);
-	uint64_t Load(char* key);
+	void Init(uint64_t Hash, const char* version, const char* name = "PatternsCache");
+	void Flush();
 
-	~eCachedPatternsManager() { if (Hash) delete[] Hash; }
+	void Set(const std::string& key, uint64_t value);
+	uint64_t Get(const std::string& key);
+	bool Has(const std::string& key);
+
+	void EnableAutoFlush() { bAutoFlush = true; }
+	void DisableAutoFlush() { bAutoFlush = false; }
+
+	~eCachedPatternsManager() { Flush(); if (HashKey) delete[] HashKey; }
 };
 
 extern eSettingsManager* SettingsMgr;

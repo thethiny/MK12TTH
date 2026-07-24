@@ -6,42 +6,78 @@ eFirstRunManager*		FirstRunMgr			= new eFirstRunManager;
 eCachedPatternsManager*	CachedPatternsMgr	= new eCachedPatternsManager;
 __int64 eCachedPatternsManager::GameAddr = reinterpret_cast<__int64>(GetModuleHandle(nullptr));
 
-void eCachedPatternsManager::Init(uint64_t Hash, const char* version)
+void eCachedPatternsManager::Init(uint64_t Hash, const char* version, const char* name)
 {
-	ini = new CIniReader("PatternsCache.cache");
+	std::string cacheFile = std::string(name) + ".cache";
+	ini = new CIniReader((char*)cacheFile.c_str());
 	if (Hash)
 	{
 		size_t totalLen = 8 + 1 + strlen(version) + 1;
 		char* hashStr = new char[totalLen];
 		sprintf_s(hashStr, totalLen, "%08X.%s", (uint32_t)(Hash >> 32), version);
-		eCachedPatternsManager::Hash = hashStr;
+		eCachedPatternsManager::HashKey = hashStr;
+
+		// Load all cached entries into memory, no more per-call file I/O
+		// INI reader doesn't support enumerating keys, so entries are loaded on first access via Get()
 	}
 	else
-		eCachedPatternsManager::Hash = nullptr;
+		eCachedPatternsManager::HashKey = nullptr;
 }
 
-void eCachedPatternsManager::Save(char* key, uint64_t offset)
+void eCachedPatternsManager::FlushEntry(const std::string& key, uint64_t value)
 {
-	if (Hash)
-	{
-		if (offset > (uint64_t)GameAddr)
-			offset -= GameAddr;
-		char buf[20];
-		sprintf_s(buf, sizeof(buf), "%llX", offset);
-		ini->WriteString(Hash, key, buf);
-	}
+	if (!HashKey || !ini)
+		return;
+
+	uint64_t offset = value;
+	if (offset > (uint64_t)GameAddr)
+		offset -= GameAddr;
+	char buf[20];
+	sprintf_s(buf, sizeof(buf), "%llX", offset);
+	ini->WriteString(HashKey, (char*)key.c_str(), buf);
 }
 
-uint64_t eCachedPatternsManager::Load(char* key)
+void eCachedPatternsManager::Flush()
 {
-	if (Hash)
+	if (!HashKey || !ini)
+		return;
+
+	for (auto& pair : Cache)
+		FlushEntry(pair.first, pair.second);
+
+	Cache.clear();
+}
+
+void eCachedPatternsManager::Set(const std::string& key, uint64_t value)
+{
+	Cache[key] = value;
+	if (bAutoFlush)
+		FlushEntry(key, value);
+}
+
+uint64_t eCachedPatternsManager::Get(const std::string& key)
+{
+	auto it = Cache.find(key);
+	if (it != Cache.end())
+		return it->second;
+
+	if (HashKey)
 	{
-		char* result = ini->ReadString(Hash, key, "0");
+		char* result = ini->ReadString(HashKey, (char*)key.c_str(), "0");
 		uint64_t val = strtoull(result, nullptr, 16);
 		if (val)
-			return val + GameAddr;
+		{
+			val += GameAddr;
+			Cache[key] = val;
+			return val;
+		}
 	}
 	return 0;
+}
+
+bool eCachedPatternsManager::Has(const std::string& key)
+{
+	return Cache.find(key) != Cache.end();
 }
 
 static DWORD WINAPI PaidModWarningThread(LPVOID)
@@ -77,7 +113,7 @@ void eSettingsManager::Init()
 	bEnableConsoleWindow		= ini.ReadBoolean	("Settings.Debug",		"bEnableConsoleWindow",		false);
 	bPauseOnStart				= ini.ReadBoolean	("Settings.Debug",		"bPauseOnStart",			false);
 	bDebug						= ini.ReadBoolean	("Settings.Debug",		"bDebug",					false);
-	bAllowNonMK					= ini.ReadBoolean	("Settings.Deubg",		"bAllowNonMK",				false);
+	bAllowNonMK					= ini.ReadBoolean	("Settings.Debug",		"bAllowNonMK",				false);
 	
 	// Settings
 	iLogSize					= ini.ReadInteger	("Settings",			"iLogSize",					50);

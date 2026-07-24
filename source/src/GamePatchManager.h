@@ -1,6 +1,5 @@
 #pragma once
 #include "../utils/ProcessPatch.h"
-#include "../utils/Patterns.h"
 #include "eSettingsManager.h"
 #include "../utils/prettyprint.h"
 #include <string>
@@ -36,30 +35,32 @@ public:
 	HMODULE GetModule() { return Module; }
 	uint64_t GetBaseAddr() { return BaseAddr; }
 
-	// Find a pattern in the game module
-	uint64_t* FindPattern(std::string_view pattern)
+	/** Returns the DLL filename without path or extension, lowercased. */
+	std::string GetModuleName()
 	{
-		hook::pattern p = hook::make_module_pattern(Module, pattern);
-		if (!p.count_hint(1).empty())
-			return p.get(0).get<uint64_t>(0);
-		return nullptr;
+		char path[MAX_PATH];
+		GetModuleFileNameA(Module, path, MAX_PATH);
+		std::string name = path;
+		size_t lastSlash = name.find_last_of("\\/");
+		if (lastSlash != std::string::npos)
+			name = name.substr(lastSlash + 1);
+		size_t dot = name.find_last_of('.');
+		if (dot != std::string::npos)
+			name = name.substr(0, dot);
+		for (size_t i = 0; i < name.length(); i++)
+			name[i] = std::tolower(name[i]);
+		return name;
 	}
 
-	// Find pattern with cache support
-	uint64_t* FindCachedPattern(const std::string& pattern)
+	// Find a pattern in the game module (no cache)
+	uint64_t* FindPattern(const std::string& pattern)
 	{
-		uint64_t cached = CachedPatternsMgr->Load((char*)pattern.c_str());
-		if (cached)
-			return (uint64_t*)cached;
-
-		uint64_t* result = FindPattern(pattern);
-		if (result)
-			CachedPatternsMgr->Save((char*)pattern.c_str(), (uint64_t)result);
-		return result;
+		return ProcessPatch::FindPattern(Module, pattern);
 	}
 
 	// Find pattern, log result, return address. Returns 0 on failure.
-	uint64_t FindPatternOrFail(const std::string& pattern, const char* name)
+	// cache = true: check/store in CachedPatternsMgr. false: always scan.
+	uint64_t FindPatternOrFail(const std::string& pattern, const char* name, bool cache = true)
 	{
 		if (pattern.empty())
 		{
@@ -67,7 +68,22 @@ public:
 			return 0;
 		}
 
-		uint64_t* result = FindCachedPattern(pattern);
+		uint64_t* result = nullptr;
+
+		if (cache)
+		{
+			uint64_t cached = CachedPatternsMgr->Get(name);
+			if (cached)
+				result = (uint64_t*)cached;
+		}
+
+		if (!result)
+		{
+			result = FindPattern(pattern);
+			if (result && cache)
+				CachedPatternsMgr->Set(name, (uint64_t)result);
+		}
+
 		if (!result)
 		{
 			printfError("Couldn't find %s Pattern\n", name);
@@ -86,7 +102,7 @@ public:
 		ProcessPatch::PatchReturn(addr, size);
 	}
 
-	// Convert conditional jump to unconditional
+	// Convert conditional jump to unconditional (handles both short and near)
 	void ConditionalToUnconditional(uint64_t addr)
 	{
 		ProcessPatch::ConditionalToUnconditional(addr);
@@ -95,8 +111,6 @@ public:
 	// Redirect a call/jmp to a new target
 	void RedirectCall(uint64_t addr, uint64_t newTarget, uint8_t opcodeSize = 0)
 	{
-		if (opcodeSize == 0)
-			opcodeSize = ProcessPatch::GetOpCodeSize(addr);
 		ProcessPatch::RedirectCall(addr, newTarget, opcodeSize);
 	}
 
@@ -126,11 +140,10 @@ public:
 	}
 
 	// Full hook workflow: find pattern -> proxy call site -> save original -> log result
-	// Returns true on success
 	template <typename T>
-	bool HookPattern(const std::string& pattern, const char* name, int64_t offset, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL)
+	bool HookPattern(const std::string& pattern, const char* name, int64_t offset, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL, bool cache = true)
 	{
-		uint64_t patAddr = FindPatternOrFail(pattern, name);
+		uint64_t patAddr = FindPatternOrFail(pattern, name, cache);
 		if (!patAddr)
 			return false;
 

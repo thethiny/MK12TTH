@@ -9,7 +9,6 @@
 
 constexpr const char * CURRENT_HOOK_VERSION = "0.3.1";
 
-Trampoline* GameTramp, * User32Tramp;
 
 void CreateConsole();
 void SpawnError(const char*);
@@ -66,11 +65,10 @@ void CreateConsole()
 
 void PreGameHooks()
 {
-	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
 	GamePatcher->Init(GetModuleHandle(nullptr), CURRENT_HOOK_VERSION);
 	if (SettingsMgr->iLogLevel)
 		printf("Generated Trampolines\n");
-	 IATable = ParsePEHeader();
+	 IATable = ProcessPatch::ParsePEHeader();
 
 
 	if (SettingsMgr->bDisableSignatureCheck)
@@ -94,12 +92,6 @@ void PreGameHooks()
 		HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
 	}
 
-	if (!GameTramp)
-	{
-		printfError("Failed to create Trampoline! Proxy hooks disabled.");
-		return;
-	}
-
 	if (SettingsMgr->bFNameToStrHook)
 	{
 		RegisterHacks::EnableRegisterHacks();
@@ -109,16 +101,46 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bUNameGetter)
 	{
-		HookMetadata::ActiveModsMap["UNameTableGetter"]		= MK12Hook::Hooks::UNameTableGetter();
-		MK12Hook::Hooks::OverrideFNameToWStrFuncs(GameTramp);
+		if (!SettingsMgr->bFNameToStrHook)
+		{
+			printfWarning("bUNameGetter requires bFPathLoader to be enabled! Skipping.");
+		}
+		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("bUNameGetter requires FPathIdLoader to succeed! Skipping.");
+		}
+		else
+		{
+			HookMetadata::ActiveModsMap["UNameTableGetter"]		= MK12Hook::Hooks::UNameTableGetter();
+			if (HookMetadata::ActiveModsMap["UNameTableGetter"])
+				MK12Hook::Hooks::OverrideFNameToWStrFuncs();
+		}
 	}
 	if (SettingsMgr->AnnouncerSwap.bEnable)
 	{
-		int swaps = MK12Hook::Mods::AnnouncerSwap();
+		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("AnnouncerSwap requires bFPathLoader to be enabled and working! Skipping.");
+		}
+		else
+		{
+			int swaps = MK12Hook::Mods::AnnouncerSwap();
+		}
 	}
 	if (SettingsMgr->bEnableStringSwap)
 	{
-		int swaps = MK12Hook::Mods::StringSwaps();
+		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("StringSwap requires bFPathLoader to be enabled and working! Skipping.");
+		}
+		else if (HookMetadata::ActiveModsMap["UNameTableGetter"])
+		{
+			printfError("StringSwap is not supported with bUNameGetter enabled! Skipping.");
+		}
+		else
+		{
+			int swaps = MK12Hook::Mods::StringSwaps();
+		}
 	}
 	if (SettingsMgr->bEnableServerProxy)
 	{
@@ -126,7 +148,7 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bGetFightMetadata)
 	{
-		HookMetadata::ActiveModsMap["bFightMetadata"]		= MK12Hook::Hooks::ExtractFightMetadataFromSecretFightSetupStage(GameTramp);
+		HookMetadata::ActiveModsMap["bFightMetadata"]		= MK12Hook::Hooks::ExtractFightMetadataFromSecretFightSetupStage();
 	}
 	if (SettingsMgr->bEnableFloydTracking)
 	{
@@ -137,6 +159,7 @@ void PreGameHooks()
 		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks();
 	}
 
+	CachedPatternsMgr->Flush();
 }
 
 void ProcessSettings()
@@ -234,8 +257,8 @@ bool OnInitializeHook()
 
 	ProcessSettings(); // Parse Settings
 
-	uint64_t EXEHash = HashTextSectionOfHost();
-	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION);
+	uint64_t EXEHash = ProcessPatch::HashTextSectionOfHost();
+	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION, GamePatcher->GetModuleName().c_str());
 
 	PreGameHooks(); // Queue Blocker
 

@@ -18,59 +18,6 @@ HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
 namespace MK12Hook::Proxies {
 
-	HANDLE __stdcall CreateFile(LPCWSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
-	{
-		//if (lpFileName)
-		//{
-		//	//std::wstring fileName = lpFileName;
-		//	wchar_t* wcFileName = (wchar_t*)lpFileName;
-		//	std::wstring fileName(wcFileName, wcslen(wcFileName));
-		//	if (!wcsncmp(wcFileName, L"..", 2))
-		//	{
-		//		std::wstring wsSwapFolder = L"MKSwap";
-		//		std::wstring newFileName = L"..\\" + wsSwapFolder + fileName.substr(2, fileName.length() - 2);
-		//		if (std::filesystem::exists(newFileName.c_str()))
-		//		{
-		//			wprintf(L"Loading %s from %s\n", wcFileName, wsSwapFolder.c_str());
-		//			MK12::vSwappedFiles.push_back(wcFileName);
-		//			return CreateFileW(newFileName.c_str(), dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-		//		}
-		//	}
-
-		//}
-
-		return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
-	}
-
-	__int64 ReadFString(__int64 rcx, __int64 rdx)
-	{
-		uint32_t* RCXArray = (uint32_t*)rcx;
-		uint64_t* R8Array = (uint64_t*)(0x14788f648);
-		uint32_t ArrayValue = RCXArray[0];
-		uint32_t ArrayValue2 = RCXArray[1];
-		uint64_t* r8 = (uint64_t*)R8Array[ArrayValue];
-		ArrayValue2 /= 8;
-		uint32_t* rax = (uint32_t*)r8[4];
-		uint64_t rsi = rax[ArrayValue2];
-		rsi += r8[6];
-		char* szFString = (char*)rsi;
-		char* szBPClass = (char*)(r8[6]);
-		printfYellow("szBPClass: %s\nszFString: %s\n", szBPClass, szFString);
-		return MK12::ReadFString(rcx, rdx);
-	}
-
-	//const char* SubzeroFatality = "/Game/Disk/Char/SubZero/Cine/Fatality/Roster/A/FatalityA.FatalityA";
-	//const char* SubzeroFatality = "/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_ShangTsung.SWGP_Announcer-SWTC_ANNO_ShangTsung";
-	//const uint16_t SubzeroFatalitySize = (uint16_t)strlen(SubzeroFatality);
-	/*MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/DLC/REL_OmniMan/Shared/Cine/Fatality/Fatality.Fatality");*/
-	// MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/Disk/Char/SubZero/Cine/Fatality/Roster/B/FatalityB.FatalityB"); // See if the issue is the size therefore another function needs to be hooked
-	//MK12::FName* ThanksGivingFatalityFName = MK12::FNameFunc::FromStr("/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_SubZero.SWGP_Announcer-SWTC_ANNO_SubZero"); // See if the issue is the size therefore another function needs to be hooked
-	/*const char* AcidBubblesModifierName = "/Game/DLC/REL_SeasonOfDragon/Modifiers/GlobalModifiers/Acid/AcidSkullIntervalGlobalModifier.AcidSkullIntervalGlobalModifier";*/
-	/*MK12::FName* ToastyModifierName = MK12::FNameFunc::FromStr("/Game/DLC/REL_SeasonOfSoulEater/Shared/UI/Libraries/UIModifiers/Toasty.Toasty");*/
-	/*const char* ToastyModifierName = "/Game/DLC/REL_SeasonOfSoulEater/Modifiers/GlobalModifiers/Fire/ToastyGlobalModifier.ToastyGlobalModifier";*/
-	//const char* OriginalModifierName =	"/Game/Disk/Shared/Game/GeneratedScripts/Modifiers/Acid/AcidSkullModifier.AcidSkullModifier";
-	//const char* NewModifierName =		"/Game/Disk/Shared/Game/GeneratedScripts/Modifiers/Fire/ToastyModifier.ToastyModifier";
-
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
 		printf("Proxy FNameToWStrId::Captured::");
@@ -487,31 +434,16 @@ ArgTypes GetArgType(const char* arg_type)
 
 // Hooks
 namespace MK12Hook::Hooks {
-	using namespace Memory::VP;
-	using namespace hook;
 
 	bool DisableSignatureCheck()
 	{
 		printf("\n==DisableSignatureCheck==\n");
-		if (SettingsMgr->pSigCheck.empty())
-		{
-			printfError("pSigCheck Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSigCheck, "SigCheck");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigCheck);
-		if (!lpSigCheckPattern)
-		{
-			printfError("Couldn't find SigCheck Pattern\n");
-			return false;
-		}
-
-		uint64_t hook_address = (uint64_t)lpSigCheckPattern;
-		if (SettingsMgr->iLogLevel)
-			printf("SigCheck Pattern found at: %p\n", lpSigCheckPattern);
-		Patch(GetGameAddr(hook_address) - 0x14, (uint8_t)0xC3); // ret
-		Patch(GetGameAddr(hook_address) - 0x14 + 1, (uint32_t)0x90909090); // Nop
-
+		GamePatcher->PatchReturn(patAddr - 0x14, 5);
 		printfSuccess("SigCheck Patched");
 
 		return true;
@@ -520,24 +452,12 @@ namespace MK12Hook::Hooks {
 	bool DisableSignatureWarn()
 	{
 		printf("\n==DisableSignatureWarn==\n");
-		if (SettingsMgr->pSigWarn.empty())
-		{
-			printfError("pSigWarn Not Specified. Please Add Pattern to ini file!\n");
-			return false;
-		}
 
-		uint64_t* lpSigWarnPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pSigWarn);
-		if (!lpSigWarnPattern)
-		{
-			printfError("Couldn't find SigWarn Pattern");
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSigWarn, "SigWarn");
+		if (!patAddr)
 			return false;
-		}
-		uint64_t hook_address = (uint64_t)lpSigWarnPattern;
-		if (SettingsMgr->iLogLevel)
-			printf("SigWarn Pattern found at: %p\n", lpSigWarnPattern);
 
-		// Shift address by -1
-		ConditionalJumpToJump(hook_address, 0xA);
+		GamePatcher->ConditionalToUnconditional(patAddr + 0xA);
 		printfSuccess("SigWarn Patched");
 
 		return true;
@@ -546,65 +466,30 @@ namespace MK12Hook::Hooks {
 	bool DisableChunkSigCheck()
 	{
 		printf("\n==DisablePakChunkSigCheck==\n");
-		if (SettingsMgr->pChunkSigCheck.empty())
-		{
-			printfError("pChunkSigCheck Not Specified. Please Add Pattern to ini file!\n");
-			return false;
-		}
-		if (SettingsMgr->pChunkSigCheckFunc.empty())
-		{
-			printfError("pChunkSigCheckFunc Not Specified. Please Add Pattern to ini file!\n");
-			return false;
-		}
 
-		uint64_t* lpChunkSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheck);
-		if (!lpChunkSigCheckPattern)
-		{
-			printfError("Couldn't find ChunkSigCheck Pattern");
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pChunkSigCheck, "ChunkSigCheck");
+		if (!patAddr)
 			return false;
-		}
-		if (SettingsMgr->iLogLevel)
-			printf("ChunkSigCheck Pattern found at: %p\n", lpChunkSigCheckPattern);
 
-		uint64_t* lpChunkSigCheckFuncPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pChunkSigCheckFunc);
-		if (!lpChunkSigCheckFuncPattern)
-		{
-			printfError("Couldn't find ChunkSigCheckFunc Pattern");
+		uint64_t funcAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pChunkSigCheckFunc, "ChunkSigCheckFunc");
+		if (!funcAddr)
 			return false;
-		}
-		if (SettingsMgr->iLogLevel)
-			printf("ChunkSigCheckFunc Pattern found at: %p\n", lpChunkSigCheckFuncPattern);
 
-#pragma warning(suppress: 4244)
-		uint32_t FuncOffset = ((uint64_t)lpChunkSigCheckFuncPattern) - (((uint64_t)lpChunkSigCheckPattern) + 0xE + 5); // 5 is the size of the opcode, E is the offset to the opcode
-		Patch<uint32_t>(((uint64_t)lpChunkSigCheckPattern) + 0xF, FuncOffset);
+		GamePatcher->RedirectCall(patAddr + 0xE, funcAddr);
 		printfSuccess("PakChunkSigCheck Patched");
 
 		return true;
-
 	}
 
 	bool DisableTOCSigCheck()
 	{
 		printf("\n==DisableTOCSigCheck==\n");
-		if (SettingsMgr->pTocCheck.empty())
-		{
-			printfError("pTocCheck Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pTocCheck, "TocSigCheck");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpTocSigCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pTocCheck);
-		if (!lpTocSigCheckPattern)
-		{
-			printfError("Couldn't find TocSigCheck Pattern");
-			return false;
-		}
-
-		uint64_t hook_address = (uint64_t)lpTocSigCheckPattern;
-		if (SettingsMgr->iLogLevel)
-			printf("TocSigCheck Pattern found at: %p\n", lpTocSigCheckPattern);
-
-		ConditionalJumpToJump(hook_address, 0x12);
+		GamePatcher->ConditionalToUnconditional(patAddr + 0x12);
 		printfSuccess("TocSigCheck Patched");
 
 		return true;
@@ -613,24 +498,12 @@ namespace MK12Hook::Hooks {
 	bool DisablePakTOCCheck()
 	{
 		printf("\n==DisablePakTOCCheck==\n");
-		if (SettingsMgr->pPakTocCheck.empty())
-		{
-			printfError("pPakTocCheck Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pPakTocCheck, "PakTocCheck");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPakTocCheckPattern = FindPattern(GetModuleHandleA(NULL), SettingsMgr->pPakTocCheck);
-		if (!lpPakTocCheckPattern)
-		{
-			printfError("Couldn't find PakTocCheck Pattern");
-			return false;
-		}
-
-		uint64_t hook_address = (uint64_t)lpPakTocCheckPattern;
-		if (SettingsMgr->iLogLevel)
-			printf("PakTocCheck Pattern found at: %p\n", lpPakTocCheckPattern);
-
-		Patch<uint8_t>(hook_address + 0x12, 0xEB); // je to short jump
+		GamePatcher->ConditionalToUnconditional(patAddr + 0x12);
 		printfSuccess("PakTocCheck Patched");
 
 		return true;
@@ -717,25 +590,15 @@ namespace MK12Hook::Hooks {
 	bool UNameTableGetter()
 	{
 		printf("\n==UNameObjectGetter==\n");
-		std::string pattern = SettingsMgr->pUNameObjGetPat;
-		if (pattern.empty())
-		{
-			printfError("pUNameObjGetPat Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pUNameObjGetPat, "UNameObjGet");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find UNameObjGet Pattern");
-			return false;
-		}
+		uint64_t* lpPattern = (uint64_t*)patAddr;
 
-		if (SettingsMgr->iLogLevel)
-			printf("UNameObjGet Pattern found at: %p\n", lpPattern);
-
-		uint64_t UNameMain	= GetDestinationFromOpCode((uint64_t)lpPattern, 2, 7, 4) - 0x8;
-		uint64_t UNameSub	= GetDestinationFromOpCode((uint64_t)lpPattern + 0x12, 3, 7, 4);
+		uint64_t UNameMain	= ProcessPatch::GetDestinationFromOpCode((uint64_t)lpPattern, 2, 7, 4) - 0x8;
+		uint64_t UNameSub	= ProcessPatch::GetDestinationFromOpCode((uint64_t)lpPattern + 0x12, 3, 7, 4);
 
 		if (SettingsMgr->iLogLevel)
 		{
@@ -762,13 +625,13 @@ namespace MK12Hook::Hooks {
 			printf("InitializeNameTable Function found at: %p\n", (uint64_t*)InitNameTableFuncAddr);
 		}
 
-		MK12::InitializeNameTable = (MK12::InitializeNameTableType*)GetDestinationFromOpCode(InitNameTableFuncAddr);
+		MK12::InitializeNameTable = (MK12::InitializeNameTableType*)ProcessPatch::GetDestinationFromOpCode(InitNameTableFuncAddr);
 		printfSuccess("InitializeNameTableFunction!\n");
 
 		return true;
 	}
 
-	bool OverrideFNameToWStrFuncs(Trampoline* GameTramp)
+	bool OverrideFNameToWStrFuncs()
 	{
 		if (SettingsMgr->iLogLevel)
 			printfYellow("String Swap Mode set to Override!\n");
@@ -783,7 +646,7 @@ namespace MK12Hook::Hooks {
 			printfError("Overriding FNameToWStr disabled: UNameTableGetter pattern failed!");
 			return false;
 		}
-			
+
 		if (MK12::ReadFNameToWStrWithIdStart == nullptr)
 		{
 			if (SettingsMgr->bFNameToStrHook)
@@ -800,7 +663,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrWithIdStart), GameTramp->Jump(MK12::Remake::FNameInfoToWStringWithId), PATCH_JUMP);
+			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrWithIdStart, MK12::Remake::FNameInfoToWStringWithId);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
 				printfYellow("FNameToWStrId replacing Proxy Loader\n");
 			else
@@ -823,7 +686,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrNoIdStart), GameTramp->Jump(MK12::Remake::FNameInfoToWStringNoId), PATCH_JUMP);
+			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrNoIdStart, MK12::Remake::FNameInfoToWStringNoId);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
 				printfYellow("FNameToWStrNoId replacing Proxy Loader\n");
 			else
@@ -846,7 +709,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			InjectHook(GetGameAddr((uint64_t)MK12::ReadFNameToWStrCommonStart), GameTramp->Jump(MK12::Remake::FNameInfoToWString), PATCH_JUMP);
+			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrCommonStart, MK12::Remake::FNameInfoToWString);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathCommonLoader"])
 				printfYellow("FNameToWStrCommon replacing Proxy Loader\n");
 			else
@@ -910,45 +773,20 @@ namespace MK12Hook::Hooks {
 		return HooksCtr;
 	}
 
-	bool ExtractFightMetadataFromSecretFightSetupStage(Trampoline* GameTramp)
+	bool ExtractFightMetadataFromSecretFightSetupStage()
 	{
 		printf("\n==ExtractFightMetadataFromSecretFightSetupStage==\n");
-		std::string pattern = SettingsMgr->pSecretFightCondPat;
-		if (pattern.empty())
-		{
-			printfError("pSecretFightCondPat Not Specified. Please Add Pattern to ini file!");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSecretFightCondPat, "SecretFightConditionSetup");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find SecretFightConditionSetup Pattern");
-			return false;
-		}
-
-		if (SettingsMgr->iLogLevel)
-			printf("SecretFightConditionSetup Pattern Found at: %p\n", lpPattern);
-
-		//uint64_t CallAddr = ((uint64_t)lpPattern) + 0x17;
-		uint64_t CallAddr = ((uint64_t)lpPattern) + 77;
-
-		//uint8_t SecretFightDataOffset = *((uint8_t*)(CallAddr - 0x5)); // Should point to 0x70
-		//MK12::KlassicTowerSecretFightDataOffset = GetOffsetFromOpCode((uint64_t)lpPattern, -0x5, 1);
-		//MK12::KlassicTowerSecretFightDataOffset = GetOffsetFromOpCode((uint64_t)lpPattern, +56, 1); // 0x80
 		MK12::KlassicTowerSecretFightDataOffset = 0x80;
 
-		MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::SetupSecretFightConditionsProxy, &MK12::SetupSecretFightConditions, PATCH_JUMP);
-
-		if (SettingsMgr->iLogLevel)
-		{
-			printf("SecretFightConditionSetup Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::SetupSecretFightConditions);
-		}
-
+		GamePatcher->ProxyCallSite(patAddr + 77, MK12Hook::Proxies::SetupSecretFightConditionsProxy, &MK12::SetupSecretFightConditions, PATCH_JUMP);
 		printfSuccess("SecretFightConditionSetup Proxied");
 
 		return true;
-
 	}
 
 };
