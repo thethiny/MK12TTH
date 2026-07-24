@@ -80,13 +80,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.asi</TargetExt>
-    <OutDir>$(SolutionDir)out\$(Configuration)\Binaries\ASI\</OutDir>
+    <OutDir>$(SolutionDir)out\$(Configuration)\Binaries\</OutDir>
     <TargetName>MK12TTH</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.asi</TargetExt>
-    <OutDir>$(SolutionDir)out\$(Configuration)\Binaries\ASI\</OutDir>
+    <OutDir>$(SolutionDir)out\$(Configuration)\Binaries\</OutDir>
     <TargetName>MK12TTH</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
