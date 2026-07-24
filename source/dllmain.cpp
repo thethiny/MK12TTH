@@ -179,12 +179,15 @@ bool HandleWindowsVersion()
 
 #include <string>
 
-inline bool VerifyProcessName() {
-	std::string expected_process = "mk12.exe";
+inline bool VerifyProcessName(std::string expected_process) {
 	std::string process_name = GetProcessName();
 
 	for (size_t i = 0; i < process_name.length(); ++i) {
 		process_name[i] = std::tolower(process_name[i]);
+	}
+
+	for (size_t i = 0; i < expected_process.length(); ++i) {
+		expected_process[i] = std::tolower(expected_process[i]);
 	}
 
 	return (process_name == expected_process);
@@ -199,7 +202,7 @@ bool OnInitializeHook()
 	if (!HandleWindowsVersion())
 		return false;
 
-	if (!SettingsMgr->bAllowNonMK && !VerifyProcessName())
+	if (!SettingsMgr->bAllowNonMK && !VerifyProcessName("mk12.exe"))
 	{
 		SpawnError("This dll is made to work only with MK12.exe");
 		return false;

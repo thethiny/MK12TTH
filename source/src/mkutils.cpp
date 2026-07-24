@@ -27,16 +27,16 @@ int64 GetModuleEntryPoint(const char* name)
 	return addr;
 }
 
-// Dead code after early return is intentional (backwards compatible)
 int64 GetGameAddr(__int64 addr)
 {
-	int64 Entry = GetGameEntryPoint();
-	return addr > Entry - 40000000 ? addr : Entry + addr;
-	if (addr > Entry)
+	int64_t base = GetGameEntryPoint();
+	if (addr >= 0x140000000 && addr < base)
+		return addr - 0x140000000 + base;
+
+	if (addr >= base)
 		return addr;
-	if (addr > Entry - 40000000)
-		return addr;
-	return Entry + addr;
+
+	return base + addr;
 }
 
 int64 GetUser32Addr(__int64 addr)
@@ -150,6 +150,16 @@ uint64_t* FindPattern(void* handle, std::string_view bytes)
 		return pCamPattern.get(0).get<uint64_t>(0);
 	}
 	return nullptr;
+}
+
+uint64_t* FindPattern(std::string pattern)
+{
+	return FindPattern(GetModuleHandleA(NULL), pattern);
+}
+
+uint64_t* FindPattern(const char* pattern)
+{
+	return FindPattern(std::string(pattern));
 }
 
 uint64_t HookPattern(std::string Pattern, const char* PatternName, void* HookProc, int64_t PatternOffset, PatchTypeEnum PatchType, uint64_t PrePat, uint64_t* Entry)

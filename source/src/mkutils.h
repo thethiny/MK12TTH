@@ -29,6 +29,8 @@ std::string		GetFileName(std::string filename);
 HMODULE			AwaitHModule(const char* name, uint64_t timeout = 0);
 uint64_t		stoui64h(std::string szString);
 uint64_t*		FindPattern(void* handle, std::string_view bytes);
+uint64_t*		FindPattern(std::string pattern);
+uint64_t*		FindPattern(const char* pattern);
 uint64_t		HookPattern(std::string Pattern, const char* PatternName, void* HookProc, int64_t PatternOffset = 0, PatchTypeEnum PatchType = PatchTypeEnum::PATCH_CALL, uint64_t PrePat = NULL, uint64_t* Entry = nullptr);
 uint64_t		GetDestinationFromOpCode(uint64_t Caller, uint64_t Offset = 1, uint64_t FuncLen = 5, uint16_t size = 4);
 int32_t			GetOffsetFromOpCode(uint64_t Caller, uint64_t Offset, uint16_t size);
@@ -40,6 +42,9 @@ int				StringToVK(std::string);
 void			RaiseException(const char*, int64_t = 1);
 bool			IsHex(char);
 bool			IsBase(char c, int = 16);
+
+static void DummyVoidFunc() {}
+static void* DummyPtrFunc(...) { return nullptr; }
 
 uint64_t* MakeProxyFromOpCode(Trampoline* GameTramp, uint64_t CallAddr, uint8_t JumpAddrSize, void* ProxyFunctionAddr, PatchTypeEnum PatchType = PATCH_CALL);
 template <typename T> void MakeProxyFromOpCode(Trampoline* GameTramp, uint64_t CallAddr, uint8_t JumpAddrSize, void* ProxyFunctionAddr, T** ProxyFuncPtr, PatchTypeEnum PatchType = PATCH_CALL);
