@@ -68,7 +68,7 @@ void PreGameHooks()
 	GamePatcher->Init(GetModuleHandle(nullptr), CURRENT_HOOK_VERSION);
 	if (SettingsMgr->iLogLevel)
 		printf("Generated Trampolines\n");
-	 IATable = ProcessPatch::ParsePEHeader();
+	 IATable = ProcessPatch::ParseImportTable();
 
 
 	if (SettingsMgr->bDisableSignatureCheck)
@@ -257,7 +257,7 @@ bool OnInitializeHook()
 
 	ProcessSettings(); // Parse Settings
 
-	uint64_t EXEHash = ProcessPatch::HashTextSectionOfHost();
+	uint64_t EXEHash = ProcessPatch::HashTextSection();
 	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION, GamePatcher->GetModuleName().c_str());
 
 	PreGameHooks(); // Queue Blocker

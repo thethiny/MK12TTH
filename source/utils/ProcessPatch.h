@@ -28,28 +28,34 @@ typedef		std::map<std::string, FuncMap>		LibMap;
  */
 namespace ProcessPatch {
 
+	// ── Get: retrieve module addresses ──
+
 	/** Returns the base address of the main module (exe). Cached on first call. */
-	int64_t		GetGameEntryPoint();
+	int64_t		GetMainModuleBase();
 
 	/** Returns the base address of the specified module by name. NOT cached, resolves every call.
 	 *  @param name  DLL or module name (e.g. "user32.dll") */
-	int64_t		GetModuleEntryPoint(const char* name);
+	int64_t		GetModuleBase(const char* name);
 
-	/** Scans a module for a byte pattern.
-	 *  @param handle  Module handle to scan (e.g. GetModuleHandle(nullptr))
+	// ── Search: locate byte patterns in memory ──
+
+	/** Searches a module for a byte pattern.
+	 *  @param handle  Module handle to search (e.g. GetModuleHandle(nullptr))
 	 *  @param bytes   Pattern string with ? wildcards (e.g. "48 8B 0D ? ? ? ? E8")
 	 *  @return Pointer to the first match, or nullptr if not found */
-	uint64_t*	FindPattern(void* handle, std::string_view bytes);
+	uint64_t*	SearchPattern(void* handle, std::string_view bytes);
 
-	/** Scans the main module for a byte pattern.
+	/** Searches the main module for a byte pattern.
 	 *  @param pattern  Pattern string with ? wildcards
 	 *  @return Pointer to the first match, or nullptr if not found */
-	uint64_t*	FindPattern(std::string pattern);
+	uint64_t*	SearchPattern(std::string pattern);
 
-	/** Scans the main module for a byte pattern.
+	/** Searches the main module for a byte pattern.
 	 *  @param pattern  Pattern string with ? wildcards
 	 *  @return Pointer to the first match, or nullptr if not found */
-	uint64_t*	FindPattern(const char* pattern);
+	uint64_t*	SearchPattern(const char* pattern);
+
+	// ── Parse: analyze instruction and PE structure ──
 
 	/** Parses the instruction at addr to determine its layout for RIP-relative resolution.
 	 *  Handles: E8 (call), E9 (jmp), EB (short jmp), 70-7F (short conditional),
@@ -59,44 +65,42 @@ namespace ProcessPatch {
 	 *  @return InstructionInfo with isValid=false if the encoding is not recognized */
 	InstructionInfo ParseInstruction(uint64_t addr);
 
-	/** Reads a relative offset from an opcode. Manual param version for encodings ParseInstruction doesn't handle.
-	 *  @param Caller  Address of the instruction
-	 *  @param Offset  Bytes to skip to reach the displacement field (1 for call/jmp, 2 for conditional, 3 for REX+opcode+ModRM)
-	 *  @param Size    Size of the displacement field in bytes (usually 4)
-	 *  @return The signed displacement value */
-	int32_t		GetOffsetFromOpCode(uint64_t Caller, uint64_t Offset, uint16_t Size);
+	/** Parses the PE Import Address Table of the main module.
+	 *  @return A map of library names (lowercase) to their function name -> address mappings */
+	LibMap		ParseImportTable();
 
-	/** Resolves the destination address from an opcode. Manual param version for encodings ParseInstruction doesn't handle.
-	 *  Formula: target = Caller + displacement + FuncLen
-	 *  @param Caller   Address of the instruction
-	 *  @param Offset   Bytes to skip to reach the displacement field (default: 1)
-	 *  @param FuncLen  Total instruction length (default: 5, for E8/E9)
-	 *  @param Size     Size of the displacement field (default: 4)
-	 *  @return The absolute target address */
-	uint64_t	GetDestinationFromOpCode(uint64_t Caller, uint64_t Offset = 1, uint64_t FuncLen = 5, uint16_t Size = 4);
+	/** Computes an FNV-1a hash of the .text section of the main module.
+	 *  Used for cache invalidation: the hash changes when the game binary updates.
+	 *  Prints the hash and timing to stdout.
+	 *  @return The 64-bit hash, or 0 if .text section not found */
+	uint64_t	HashTextSection();
+
+	// ── Resolve: compute where an instruction points ──
 
 	/** Resolves the destination address from a call/jmp/lea/mov/cmp opcode using auto-detection.
 	 *  Uses ParseInstruction internally. Falls back to 0 if instruction not recognized.
 	 *  For indirect instructions (FF 15/25), performs the extra pointer dereference automatically.
 	 *  @param addr  Address of the first byte of the instruction
 	 *  @return The resolved target address, or 0 on failure */
-	uint64_t ResolveDestination(uint64_t addr);
+	uint64_t	ResolveDestination(uint64_t addr);
 
-	/** Parses the PE Import Address Table of the main module.
-	 *  @return A map of library names (lowercase) to their function name -> address mappings */
-	LibMap		ParsePEHeader();
+	/** Resolves the destination address from an opcode with manually provided layout.
+	 *  Uses ReadDisplacement internally. Use when ParseInstruction doesn't recognize the encoding.
+	 *  Formula: target = addr + displacement + instrSize
+	 *  @param addr        Address of the instruction
+	 *  @param dispOffset  Bytes to skip to reach the displacement field (1 for call/jmp, 2 for conditional, 3 for REX+opcode+ModRM)
+	 *  @param instrSize   Total instruction length in bytes (5 for E8/E9, 6 for 0F 8x, 7 for REX+lea/mov)
+	 *  @param dispSize    Size of the displacement field in bytes (usually 4)
+	 *  @return The absolute target address */
+	uint64_t	ResolveDestination(uint64_t addr, uint64_t dispOffset, uint64_t instrSize, uint16_t dispSize);
 
-	/** Computes an FNV-1a hash of the .text section of the main module.
-	 *  Used for cache invalidation: the hash changes when the game binary updates.
-	 *  Prints the hash and timing to stdout.
-	 *  @return The 64-bit hash, or 0 if .text section not found */
-	uint64_t	HashTextSectionOfHost();
+	// ── Patch: modify bytes at an address ──
 
 	/** Overwrites an instruction with ret (0xC3) followed by nops to fill the remaining bytes.
-	 *  Use this to disable a function by making it return immediately.
-	 *  @param addr  Address of the instruction to overwrite
+	 *  Use this to make a function return immediately.
+	 *  @param addr  Address to patch
 	 *  @param size  Number of bytes to overwrite. Common sizes: 5 (call near), 6 (call far/jne near), 2 (short jmp) */
-	inline void PatchReturn(uint64_t addr, uint8_t size)
+	inline void PatchReturnAt(uint64_t addr, uint8_t size)
 	{
 		DWORD dwProtect;
 		VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &dwProtect);
@@ -110,7 +114,7 @@ namespace ProcessPatch {
 	 *  Handles both short (7x -> EB, 2 bytes) and near (0F 8x -> E9, 6 bytes) conditionals.
 	 *  Auto-detects which encoding is present at addr.
 	 *  @param addr  Address of the conditional jump instruction (the first opcode byte) */
-	inline void ConditionalToUnconditional(uint64_t addr)
+	inline void PatchConditionalToUnconditional(uint64_t addr)
 	{
 		uint8_t b0 = *(uint8_t*)addr;
 
@@ -133,11 +137,13 @@ namespace ProcessPatch {
 		}
 	}
 
+	// ── Redirect: change where a call/jmp points ──
+
 	/** Redirects an existing call/jmp instruction to a new target by patching its relative displacement.
 	 *  @param addr        Address of the call/jmp instruction
 	 *  @param newTarget   Absolute address of the new target function
 	 *  @param opcodeSize  Bytes before the displacement field. 0 = auto-detect via ParseInstruction */
-	inline void RedirectCall(uint64_t addr, uint64_t newTarget, uint8_t opcodeSize = 0)
+	inline void RedirectCallTo(uint64_t addr, uint64_t newTarget, uint8_t opcodeSize = 0)
 	{
 		if (opcodeSize == 0)
 		{
@@ -159,14 +165,16 @@ namespace ProcessPatch {
 		VirtualProtect((void*)(addr + opcodeSize), addrFieldSize, dwProtect, &dwProtect);
 	}
 
-	/** Redirects a call/jmp to a proxy function via trampoline, and returns the original target address.
-	 *  Uses ResolveDestination to extract the original target before patching.
+	// ── Proxy: intercept a call and forward to original ──
+
+	/** Proxies a call/jmp instruction via trampoline, capturing the original target.
+	 *  Resolves the original destination before patching, so the proxy can forward to it.
 	 *  @param tramp      Trampoline for generating the far jump stub
-	 *  @param addr       Address of the call/jmp instruction to patch
+	 *  @param addr       Address of the call/jmp instruction to proxy
 	 *  @param proxyFunc  Your proxy function that will be called instead
 	 *  @param patchType  PATCH_CALL or PATCH_JUMP (from MemoryMgr.h)
-	 *  @return The original function address as a pointer, or nullptr if ResolveDestination failed */
-	inline uint64_t* ProxyCallSite(Trampoline* tramp, uint64_t addr, void* proxyFunc, PatchTypeEnum patchType = PATCH_CALL)
+	 *  @return The original function address as a pointer, or nullptr if resolution failed */
+	inline uint64_t* ProxyCallAt(Trampoline* tramp, uint64_t addr, void* proxyFunc, PatchTypeEnum patchType = PATCH_CALL)
 	{
 		uint64_t originalFunc = ResolveDestination(addr);
 		if (!originalFunc)
@@ -176,27 +184,31 @@ namespace ProcessPatch {
 		return (uint64_t*)originalFunc;
 	}
 
-	/** Typed version of ProxyCallSite. Extracts the original function pointer into a typed variable.
+	/** Typed version of ProxyCallAt. Stores the original function pointer into a typed variable.
 	 *  @param tramp         Trampoline for generating the far jump stub
-	 *  @param addr          Address of the call/jmp instruction to patch
+	 *  @param addr          Address of the call/jmp instruction to proxy
 	 *  @param proxyFunc     Your proxy function that will be called instead
 	 *  @param originalFunc  Pointer to store the original function address (cast to T*)
 	 *  @param patchType     PATCH_CALL or PATCH_JUMP */
 	template <typename T>
-	inline void ProxyCallSite(Trampoline* tramp, uint64_t addr, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL)
+	inline void ProxyCallAt(Trampoline* tramp, uint64_t addr, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL)
 	{
-		*originalFunc = (T*)ProxyCallSite(tramp, addr, proxyFunc, patchType);
+		*originalFunc = (T*)ProxyCallAt(tramp, addr, proxyFunc, patchType);
 	}
 
+	// ── Replace: swap a function entirely ──
+
 	/** Replaces a function at its entry point with a jump to a replacement function.
-	 *  The original function becomes unreachable. Use ProxyCallSite if you need to call the original.
+	 *  The original function becomes unreachable. Use ProxyCallAt if you need to call the original.
 	 *  @param tramp        Trampoline for generating the far jump stub
 	 *  @param addr         Address of the function entry point to replace
 	 *  @param replacement  Your replacement function */
-	inline void ReplaceFunction(Trampoline* tramp, uint64_t addr, void* replacement)
+	inline void ReplaceFunctionWith(Trampoline* tramp, uint64_t addr, void* replacement)
 	{
 		Memory::VP::InjectHook(addr, tramp->Jump(replacement), PATCH_JUMP);
 	}
+
+	// ── Utility ──
 
 	/** No-op void function stub. Use when you need to patch a function to do nothing. */
 	static void DummyVoidFunc() {}

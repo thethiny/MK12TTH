@@ -439,11 +439,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==DisableSignatureCheck==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSigCheck, "SigCheck");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pSigCheck, "SigCheck");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->PatchReturn(patAddr - 0x14, 5);
+		GamePatcher->PatchReturnAt(patAddr - 0x14, 5);
 		printfSuccess("SigCheck Patched");
 
 		return true;
@@ -453,11 +453,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==DisableSignatureWarn==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSigWarn, "SigWarn");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pSigWarn, "SigWarn");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ConditionalToUnconditional(patAddr + 0xA);
+		GamePatcher->PatchConditionalToUnconditional(patAddr + 0xA);
 		printfSuccess("SigWarn Patched");
 
 		return true;
@@ -467,15 +467,15 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==DisablePakChunkSigCheck==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pChunkSigCheck, "ChunkSigCheck");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pChunkSigCheck, "ChunkSigCheck");
 		if (!patAddr)
 			return false;
 
-		uint64_t funcAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pChunkSigCheckFunc, "ChunkSigCheckFunc");
+		uint64_t funcAddr = GamePatcher->ResolvePattern(SettingsMgr->pChunkSigCheckFunc, "ChunkSigCheckFunc");
 		if (!funcAddr)
 			return false;
 
-		GamePatcher->RedirectCall(patAddr + 0xE, funcAddr);
+		GamePatcher->RedirectCallTo(patAddr + 0xE, funcAddr);
 		printfSuccess("PakChunkSigCheck Patched");
 
 		return true;
@@ -485,11 +485,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==DisableTOCSigCheck==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pTocCheck, "TocSigCheck");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pTocCheck, "TocSigCheck");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ConditionalToUnconditional(patAddr + 0x12);
+		GamePatcher->PatchConditionalToUnconditional(patAddr + 0x12);
 		printfSuccess("TocSigCheck Patched");
 
 		return true;
@@ -499,11 +499,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==DisablePakTOCCheck==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pPakTocCheck, "PakTocCheck");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pPakTocCheck, "PakTocCheck");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ConditionalToUnconditional(patAddr + 0x12);
+		GamePatcher->PatchConditionalToUnconditional(patAddr + 0x12);
 		printfSuccess("PakTocCheck Patched");
 
 		return true;
@@ -513,11 +513,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==ProxyFPathIdLoader==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPathLoadPat, "FPathLoad");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPathLoadPat, "FPathLoad");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ProxyCallSite(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrId, &MK12::FNameToWStr, PATCH_CALL);
+		GamePatcher->ProxyCallAt(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrId, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPathLoad Proxied");
 
 		uint64_t func_start = patAddr - 0x6F;
@@ -539,11 +539,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==ProxyFPathNoIdLoader==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPath2LoadPat, "FPath2Load");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPath2LoadPat, "FPath2Load");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ProxyCallSite(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrNoId, &MK12::FNameToWStr, PATCH_CALL);
+		GamePatcher->ProxyCallAt(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrNoId, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPath2Load Proxied");
 
 		uint64_t func_start = patAddr - 0x55;
@@ -565,11 +565,11 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==ProxyFPathCommonLoader==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPathCLoadPat, "FPathCLoad");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPathCLoadPat, "FPathCLoad");
 		if (!patAddr)
 			return false;
 
-		GamePatcher->ProxyCallSite(patAddr + 0x00, MK12Hook::Proxies::ReadFNameToWStrCommon, &MK12::FNameToWStr, PATCH_CALL);
+		GamePatcher->ProxyCallAt(patAddr + 0x00, MK12Hook::Proxies::ReadFNameToWStrCommon, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPathCLoad Proxied");
 
 		uint64_t func_start = patAddr - 0x10;
@@ -591,14 +591,14 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==UNameObjectGetter==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pUNameObjGetPat, "UNameObjGet");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pUNameObjGetPat, "UNameObjGet");
 		if (!patAddr)
 			return false;
 
 		uint64_t* lpPattern = (uint64_t*)patAddr;
 
-		uint64_t UNameMain	= ProcessPatch::GetDestinationFromOpCode((uint64_t)lpPattern, 2, 7, 4) - 0x8;
-		uint64_t UNameSub	= ProcessPatch::GetDestinationFromOpCode((uint64_t)lpPattern + 0x12, 3, 7, 4);
+		uint64_t UNameMain	= ProcessPatch::ResolveDestination((uint64_t)lpPattern, 2, 7, 4) - 0x8;
+		uint64_t UNameSub	= ProcessPatch::ResolveDestination((uint64_t)lpPattern + 0x12, 3, 7, 4);
 
 		if (SettingsMgr->iLogLevel)
 		{
@@ -625,7 +625,7 @@ namespace MK12Hook::Hooks {
 			printf("InitializeNameTable Function found at: %p\n", (uint64_t*)InitNameTableFuncAddr);
 		}
 
-		MK12::InitializeNameTable = (MK12::InitializeNameTableType*)ProcessPatch::GetDestinationFromOpCode(InitNameTableFuncAddr);
+		MK12::InitializeNameTable = (MK12::InitializeNameTableType*)ProcessPatch::ResolveDestination(InitNameTableFuncAddr);
 		printfSuccess("InitializeNameTableFunction!\n");
 
 		return true;
@@ -663,7 +663,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrWithIdStart, MK12::Remake::FNameInfoToWStringWithId);
+			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrWithIdStart, MK12::Remake::FNameInfoToWStringWithId);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
 				printfYellow("FNameToWStrId replacing Proxy Loader\n");
 			else
@@ -686,7 +686,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrNoIdStart, MK12::Remake::FNameInfoToWStringNoId);
+			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrNoIdStart, MK12::Remake::FNameInfoToWStringNoId);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
 				printfYellow("FNameToWStrNoId replacing Proxy Loader\n");
 			else
@@ -709,7 +709,7 @@ namespace MK12Hook::Hooks {
 		}
 		else
 		{
-			GamePatcher->ReplaceFunction((uint64_t)MK12::ReadFNameToWStrCommonStart, MK12::Remake::FNameInfoToWString);
+			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrCommonStart, MK12::Remake::FNameInfoToWString);
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathCommonLoader"])
 				printfYellow("FNameToWStrCommon replacing Proxy Loader\n");
 			else
@@ -735,7 +735,7 @@ namespace MK12Hook::Hooks {
 			return false;
 		}
 
-		return GamePatcher->HookPattern(SettingsMgr->pEndpointLoader, "EndpointLoader", 0x00,
+		return GamePatcher->ProxyByPattern(SettingsMgr->pEndpointLoader, "EndpointLoader", 0x00,
 			MK12Hook::Proxies::OverrideGameEndpoint, &MK12::GetEndpointKeyValue, PATCH_CALL);
 	}
 
@@ -743,7 +743,7 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==ProfileGetterHooks==\n");
 
-		return GamePatcher->HookPattern(SettingsMgr->pProfileGetter, "ProfileGetter", 30,
+		return GamePatcher->ProxyByPattern(SettingsMgr->pProfileGetter, "ProfileGetter", 30,
 			MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
 	}
 
@@ -754,13 +754,13 @@ namespace MK12Hook::Hooks {
 		int HooksCtr = 0;
 		int ExpectedHooksCtr = 3;
 
-		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetChallengesFromHash, "GetChallengesFromHash", 14,
+		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetChallengesFromHash, "GetChallengesFromHash", 14,
 			MK12Hook::Proxies::GenerateFloydCluesFromHashProxy, &MK12::GenerateFloydCluesFromHash, PATCH_CALL);
 
-		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetFloydHashInputString, "GetFloydHashInputString", 11,
+		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetFloydHashInputString, "GetFloydHashInputString", 11,
 			MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
 
-		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetFloydHashInputString2, "GetFloydHashInputString2", 11,
+		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetFloydHashInputString2, "GetFloydHashInputString2", 11,
 			MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
 
 		if (HooksCtr == ExpectedHooksCtr)
@@ -777,13 +777,13 @@ namespace MK12Hook::Hooks {
 	{
 		printf("\n==ExtractFightMetadataFromSecretFightSetupStage==\n");
 
-		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pSecretFightCondPat, "SecretFightConditionSetup");
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pSecretFightCondPat, "SecretFightConditionSetup");
 		if (!patAddr)
 			return false;
 
 		MK12::KlassicTowerSecretFightDataOffset = 0x80;
 
-		GamePatcher->ProxyCallSite(patAddr + 77, MK12Hook::Proxies::SetupSecretFightConditionsProxy, &MK12::SetupSecretFightConditions, PATCH_JUMP);
+		GamePatcher->ProxyCallAt(patAddr + 77, MK12Hook::Proxies::SetupSecretFightConditionsProxy, &MK12::SetupSecretFightConditions, PATCH_JUMP);
 		printfSuccess("SecretFightConditionSetup Proxied");
 
 		return true;

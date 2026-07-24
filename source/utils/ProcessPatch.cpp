@@ -4,23 +4,23 @@
 
 using namespace hook;
 
-// Module base addresses
+// ── Get ──
 
-int64_t ProcessPatch::GetGameEntryPoint()
+int64_t ProcessPatch::GetMainModuleBase()
 {
 	static int64_t addr = reinterpret_cast<int64_t>(GetModuleHandle(nullptr));
 	return addr;
 }
 
-int64_t ProcessPatch::GetModuleEntryPoint(const char* name)
+int64_t ProcessPatch::GetModuleBase(const char* name)
 {
 	int64_t addr = reinterpret_cast<int64_t>(GetModuleHandle(name));
 	return addr;
 }
 
-// Pattern scanning
+// ── Search ──
 
-uint64_t* ProcessPatch::FindPattern(void* handle, std::string_view bytes)
+uint64_t* ProcessPatch::SearchPattern(void* handle, std::string_view bytes)
 {
 	hook::pattern pCamPattern = hook::make_module_pattern(handle, bytes);
 	if (!pCamPattern.count_hint(1).empty())
@@ -30,17 +30,17 @@ uint64_t* ProcessPatch::FindPattern(void* handle, std::string_view bytes)
 	return nullptr;
 }
 
-uint64_t* ProcessPatch::FindPattern(std::string pattern)
+uint64_t* ProcessPatch::SearchPattern(std::string pattern)
 {
-	return FindPattern(GetModuleHandleA(NULL), pattern);
+	return SearchPattern(GetModuleHandleA(NULL), pattern);
 }
 
-uint64_t* ProcessPatch::FindPattern(const char* pattern)
+uint64_t* ProcessPatch::SearchPattern(const char* pattern)
 {
-	return FindPattern(std::string(pattern));
+	return SearchPattern(std::string(pattern));
 }
 
-// Instruction parsing
+// ── Parse ──
 
 InstructionInfo ProcessPatch::ParseInstruction(uint64_t addr)
 {
@@ -128,43 +128,7 @@ InstructionInfo ProcessPatch::ParseInstruction(uint64_t addr)
 	return info; // isValid = false
 }
 
-// Opcode helpers (manual params)
-
-int32_t ProcessPatch::GetOffsetFromOpCode(uint64_t Caller, uint64_t Offset, uint16_t Size)
-{
-	int32_t offset = 0;
-	memcpy(&offset, (uint64_t*)(Caller + Offset), Size);
-	return offset;
-}
-
-uint64_t ProcessPatch::GetDestinationFromOpCode(uint64_t Caller, uint64_t Offset, uint64_t FuncLen, uint16_t Size)
-{
-	int32_t offset = GetOffsetFromOpCode(Caller, Offset, Size);
-	return uint64_t(Caller + offset) + FuncLen;
-}
-
-// Auto-detect resolve
-
-uint64_t ProcessPatch::ResolveDestination(uint64_t addr)
-{
-	InstructionInfo info = ParseInstruction(addr);
-	if (!info.isValid || !info.dispSize)
-		return 0;
-
-	int32_t disp = 0;
-	memcpy(&disp, (void*)(addr + info.dispOffset), info.dispSize);
-
-	uint64_t target = addr + info.totalSize + disp;
-
-	if (info.isIndirect)
-		target = *(uint64_t*)target;
-
-	return target;
-}
-
-// PE parsing
-
-LibMap ProcessPatch::ParsePEHeader()
+LibMap ProcessPatch::ParseImportTable()
 {
 	PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)GetModuleHandleA(NULL);
 	PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)RVAtoLP((PBYTE)pDosHeader, pDosHeader->e_lfanew);
@@ -209,7 +173,7 @@ LibMap ProcessPatch::ParsePEHeader()
 	return IAT;
 }
 
-uint64_t ProcessPatch::HashTextSectionOfHost()
+uint64_t ProcessPatch::HashTextSection()
 {
 	LARGE_INTEGER start, end, freq;
 	QueryPerformanceFrequency(&freq);
@@ -248,7 +212,33 @@ uint64_t ProcessPatch::HashTextSectionOfHost()
 	return 0;
 }
 
-// RegisterHacks
+// ── Resolve ──
+
+uint64_t ProcessPatch::ResolveDestination(uint64_t addr)
+{
+	InstructionInfo info = ParseInstruction(addr);
+	if (!info.isValid || !info.dispSize)
+		return 0;
+
+	int32_t disp = 0;
+	memcpy(&disp, (void*)(addr + info.dispOffset), info.dispSize);
+
+	uint64_t target = addr + info.totalSize + disp;
+
+	if (info.isIndirect)
+		target = *(uint64_t*)target;
+
+	return target;
+}
+
+uint64_t ProcessPatch::ResolveDestination(uint64_t addr, uint64_t dispOffset, uint64_t instrSize, uint16_t dispSize)
+{
+	int32_t offset = 0;
+	memcpy(&offset, (uint64_t*)(addr + dispOffset), dispSize);
+	return uint64_t(addr + offset) + instrSize;
+}
+
+// ── RegisterHacks ──
 
 namespace RegisterHacks {
 

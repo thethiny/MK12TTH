@@ -23,15 +23,15 @@ private:
 
 public:
 	PatternFinder() = default;
-	PatternFinder(const std::string pattern, bool cache = true) { Assign(pattern, cache); }
+	PatternFinder(const std::string pattern, bool cache = true) { Search(pattern, cache); }
 	operator uint64_t () { return address; }
 	operator uint64_t* () { return (uint64_t*)address; }
 	operator __int64() { return __int64(address); }
 	operator bool() { return bool(address); }
 	PatternFinder& operator+=(const uint64_t b) { address += b; return *this; }
-	PatternFinder& operator=(const std::string pattern) { return Assign(pattern, true); }
+	PatternFinder& operator=(const std::string pattern) { return Search(pattern, true); }
 
-	PatternFinder& Assign(const std::string pattern, bool cache = true)
+	PatternFinder& Search(const std::string pattern, bool cache = true)
 	{
 		if (cache)
 		{
@@ -43,7 +43,7 @@ public:
 			}
 		}
 
-		address = (uint64_t)ProcessPatch::FindPattern(pattern);
+		address = (uint64_t)ProcessPatch::SearchPattern(pattern);
 
 		if (cache && address)
 			CachedPatternsMgr->Set(pattern, address);
@@ -58,7 +58,7 @@ public:
 
 		uint64_t target = ProcessPatch::ResolveDestination(address);
 		if (!target)
-			target = ProcessPatch::GetDestinationFromOpCode(address);
+			target = ProcessPatch::ResolveDestination(address, 1, 5, 4);
 
 		return target;
 	}

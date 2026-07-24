@@ -52,15 +52,23 @@ public:
 		return name;
 	}
 
-	// Find a pattern in the game module (no cache)
-	uint64_t* FindPattern(const std::string& pattern)
+	// ── Search ──
+
+	/** Searches for a pattern in the game module (no cache, no logging).
+	 *  @param pattern  Pattern string with ? wildcards
+	 *  @return Pointer to the first match, or nullptr if not found */
+	uint64_t* SearchPattern(const std::string& pattern)
 	{
-		return ProcessPatch::FindPattern(Module, pattern);
+		return ProcessPatch::SearchPattern(Module, pattern);
 	}
 
-	// Find pattern, log result, return address. Returns 0 on failure.
-	// cache = true: check/store in CachedPatternsMgr. false: always scan.
-	uint64_t FindPatternOrFail(const std::string& pattern, const char* name, bool cache = true)
+	/** Searches for a pattern with caching, validation, and error logging.
+	 *  Checks cache first, scans on miss, saves result, logs errors on failure.
+	 *  @param pattern  Pattern string with ? wildcards
+	 *  @param name     Hook name (used as cache key and in log messages)
+	 *  @param cache    true = use cache, false = always scan (for dynamic code)
+	 *  @return The pattern address, or 0 on failure */
+	uint64_t ResolvePattern(const std::string& pattern, const char* name, bool cache = true)
 	{
 		if (pattern.empty())
 		{
@@ -79,7 +87,7 @@ public:
 
 		if (!result)
 		{
-			result = FindPattern(pattern);
+			result = SearchPattern(pattern);
 			if (result && cache)
 				CachedPatternsMgr->Set(name, (uint64_t)result);
 		}
@@ -96,63 +104,93 @@ public:
 		return (uint64_t)result;
 	}
 
-	// Patch return at address with nops to fill size bytes
-	void PatchReturn(uint64_t addr, uint8_t size)
+	// ── Patch ──
+
+	/** Patches a return instruction at the given address to disable a function.
+	 *  @param addr  Address to patch
+	 *  @param size  Number of bytes to overwrite */
+	void PatchReturnAt(uint64_t addr, uint8_t size)
 	{
-		ProcessPatch::PatchReturn(addr, size);
+		ProcessPatch::PatchReturnAt(addr, size);
 	}
 
-	// Convert conditional jump to unconditional (handles both short and near)
-	void ConditionalToUnconditional(uint64_t addr)
+	/** Converts a conditional jump to unconditional at the given address.
+	 *  @param addr  Address of the conditional jump instruction */
+	void PatchConditionalToUnconditional(uint64_t addr)
 	{
-		ProcessPatch::ConditionalToUnconditional(addr);
+		ProcessPatch::PatchConditionalToUnconditional(addr);
 	}
 
-	// Redirect a call/jmp to a new target
-	void RedirectCall(uint64_t addr, uint64_t newTarget, uint8_t opcodeSize = 0)
+	// ── Redirect ──
+
+	/** Redirects a call/jmp instruction to a new target.
+	 *  @param addr        Address of the call/jmp instruction
+	 *  @param newTarget   Absolute address of the new target
+	 *  @param opcodeSize  Bytes before displacement. 0 = auto-detect */
+	void RedirectCallTo(uint64_t addr, uint64_t newTarget, uint8_t opcodeSize = 0)
 	{
-		ProcessPatch::RedirectCall(addr, newTarget, opcodeSize);
+		ProcessPatch::RedirectCallTo(addr, newTarget, opcodeSize);
 	}
 
-	// Proxy a call site: redirect to proxy, save original function pointer
+	// ── Proxy ──
+
+	/** Proxies a call/jmp instruction, redirecting to a proxy and saving the original function pointer.
+	 *  @param addr          Address of the call/jmp instruction
+	 *  @param proxyFunc     Your proxy function
+	 *  @param originalFunc  Pointer to store the original function address
+	 *  @param patchType     PATCH_CALL or PATCH_JUMP
+	 *  @return true on success */
 	template <typename T>
-	bool ProxyCallSite(uint64_t addr, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL)
+	bool ProxyCallAt(uint64_t addr, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL)
 	{
 		if (!Tramp)
 		{
 			printfError("Trampoline not initialized!");
 			return false;
 		}
-		ProcessPatch::ProxyCallSite(Tramp, addr, proxyFunc, originalFunc, patchType);
+		ProcessPatch::ProxyCallAt(Tramp, addr, proxyFunc, originalFunc, patchType);
 		return true;
 	}
 
-	// Replace a function entry point with a jump to replacement
-	bool ReplaceFunction(uint64_t addr, void* replacement)
-	{
-		if (!Tramp)
-		{
-			printfError("Trampoline not initialized!");
-			return false;
-		}
-		ProcessPatch::ReplaceFunction(Tramp, addr, replacement);
-		return true;
-	}
-
-	// Full hook workflow: find pattern -> proxy call site -> save original -> log result
+	/** Searches for a pattern, then proxies the call/jmp at the given offset from the match.
+	 *  Combines ResolvePattern + ProxyCallAt into one call with success logging.
+	 *  @param pattern       Pattern string with ? wildcards
+	 *  @param name          Hook name (used as cache key and in log messages)
+	 *  @param offset        Byte offset from pattern match to the call/jmp instruction
+	 *  @param proxyFunc     Your proxy function
+	 *  @param originalFunc  Pointer to store the original function address
+	 *  @param patchType     PATCH_CALL or PATCH_JUMP
+	 *  @param cache         true = use pattern cache, false = always scan */
 	template <typename T>
-	bool HookPattern(const std::string& pattern, const char* name, int64_t offset, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL, bool cache = true)
+	bool ProxyByPattern(const std::string& pattern, const char* name, int64_t offset, void* proxyFunc, T** originalFunc, PatchTypeEnum patchType = PATCH_CALL, bool cache = true)
 	{
-		uint64_t patAddr = FindPatternOrFail(pattern, name, cache);
+		uint64_t patAddr = ResolvePattern(pattern, name, cache);
 		if (!patAddr)
 			return false;
 
 		uint64_t callAddr = patAddr + offset;
 
-		if (!ProxyCallSite(callAddr, proxyFunc, originalFunc, patchType))
+		if (!ProxyCallAt(callAddr, proxyFunc, originalFunc, patchType))
 			return false;
 
 		printfSuccess("%s Hooked", name);
+		return true;
+	}
+
+	// ── Replace ──
+
+	/** Replaces a function at its entry point with a jump to a replacement.
+	 *  @param addr         Address of the function entry point
+	 *  @param replacement  Your replacement function
+	 *  @return true on success */
+	bool ReplaceFunctionWith(uint64_t addr, void* replacement)
+	{
+		if (!Tramp)
+		{
+			printfError("Trampoline not initialized!");
+			return false;
+		}
+		ProcessPatch::ReplaceFunctionWith(Tramp, addr, replacement);
 		return true;
 	}
 };
