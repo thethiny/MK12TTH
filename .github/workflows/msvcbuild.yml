@@ -11,22 +11,22 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-2025
     permissions:
       contents: write
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: 'true'
         # token: ${{ secrets.GITHUB_TOKEN }} # Removed since the repos it checks out are public
 
     - name: Set up MSVC environment
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Build ASIMK12
-      run: msbuild ASIMK12.sln /p:Configuration=Release /p:Platform=x64
+      run: msbuild ASIMK12.sln /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v142
       working-directory: ${{ github.workspace }}
 
     - name: Get current version
@@ -77,7 +77,7 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: ./${{ env.RELEASE_FILE }}
         name: ${{env.PROJECT_NAME}} Version ${{ env.PROJECT_VERSION }}
