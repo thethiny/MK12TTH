@@ -1,55 +1,65 @@
 # MK12TTH
+
+[![Total Downloads](https://img.shields.io/github/downloads/thethiny/MK12TTH/total.svg)](https://github.com/thethiny/MK12TTH/releases)
+[![Latest Release Downloads](https://img.shields.io/github/downloads/thethiny/MK12TTH/latest/total.svg)](https://github.com/thethiny/MK12TTH/releases/latest)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/D1D219Y0XH)
+
 ### Formerly ASIMK12
-MK12 TTH is the name I'm giving to the dll hook mods. Basically they're similar to Cheat Engine mods but they're applied to the game directly, this means you don't have to manually open Cheat Engine everytime you want to apply some mods, and you don't have to patch the exe to apply anti cheats.
-What is it used for? It's used to modify game functions to make them do whatever you want them to, making the game act like you coded it.
+MK12 TTH is a DLL hook mod for Mortal Kombat 1. It patches game functions at runtime using pattern scanning, allowing you to apply mods without modifying the game executable or using Cheat Engine.
 
-### Current Features:
-- Anti Pak Signature Patch. Allows you to run `.pak` files with invalid `.sig` signatures.
-- Anti uToc Signature Patch. Allows you to use `uToc` files (and `.uCas`) with invalid Signature Headers
-- Anti Pak Chunk Signature Patch. Optional, allows you to delete `.sig` files, since the game still loads the `.sig` files and runs checks against them on load, but will only give a warning. However, some large files require a `.sig` file due to the warning assuming they're there, so this Patch disables this warning.
+### Features
+- **Anti-Cheat Bypass**: Patches Pak, Chunk, and TOC signature checks to allow loading modded `.pak`, `.utoc`, and `.ucas` files.
+- **FName/FString Hooking**: Hooks Unreal Engine's internal FName-to-string conversion for asset swapping.
+- **Announcer Swap**: Swap in-game announcer voices via INI configuration.
+- **String Swap**: Swap arbitrary asset paths using a `string_swaps.txt` file.
+- **Server Proxy**: Redirect game server endpoints to a custom/MITM server.
+- **Floyd Tracking**: Extract and display secret fight (Floyd) challenge data including challenge IDs and conditions.
+- **Profile Info**: Capture player profile identifiers (Platform, PlatformId, SaveKey, HydraId, WBId).
+- **MK1Hook Plugin**: Integrates as an EHP plugin for [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook) with ImGui tab support.
 
-### How to use:
-Download the Latest MK12TTH version, and select the mods you want in the provided ini file. When a game updates, you might need to change the patches in the [Patterns] section. The updated patterns will be provided by me below, and in the downloaded file.
-The zip file will contain 3 files. MK12TTH.ehp, MK12TTH.ini, and dsound.dll. You need to place the files into your game's folder, next to SDL2.dll. `MK1Folder/MK12/Binaries/Win64/`.
+### How to Use
+1. Download the latest release from the [Releases Page](https://github.com/thethiny/MK12TTH/releases).
+2. Extract the zip into your game folder: `MK1Folder/MK12/Binaries/Win64/` (next to `SDL2.dll`).
+3. Edit `MK12TTH.ini` to configure which features to enable and set the appropriate byte patterns.
+4. When a game updates, you may need to update the patterns in the `[Patterns]` section.
 
-To load modded files, create a folder called Pakchunk99 in the content directory `MK1Folder/MK12/Content/Paks`, and inside it create a new folder with the mod you're planning to install (optional). If the mod was a texture/model/utoc/ucas file, then place it in Paks directly, since they need to be loaded last, and MK1 loads folders first.
+The zip contains:
+- `MK12TTH.ehp` - Main hook DLL - Compatible with MK1Hook
+- `MK12TTH.asi` - ASI loader (loads the EHP automatically when MK1Hook is missing)
+- `MK12TTH.ini` - Configuration file
+- `dsound.dll` - Proxy loader from MK1Hook
 
-### Ermaccer's MK1Hook Compatibility:
-This mod is designed to be compatible with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook). When the hook is detected to be present, MK12TTH becomes a plugin instead of a standalone mod. If you intend to use the 2 together, then use the dsound.dll from Ermaccer's MK1Hook and not the one provided in the downloaded zip file.
-#### _NOTE: The current version of MK1Hook (0.3) doesn't support mod patches, therefore using the 2 hooks together is not currently possible. Wait for un update from me on when they will work together!_
-#### _NOTE2: MK1Hook (0.4) will support mod patches._
-
-### All Ini Settings
-```ini
-    [Debug]
-    bEnableConsoleWindow = false
-    bPauseOnStart = true
-    bDebug = true
-    iVerbose = 10
-
-    [Settings]
-    iLogSize = 100
-    szModLoader = Kernel32.CreateFileW
-    szCurlSetOpt = libcurl.curl_easy_setopt
-    szCurlPerform = libcurl.curl_easy_perform
-
-    [Patches]
-    bPatchCurl = false
-
-    [Patches.AntiCheat]
-    bDisableSignatureCheck = true
-    bDisableChunkSigCheck = true
-    bDisableTOCSigCheck = true
-
-    [Patterns]
-    pSigCheck = 80 b9 ? ? ? ? 00 49 8b f0 48 8b fa 48 8b d9 75
-    pSigWarn = 4c 03 f1 80 3D ? ? ? ? 03 0f 82
-    pTocCheck = 4D 8B CE 45 33 C0 E8 ? ? ? ? 44 39 Bd ? ? ? ? 0F 84
-    pChunkSigCheck = 0F B6 51 ? 48 8b f1 48 8b 0d ? ? ? ? E8 ? ? ? ? C6 46 ? ? 0F AE F8
-    pChunkSigCheckFunc = 48 89 5C 24 ? 48 89 6C 24 ? 48 89 74 24 ? 57 41 56 41 57 48 83 EC 20 48 8D 59 08 49 63 F9 48 8B F1 49 8B E8 48 8B CB 44 0F B6 F2
+### Loading Modded Files
+Create the following folder structure inside `MK1Folder/MK12/Content/Paks/`:
 
 ```
-You can find the [sample ini file](sample.ini) in this repo
+Paks/
+├── global.ucas
+├── global.utoc
+├── pakchunk91-ucas/    ← Non-audio mods (textures, models, .ucas/.utoc files)
+├── pakchunk92-og/      ← Original game files (required for some mods to reference)
+└── pakchunk93-pak/     ← Audio mods (.pak files)
+```
 
-## Download
-[Download Here](https://github.com/thethiny/MK12TTH/releases)
+- Place non-audio mods (textures, models) in `pakchunk91-ucas/`.
+- Place original game files in `pakchunk92-og/`.
+- Place audio mods (.pak files) in `pakchunk93-pak/`.
+- Keep `global.ucas` and `global.utoc` directly in `Paks/`, not inside any subfolder.
+
+This is the most stable way to get mods working consistently.
+
+### MK1Hook Compatibility
+This mod is compatible with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook). When MK1Hook is detected, MK12TTH loads as a plugin with an ImGui tab. If using both together, use MK1Hook's `dsound.dll` instead of the one provided.
+
+### INI Configuration
+
+You can find the [sample ini file](source/sample.ini) in this repo.
+
+### Building
+Requires Visual Studio 2019 (v142 toolset) or VS2022 with v142 installed:
+```
+msbuild ASIMK12.sln /p:Configuration=Release /p:Platform=x64
+```
+
+### Download
+[Download Latest](https://github.com/thethiny/MK12TTH/releases/latest)
