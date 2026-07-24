@@ -156,7 +156,7 @@ namespace MK12 {
 			EComparisonType_MAX = 6,
 		};
 
-        enum class EManualMoveTraceEvent: int8_t {
+        enum class EManualMoveTraceEvent: uint8_t {
             None = 0,
             DebugTrace = 1,
             DashForward = 2,

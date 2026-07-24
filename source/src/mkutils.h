@@ -5,6 +5,7 @@
 #include "../utils/Trampoline.h"
 #include "../utils/Patterns.h"
 #include "../CPPython/cppython.h"
+#undef in
 #include "eSettingsManager.h"
 #include <chrono>
 #include <map>

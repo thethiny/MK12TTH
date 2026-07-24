@@ -24,11 +24,11 @@ void eCachedPatternsManager::Save(char* key, uint64_t offset)
 {
 	if (Hash)
 	{
-		if (offset > GameAddr)
-		{
+		if (offset > (uint64_t)GameAddr)
 			offset -= GameAddr;
-		}
-		ini->WriteInteger(Hash, key, offset);
+		char buf[20];
+		sprintf_s(buf, sizeof(buf), "%llX", offset);
+		ini->WriteString(Hash, key, buf);
 	}
 }
 
@@ -36,9 +36,10 @@ uint64_t eCachedPatternsManager::Load(char* key)
 {
 	if (Hash)
 	{
-		uint64_t result = ini->ReadInteger(Hash, key, 0);
-		if (result)
-			return result + GameAddr;
+		char* result = ini->ReadString(Hash, key, "0");
+		uint64_t val = strtoull(result, nullptr, 16);
+		if (val)
+			return val + GameAddr;
 	}
 	return 0;
 }

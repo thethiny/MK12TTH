@@ -111,6 +111,7 @@ uint64_t __fastcall	MK12::Remake::FNameInfoToWStringWithId(MK12::FNameInfoStruct
 		return NameSize;
 
 	wchar_t buff[16];
+#pragma warning(suppress: 4477)
 	__int32 addSize = swprintf(buff, L"_%d", DupId - 1);
 	char* PtrToEndOfStr = &Destination[2 * NameSize];
 	NameSize += addSize;

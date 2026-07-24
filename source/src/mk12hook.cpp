@@ -128,6 +128,8 @@ namespace MK12Hook::Proxies {
 		{
 			ServerUrl = ServerUrl.strip("/");
 
+#pragma warning(push)
+#pragma warning(disable: 4267)
 			int StringLength = (ServerUrl.size() + 1) * 2;
 			std::wstring wServerUrl = std::wstring(ServerUrl.begin(), ServerUrl.end());
 
@@ -142,6 +144,7 @@ namespace MK12Hook::Proxies {
 				cachedServerLen = ServerUrl.size() + 1;
 			}
 
+#pragma warning(pop)
 			obj.ValuePointer = cachedServerUrl;
 			obj.ValueLength = cachedServerLen; // Characters count in str and not wstr
 			obj.ValueLength8BAligned = (obj.ValueLength + 7) & (~7);
@@ -560,6 +563,7 @@ namespace MK12Hook::Hooks {
 		if (SettingsMgr->iLogLevel)
 			printf("ChunkSigCheckFunc Pattern found at: %p\n", lpChunkSigCheckFuncPattern);
 
+#pragma warning(suppress: 4244)
 		uint32_t FuncOffset = ((uint64_t)lpChunkSigCheckFuncPattern) - (((uint64_t)lpChunkSigCheckPattern) + 0xE + 5); // 5 is the size of the opcode, E is the offset to the opcode
 		Patch<uint32_t>(((uint64_t)lpChunkSigCheckPattern) + 0xF, FuncOffset);
 		printfSuccess("PakChunkSigCheck Patched");

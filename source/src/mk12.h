@@ -21,6 +21,8 @@ bool containsCaseInsensitive(const char* str, const char* compare);
 
 namespace MK12 { // Namespace for game functions / structs
 
+#pragma warning(push)
+#pragma warning(disable: 4200)
 	// Structs
 	struct FName {
 		uint16_t	NameSize;
@@ -40,6 +42,8 @@ namespace MK12 { // Namespace for game functions / structs
 		uint32_t	ProbTablesSize;
 		FName*		NameTableEntry[];
 	};
+
+#pragma warning(pop)
 
 	struct UNameTableMainStruct {
 		uint64_t			ProbablyUNameClassPtr;
