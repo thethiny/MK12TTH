@@ -292,16 +292,27 @@ namespace MK12Hook::Proxies {
 			return copy;
 			};
 
-		delete[] HookMetadata::UserProfileInfo.Platform;
-		delete[] HookMetadata::UserProfileInfo.PlatformId;
-		delete[] HookMetadata::UserProfileInfo.SaveKey;
+		auto SafeWcsCmp = [](const wchar_t* a, const wchar_t* b) -> bool {
+			if (!a && !b) return true;
+			if (!a || !b) return false;
+			return wcscmp(a, b) == 0;
+			};
 
-		HookMetadata::UserProfileInfo.Platform = SafeStringCopy(arg0);
-		HookMetadata::UserProfileInfo.PlatformId = SafeStringCopy(arg1);
-		HookMetadata::UserProfileInfo.SaveKey = SafeStringCopy(arg2);
+		if (!SafeWcsCmp(HookMetadata::UserProfileInfo.Platform, arg0) ||
+			!SafeWcsCmp(HookMetadata::UserProfileInfo.PlatformId, arg1) ||
+			!SafeWcsCmp(HookMetadata::UserProfileInfo.SaveKey, arg2))
+		{
+			delete[] HookMetadata::UserProfileInfo.Platform;
+			delete[] HookMetadata::UserProfileInfo.PlatformId;
+			delete[] HookMetadata::UserProfileInfo.SaveKey;
 
-		if (SettingsMgr->iLogLevel)
-			printf("Stored Profile Info:\nPlatform: %ws\nPlatformId: %ws\nSaveKey: %ws\n", arg0, arg1, arg2);
+			HookMetadata::UserProfileInfo.Platform = SafeStringCopy(arg0);
+			HookMetadata::UserProfileInfo.PlatformId = SafeStringCopy(arg1);
+			HookMetadata::UserProfileInfo.SaveKey = SafeStringCopy(arg2);
+
+			if (SettingsMgr->iLogLevel)
+				printf("Stored Profile Info:\nPlatform: %ws\nPlatformId: %ws\nSaveKey: %ws\n", arg0, arg1, arg2);
+		}
 
 		// Now call real function with full argsCopy
 		return MK12::MKWScanf(ResultString, Format, arg0, arg1, arg2);
