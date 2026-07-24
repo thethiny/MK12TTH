@@ -40,6 +40,7 @@ bool containsFloydCaseInsensitive(const wchar_t* str) {
 }
 
 bool containsCaseInsensitive(const char* str, const char* compare) {
+	if (!str || !compare) return false;
 	std::string s(str);
 	std::string target = compare;
 

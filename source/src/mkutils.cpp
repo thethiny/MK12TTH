@@ -23,7 +23,7 @@ int64 GetUser32EntryPoint()
 
 int64 GetModuleEntryPoint(const char* name)
 {
-	static __int64 addr = reinterpret_cast<__int64>(GetModuleHandle(name));
+	__int64 addr = reinterpret_cast<__int64>(GetModuleHandle(name));
 	return addr;
 }
 
