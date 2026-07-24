@@ -243,10 +243,12 @@ namespace MK12::FNameFunc {
 	}
 	char* ToStr(FName& F)
 	{
+		static char name[4096];
 		uint16_t s = GetSize(F);
-		char* name = new char[s + 1];
+		if (s >= sizeof(name))
+			s = sizeof(name) - 1;
 		strncpy(name, F.Name, s);
-		name[s] = '\0'; // Null terminate
+		name[s] = '\0';
 		return name;
 	}
 	// No null termination intentional - mirrors UE's length-prefixed FName, consumers use GetSize() not strlen

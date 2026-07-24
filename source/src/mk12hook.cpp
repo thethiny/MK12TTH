@@ -127,16 +127,23 @@ namespace MK12Hook::Proxies {
 		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"] && !ServerUrl.empty())
 		{
 			ServerUrl = ServerUrl.strip("/");
-			
+
 			int StringLength = (ServerUrl.size() + 1) * 2;
 			std::wstring wServerUrl = std::wstring(ServerUrl.begin(), ServerUrl.end());
 
 			wprintf(L"Replacing endpoint \"%s\" with \"%s\"!\n", obj.ValuePointer, wServerUrl.c_str());
 
-			obj.ValuePointer = new wchar_t[StringLength];
-			memcpy(obj.ValuePointer, wServerUrl.c_str(), StringLength);
+			static wchar_t* cachedServerUrl = nullptr;
+			static int cachedServerLen = 0;
+			if (!cachedServerUrl)
+			{
+				cachedServerUrl = new wchar_t[StringLength];
+				memcpy(cachedServerUrl, wServerUrl.c_str(), StringLength);
+				cachedServerLen = ServerUrl.size() + 1;
+			}
 
-			obj.ValueLength = ServerUrl.size() + 1; // Characters count in str and not wstr
+			obj.ValuePointer = cachedServerUrl;
+			obj.ValueLength = cachedServerLen; // Characters count in str and not wstr
 			obj.ValueLength8BAligned = (obj.ValueLength + 7) & (~7);
 
 			MK12::GetEndpointKeyValue(obj, EndpointAddress);
