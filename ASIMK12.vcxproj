@@ -23,6 +23,7 @@
     <ClCompile Include="source\src\mk12.cpp" />
     <ClCompile Include="source\src\mk12hook.cpp" />
     <ClCompile Include="source\src\mkutils.cpp" />
+    <ClCompile Include="source\src\GamePatchManager.cpp" />
     <ClCompile Include="source\src\MK12Unlocker.cpp" />
     <ClCompile Include="source\utils\CPPython\pystring.cpp" />
     <ClCompile Include="source\utils\Patterns.cpp" />
@@ -39,7 +40,9 @@
     <ClInclude Include="source\src\mk12hook.h" />
     <ClInclude Include="source\src\mk12_enums.h" />
     <ClInclude Include="source\src\mkutils.h" />
+    <ClInclude Include="source\src\GamePatchManager.h" />
     <ClInclude Include="source\src\MK12Unlocker.h" />
+    <ClInclude Include="source\utils\ProcessPatch.h" />
     <ClInclude Include="source\utils\CPPython\cppython.h" />
     <ClInclude Include="source\utils\CPPython\pystring.h" />
     <ClInclude Include="source\utils\MemoryMgr.h" />

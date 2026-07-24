@@ -2,6 +2,7 @@
 #include "src/mkutils.h"
 #include "src/mk12.h"
 #include "src/mk12hook.h"
+#include "src/GamePatchManager.h"
 #include "mk12sdk/sdk.h"
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
@@ -66,6 +67,7 @@ void CreateConsole()
 void PreGameHooks()
 {
 	GameTramp = Trampoline::MakeTrampoline(GetModuleHandle(nullptr));
+	GamePatcher->Init(GetModuleHandle(nullptr), CURRENT_HOOK_VERSION);
 	if (SettingsMgr->iLogLevel)
 		printf("Generated Trampolines\n");
 	 IATable = ParsePEHeader();
@@ -101,9 +103,9 @@ void PreGameHooks()
 	if (SettingsMgr->bFNameToStrHook)
 	{
 		RegisterHacks::EnableRegisterHacks();
-		HookMetadata::ActiveModsMap["bFPathIdLoader"]		= MK12Hook::Hooks::FNameToStrWithIdLoader(GameTramp);
-		HookMetadata::ActiveModsMap["bFPathNoIdLoader"]		= MK12Hook::Hooks::FNameToStrNoIdLoader(GameTramp);
-		HookMetadata::ActiveModsMap["bFPathCommonLoader"]	= MK12Hook::Hooks::FNameToStrCommonLoader(GameTramp);
+		HookMetadata::ActiveModsMap["bFPathIdLoader"]		= MK12Hook::Hooks::FNameToStrWithIdLoader();
+		HookMetadata::ActiveModsMap["bFPathNoIdLoader"]		= MK12Hook::Hooks::FNameToStrNoIdLoader();
+		HookMetadata::ActiveModsMap["bFPathCommonLoader"]	= MK12Hook::Hooks::FNameToStrCommonLoader();
 	}
 	if (SettingsMgr->bUNameGetter)
 	{
@@ -120,7 +122,7 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bEnableServerProxy)
 	{
-		HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData(GameTramp);
+		HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData();
 	}
 	if (SettingsMgr->bGetFightMetadata)
 	{
@@ -128,11 +130,11 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bEnableFloydTracking)
 	{
-		HookMetadata::ActiveModsMap["bFloydTracking"]		= MK12Hook::Hooks::FloydTrackingHooks(GameTramp);
+		HookMetadata::ActiveModsMap["bFloydTracking"]		= MK12Hook::Hooks::FloydTrackingHooks();
 	}
 	if (SettingsMgr->bEnableProfileGetter)
 	{
-		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks(GameTramp);
+		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks();
 	}
 
 }

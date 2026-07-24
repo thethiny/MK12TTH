@@ -25,14 +25,14 @@ namespace MK12Hook {
 		bool DisableTOCSigCheck();
 		bool DisablePakTOCCheck();
 		bool UNameTableGetter();
-		bool FNameToStrWithIdLoader(Trampoline*);
-		bool FNameToStrNoIdLoader(Trampoline*);
-		bool FNameToStrCommonLoader(Trampoline*);
+		bool FNameToStrWithIdLoader();
+		bool FNameToStrNoIdLoader();
+		bool FNameToStrCommonLoader();
 		bool OverrideFNameToWStrFuncs(Trampoline*);
-		bool OverrideGameEndpointsData(Trampoline*);
+		bool OverrideGameEndpointsData();
 		bool ExtractFightMetadataFromSecretFightSetupStage(Trampoline*);
-		bool ProfileGetterHooks(Trampoline* GameTramp);
-		int	 FloydTrackingHooks(Trampoline* GameTramp);
+		bool ProfileGetterHooks();
+		int	 FloydTrackingHooks();
 	};
 
 	namespace Mods {

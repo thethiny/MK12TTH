@@ -1,4 +1,5 @@
 #include "mk12hook.h"
+#include "GamePatchManager.h"
 
 
 HookMetadata::ActiveMods			HookMetadata::ActiveModsMap;
@@ -635,32 +636,18 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool FNameToStrWithIdLoader(Trampoline* GameTramp)
+	bool FNameToStrWithIdLoader()
 	{
 		printf("\n==ProxyFPathIdLoader==\n");
-		std::string pattern = SettingsMgr->pFPathLoadPat;
-		if (pattern.empty())
-		{
-			printfError("pFPathLoadPat Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPathLoadPat, "FPathLoad");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find FPathLoad Pattern");
-			return false;
-		}
-
-		uint64_t call_address = ((uint64_t)lpPattern) + 0xB;
-		if (SettingsMgr->iLogLevel)
-			printf("FPathLoad Pattern found at: %p\n", lpPattern);
-
-		MakeProxyFromOpCode(GameTramp, call_address, (uint8_t)4, MK12Hook::Proxies::ReadFNameToWStrId, &MK12::FNameToWStr, PATCH_CALL);	
-
+		GamePatcher->ProxyCallSite(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrId, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPathLoad Proxied");
 
-		uint64_t func_start = ((uint64_t)lpPattern) - 0x6F;
+		uint64_t func_start = patAddr - 0x6F;
 		if (*(uint8_t*)func_start != 0x48)
 		{
 			printfError("FPathLoad Start not found!");
@@ -675,32 +662,18 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool FNameToStrNoIdLoader(Trampoline* GameTramp)
+	bool FNameToStrNoIdLoader()
 	{
 		printf("\n==ProxyFPathNoIdLoader==\n");
-		std::string pattern = SettingsMgr->pFPath2LoadPat;
-		if (pattern.empty())
-		{
-			printfError("pFPath2LoadPat Not Specified. Please Add Pattern to ini file!\n");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPath2LoadPat, "FPath2Load");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find FPath2Load Pattern");
-			return false;
-		}
-
-		uint64_t call_address = ((uint64_t)lpPattern) + 0xB;
-		if (SettingsMgr->iLogLevel)
-			printf("FPath2Load Pattern found at: %p\n", lpPattern);
-
-		MakeProxyFromOpCode(GameTramp, call_address, (uint8_t)4, MK12Hook::Proxies::ReadFNameToWStrNoId, &MK12::FNameToWStr, PATCH_CALL); // Using the same FNameToWStr var cuz all functions use the same call
-
+		GamePatcher->ProxyCallSite(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrNoId, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPath2Load Proxied");
 
-		uint64_t func_start = ((uint64_t)lpPattern) - 0x55;
+		uint64_t func_start = patAddr - 0x55;
 		if (*(uint8_t*)func_start != 0x48)
 		{
 			printfError("FPath2Load Start not found!");
@@ -715,32 +688,18 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool FNameToStrCommonLoader(Trampoline* GameTramp)
+	bool FNameToStrCommonLoader()
 	{
 		printf("\n==ProxyFPathCommonLoader==\n");
-		std::string pattern = SettingsMgr->pFPathCLoadPat;
-		if (pattern.empty())
-		{
-			printfError("pFPathCLoadPath Not Specified. Please Add Pattern to ini file!");
+
+		uint64_t patAddr = GamePatcher->FindPatternOrFail(SettingsMgr->pFPathCLoadPat, "FPathCLoad");
+		if (!patAddr)
 			return false;
-		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find FPathCLoad Pattern");
-			return false;
-		}
-
-		uint64_t call_address = ((uint64_t)lpPattern) + 0x00;
-		if (SettingsMgr->iLogLevel)
-			printf("FPathCLoad Pattern Found at: %p\n", lpPattern);
-
-		MakeProxyFromOpCode(GameTramp, call_address, (uint8_t)4, MK12Hook::Proxies::ReadFNameToWStrCommon, &MK12::FNameToWStr, PATCH_CALL);
-
+		GamePatcher->ProxyCallSite(patAddr + 0x00, MK12Hook::Proxies::ReadFNameToWStrCommon, &MK12::FNameToWStr, PATCH_CALL);
 		printfSuccess("FPathCLoad Proxied");
 
-		uint64_t func_start = ((uint64_t)lpPattern) - 0x10; // Change this address
+		uint64_t func_start = patAddr - 0x10;
 		if (*(uint8_t*)func_start != 0x48)
 		{
 			printfError("FPathCLoad Start not found!");
@@ -903,15 +862,9 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool OverrideGameEndpointsData(Trampoline* GameTramp)
+	bool OverrideGameEndpointsData()
 	{
 		printf("\n==OverrideGameEndpointsData==\n");
-		std::string pattern = SettingsMgr->pEndpointLoader;
-		if (pattern.empty())
-		{
-			printfError("pEndpointLoader Not Specified. Please Add Pattern to ini file!");
-			return false;
-		}
 
 		if (SettingsMgr->szServerUrl.empty())
 		{
@@ -919,158 +872,33 @@ namespace MK12Hook::Hooks {
 			return false;
 		}
 
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find EndpointLoader Pattern");
-			return false;
-		}
-
-		uint64_t call_address = ((uint64_t)lpPattern) + 0x00;
-		if (SettingsMgr->iLogLevel)
-			printf("EndpointLoader Pattern Found at: %p\n", lpPattern);
-
-		MakeProxyFromOpCode(GameTramp, call_address, (uint8_t)4, MK12Hook::Proxies::OverrideGameEndpoint, &MK12::GetEndpointKeyValue, PATCH_CALL);
-
-		printfSuccess("EndpointLoader Proxied");
-
-		return true;
+		return GamePatcher->HookPattern(SettingsMgr->pEndpointLoader, "EndpointLoader", 0x00,
+			MK12Hook::Proxies::OverrideGameEndpoint, &MK12::GetEndpointKeyValue, PATCH_CALL);
 	}
 
-	bool ProfileGetterHooks(Trampoline* GameTramp)
+	bool ProfileGetterHooks()
 	{
 		printf("\n==ProfileGetterHooks==\n");
 
-		std::string pattern = SettingsMgr->pProfileGetter;
-		if (pattern.empty())
-		{
-			printfError("pProfileGetter Not Specified. Please Add Pattern to ini file!");
-			return false;
-		}
-
-		uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-		if (!lpPattern)
-		{
-			printfError("Couldn't find MK::wscanf Pattern");
-			return false;
-		}
-
-		uint64_t CallAddr = ((uint64_t)lpPattern) + 30;
-
-		MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
-		if (SettingsMgr->iLogLevel)
-			printf("MK::wscanf Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::GenerateFloydCluesFromHash);
-
-
-		if (SettingsMgr->iLogLevel)
-			printf("MK::wscanf  Pattern Found at: %p\n", lpPattern);
-
-		printfSuccess("Profile Getter Patched");
-		return true;
-		
+		return GamePatcher->HookPattern(SettingsMgr->pProfileGetter, "ProfileGetter", 30,
+			MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
 	}
 
-	int FloydTrackingHooks(Trampoline* GameTramp)
+	int FloydTrackingHooks()
 	{
 		printf("\n==FloydTrackingHooks==\n");
 
 		int HooksCtr = 0;
-		int ExpectedHooksCtr = 0;
+		int ExpectedHooksCtr = 3;
 
-		std::string pattern = SettingsMgr->pGetChallengesFromHash;
-		ExpectedHooksCtr++;
-		if (pattern.empty())
-		{
-			printfError("pGetChallengesFromHash Not Specified. Please Add Pattern to ini file!");
-		}
-		else
-		{
-			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-			if (!lpPattern)
-			{
-				printfError("Couldn't find GetChallengesFromHash Pattern");
-			}
-			else
-			{
-				uint64_t CallAddr = ((uint64_t)lpPattern) + 14;
+		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetChallengesFromHash, "GetChallengesFromHash", 14,
+			MK12Hook::Proxies::GenerateFloydCluesFromHashProxy, &MK12::GenerateFloydCluesFromHash, PATCH_CALL);
 
-				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::GenerateFloydCluesFromHashProxy, &MK12::GenerateFloydCluesFromHash, PATCH_CALL);
-				if (SettingsMgr->iLogLevel)
-					printf("GetChallengesFromHash Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::GenerateFloydCluesFromHash);
+		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetFloydHashInputString, "GetFloydHashInputString", 11,
+			MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
 
-				HooksCtr++;
-
-				if (SettingsMgr->iLogLevel)
-					printf("GetChallengesFromHash Pattern Found at: %p\n", lpPattern);
-			}
-			
-		}
-
-		pattern = SettingsMgr->pGetFloydHashInputString;
-		ExpectedHooksCtr++;
-		if (pattern.empty())
-		{
-			printfError("pGetFloydHashInputString Not Specified. Please Add Pattern to ini file!");
-		}
-		else
-		{
-
-			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-
-			if (!lpPattern)
-			{
-				printfError("Couldn't find GetFloydHashInputString Pattern");
-				false;
-			}
-			else
-			{
-				uint64_t CallAddr = ((uint64_t)lpPattern) + 11;
-
-				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
-				if (SettingsMgr->iLogLevel)
-					printf("GetFloydHashInputString Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::CustomCityHash);
-
-				HooksCtr++;
-
-				if (SettingsMgr->iLogLevel)
-					printf("GetFloydHashInputString Pattern Found at: %p\n", lpPattern);
-			}
-
-
-		}
-
-		pattern = SettingsMgr->pGetFloydHashInputString2;
-		ExpectedHooksCtr++;
-		if (pattern.empty())
-		{
-			printfError("pGetFloydHashInputString2 Not Specified. Please Add Pattern to ini file!");
-		}
-		else
-		{
-
-			uint64_t* lpPattern = FindPattern(GetModuleHandleA(NULL), pattern);
-
-			if (!lpPattern)
-			{
-				printfError("Couldn't find GetFloydHashInputString Pattern");
-				false;
-			}
-			else
-			{
-				uint64_t CallAddr = ((uint64_t)lpPattern) + 11;
-
-				MakeProxyFromOpCode(GameTramp, CallAddr, (uint8_t)4, MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
-				if (SettingsMgr->iLogLevel)
-					printf("GetFloydHashInputString Pattern Call at: %p to %p\n", (uint64_t*)CallAddr, (void*)MK12::CustomCityHash);
-
-				HooksCtr++;
-
-				if (SettingsMgr->iLogLevel)
-					printf("GetFloydHashInputString Pattern Found at: %p\n", lpPattern);
-			}
-
-
-		}
+		HooksCtr += GamePatcher->HookPattern(SettingsMgr->pGetFloydHashInputString2, "GetFloydHashInputString2", 11,
+			MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
 
 		if (HooksCtr == ExpectedHooksCtr)
 			printfSuccess("Floyd Tracking On");
