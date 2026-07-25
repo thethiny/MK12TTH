@@ -7,7 +7,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.4.0";
+constexpr const char * CURRENT_HOOK_VERSION = "0.4.1";
 
 
 void CreateConsole();
