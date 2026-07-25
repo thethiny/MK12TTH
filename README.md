@@ -55,6 +55,9 @@ This mod is compatible with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1
 
 You can find the [sample ini file](source/sample.ini) in this repo.
 
+### Developer Guide
+See the [Memory Patch Utility Guide](MemoryPatchUtilityGuide.md) for detailed usage examples of the hooking and patching API.
+
 ### Building
 Requires Visual Studio 2019 (v142 toolset) or VS2022 with v142 installed:
 ```
