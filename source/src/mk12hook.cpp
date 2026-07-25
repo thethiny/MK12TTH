@@ -282,9 +282,12 @@ namespace MK12Hook::Proxies {
 
 	MK12::FKlassicLadderSecretFightData* SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData* mSecretFightData)
 	{
-		printf("Found the index @ %p\n", mSecretFightData);
  		MK12::UKlassicTowerSecretFightData* mKlassicTowerSecretFightInstance = (MK12::UKlassicTowerSecretFightData*)(((uint64_t)(mSecretFightData)) - MK12::KlassicTowerSecretFightDataOffset);
-		printf("Found the parent index @ %p\n", mKlassicTowerSecretFightInstance);
+		if (SettingsMgr->ShouldLog(Log::Debug))
+		{
+			printf("SecretFightData @ %p\n", mSecretFightData);
+			printf("KlassicTowerSecretFightData @ %p\n", mKlassicTowerSecretFightInstance);
+		}
 
 		MK12::FKlassicLadderSecretFightData* mSecretFightDataRet = MK12::SetupSecretFightConditions(mSecretFightData);
 
@@ -930,7 +933,7 @@ namespace MK12Hook::Mods {
 		}
 		if (HookMetadata::ActiveModsMap["UNameTableGetter"])
 		{
-			printfError("Currently using String Swaps with `bUNameGetter` set to `true` is not supported. Only `bFPathLoader` must be `true`.");
+			printfWarning("StringSwap is not available in Remake Mode.");
 			return -1;
 		}
 

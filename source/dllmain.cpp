@@ -116,6 +116,17 @@ void PreGameHooks()
 				MK12Hook::Hooks::OverrideFNameToWStrFuncs();
 		}
 	}
+
+	if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
+	{
+		if (HookMetadata::ActiveModsMap["UNameTableGetter"])
+			printfInfo("FName Mode: Remake (bUNameGetter enabled)");
+		else if (SettingsMgr->bUNameGetter)
+			printfInfo("FName Mode: Injection (bUNameGetter failed, falling back)");
+		else
+			printfInfo("FName Mode: Injection (bUNameGetter disabled)");
+	}
+
 	if (SettingsMgr->AnnouncerSwap.bEnable)
 	{
 		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
@@ -135,7 +146,7 @@ void PreGameHooks()
 		}
 		else if (HookMetadata::ActiveModsMap["UNameTableGetter"])
 		{
-			printfError("StringSwap is not supported with bUNameGetter enabled! Skipping.");
+			printfWarning("StringSwap is not available in Remake Mode.");
 		}
 		else
 		{
