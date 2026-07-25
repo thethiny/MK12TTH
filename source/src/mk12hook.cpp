@@ -20,7 +20,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->ShouldLog(Log::Debug))
+		if (SettingsMgr->bVerboseFName)
 		{
 			printf("Proxy FNameToWStrId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -32,7 +32,7 @@ namespace MK12Hook::Proxies {
 	}
 	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->ShouldLog(Log::Debug))
+		if (SettingsMgr->bVerboseFName)
 		{
 			printf("Proxy FNameToWStrNoId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -45,7 +45,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->ShouldLog(Log::Debug))
+		if (SettingsMgr->bVerboseFName)
 		{
 			printf("Proxy FNameToWStrCommon::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -648,8 +648,6 @@ namespace MK12Hook::Hooks {
 
 	bool OverrideFNameToWStrFuncs()
 	{
-		if (SettingsMgr->ShouldLog(Log::Verbose))
-			printfYellow("String Swap Mode set to Override!\n");
 
 		if (!SettingsMgr->bUNameGetter)
 		{

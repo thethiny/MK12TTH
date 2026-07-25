@@ -32,6 +32,7 @@ public:
 	bool bPauseOnStart;
 	int	iLogLevel;
 	bool bDebug;
+	bool bVerboseFName;
 	bool bAllowNonMK;
 
 

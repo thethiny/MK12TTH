@@ -75,7 +75,8 @@ uint64_t __fastcall	MK12::Remake::FNameInfoToWString(MK12::FNameInfoStruct* FNam
 uint64_t __fastcall MK12::Remake::FNameObjectToWString(MK12::FName* Name, char* Destination) // This is the function that we jmp to
 {
 	uint64_t NameSize = FNameObjectToWStringCommon(Name, Destination);
-	printf("FNameObjectToWString::%p = %ls\n", (void*)Name, (wchar_t*)Destination);
+	if (SettingsMgr->bVerboseFName)
+		printf("FNameObjectToWString::%p = %ls\n", (void*)Name, (wchar_t*)Destination);
 	return NameSize;
 }
 
@@ -95,18 +96,18 @@ uint64_t __fastcall MK12::Remake::FNameObjectToWStringCommon(MK12::FName* Name, 
 uint64_t __fastcall	MK12::Remake::FNameInfoToWStringNoId(MK12::FNameInfoStruct* FNameInfo, char* Destination)
 {
 	uint64_t NameSize = FNameInfoToWString(FNameInfo, Destination);
-	//if (containsFloydCaseInsensitive((wchar_t*)Destination))
-	printf("FNameInfoToWStringNoId::%p = %ls\n", (void*)FNameInfo, (wchar_t*)Destination);
+	if (SettingsMgr->bVerboseFName)
+		printf("FNameInfoToWStringNoId::%p = %ls\n", (void*)FNameInfo, (wchar_t*)Destination);
 	return NameSize;
 }
 
 uint64_t __fastcall	MK12::Remake::FNameInfoToWStringWithId(MK12::FNameInfoStruct* FNameInfo, char* Destination)
 {
 	uint64_t NameSize = FNameInfoToWString(FNameInfo, Destination);
-	
+
 	uint64_t DupId = FNameInfo->DuplicateId;
-	//if (containsFloydCaseInsensitive((wchar_t*)Destination))
-	printf("FNameInfoToWStringWithId::%p = %ls dup %lld\n", (void*)FNameInfo, (wchar_t*)Destination, DupId);
+	if (SettingsMgr->bVerboseFName)
+		printf("FNameInfoToWStringWithId::%p = %ls dup %lld\n", (void*)FNameInfo, (wchar_t*)Destination, DupId);
 
 	if (!DupId)
 		return NameSize;
