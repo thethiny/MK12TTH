@@ -1,3 +1,6 @@
 [submodule "source/utils/CPPython"]
 	path = source/utils/CPPython
 	url = git@github.com:thethiny/CPPython.git
+[submodule "source/utils/MinHook"]
+	path = source/utils/MinHook
+	url = git@github.com:TsudaKageyu/minhook.git

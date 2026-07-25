@@ -15,8 +15,9 @@ This document shows how to use every patching function, organized by what you're
 7. [Two-step: capture original then replace entry](#scenario-7-two-step-capture-original-then-replace-entry)
 8. [Resolve where an instruction points (data extraction)](#scenario-8-resolve-where-an-instruction-points-data-extraction)
 9. [Search for a pattern](#scenario-9-search-for-a-pattern)
-10. [Proxy without capturing the original](#scenario-10-proxy-without-capturing-the-original)
-11. [Direct function pointer from pattern address](#scenario-11-direct-function-pointer-from-pattern-address)
+10. [Proxy a function for all callers (entry-point proxy)](#scenario-10-proxy-a-function-for-all-callers-entry-point-proxy)
+11. [Proxy without capturing the original](#scenario-11-proxy-without-capturing-the-original)
+12. [Direct function pointer from pattern address](#scenario-12-direct-function-pointer-from-pattern-address)
 
 ---
 
@@ -492,7 +493,96 @@ uint64_t target = pat.Resolve();
 
 ---
 
-## Scenario 10: Proxy without capturing the original
+## Scenario 10: Proxy a function for all callers (entry-point proxy)
+
+Intercept a function at its entry point so ALL callers are redirected, while keeping the original callable. Combines the best of `ProxyCallAt` (original stays callable) and `ReplaceFunctionWith` (all callers intercepted).
+
+Use this for statically linked functions (like curl) where there's no single call instruction to patch, or when you need to intercept every caller.
+
+**Assembly before:**
+```asm
+Caller1:
+    call TargetFunc      ; calls the function
+    ...
+Caller2:
+    call TargetFunc      ; also calls the function
+    ...
+
+TargetFunc:
+    push rbp             ; original prologue
+    mov rbp, rsp
+    sub rsp, 0x40
+    ...
+    ret
+```
+
+**Assembly after:**
+```asm
+Caller1:
+    call TargetFunc      ; still points here...
+    ...
+Caller2:
+    call TargetFunc      ; still points here...
+    ...
+
+TargetFunc:
+    jmp YourProxy        ; redirected to your proxy
+
+Trampoline:
+    push rbp             ; saved prologue (original bytes)
+    mov rbp, rsp
+    jmp TargetFunc+N     ; continues into original body
+```
+
+**Your proxy can call the original through the trampoline:**
+```cpp
+// The proxy has the same signature as the target
+__int64 __fastcall MySetOptProxy(__int64 handle, __int64 option, __int64 value)
+{
+    // Inspect or modify arguments before
+    printf("option=%lld\n", option);
+
+    // Call the original function (via trampoline)
+    __int64 result = OriginalSetOpt(handle, option, value);
+
+    // Inspect or modify the result after
+    return result;
+}
+```
+
+**Code:**
+```cpp
+uint64_t funcAddr = base + 0x5878250; // address of the function to proxy
+
+GamePatcher->ProxyFunctionAt(funcAddr,
+    MySetOptProxy,           // your proxy function
+    &OriginalSetOpt,         // stores the callable original
+    "curl_easy_setopt");     // name for logging
+```
+
+**ProcessPatch equivalent:**
+```cpp
+ProcessPatch::ProxyFunctionAt(funcAddr, (void*)MySetOptProxy, &OriginalSetOpt);
+```
+
+**To remove the proxy and restore the original:**
+```cpp
+GamePatcher->UnproxyFunctionAt(funcAddr, "curl_easy_setopt");
+```
+
+**Comparison with other proxy methods:**
+
+| Method | Patches at | All callers? | Original callable? |
+|--------|-----------|-------------|-------------------|
+| `ProxyCallAt` | A `call` instruction | No, one caller only | Yes |
+| `ReplaceFunctionWith` | Function entry | Yes | No, original is gone |
+| `ProxyFunctionAt` | Function entry | Yes | Yes, via trampoline |
+
+**MK12 hooks using this:** `CurlSetOptProxy` (statically linked `curl_easy_setopt`)
+
+---
+
+## Scenario 11: Proxy without capturing the original
 
 Sometimes you want to redirect a call but don't need to call the original. For example, replacing a check function with a no-op.
 
@@ -527,7 +617,7 @@ ProcessPatch::ProxyCallAt(trampoline, addr, ProcessPatch::DummyPtrFunc, PATCH_CA
 
 ---
 
-## Scenario 11: Direct function pointer from pattern address
+## Scenario 12: Direct function pointer from pattern address
 
 Sometimes the pattern match IS the function entry. No opcode resolution needed, just cast the address.
 
@@ -554,7 +644,9 @@ This is useful for functions you want to CALL (not hook), like callbacks, constr
 | Same but find the call by pattern | `ProxyByPattern(pattern, name, offset, proxy, &original)` |
 | Same but convert call to jmp (tail-call) | `ProxyCallAt(..., PATCH_JUMP)` |
 | Replace a function for ALL callers | `ReplaceFunctionWith(entryAddr, replacement)` |
-| Replace entry but still call original | Step 1: `ProxyCallAt` to capture, Step 2: `ReplaceFunctionWith` |
+| Intercept a function for ALL callers, keep original callable | `ProxyFunctionAt(funcAddr, proxy, &original)` |
+| Remove a function proxy | `UnproxyFunctionAt(funcAddr)` |
+| Replace entry but still call original (two-step) | Step 1: `ProxyCallAt` to capture, Step 2: `ReplaceFunctionWith` |
 | Read where an instruction points | `ResolveDestination(addr)` or `ResolveDestination(addr, disp, size, ...)` |
 | Search for bytes in memory | `SearchPattern(pattern)` |
 | Search with cache + error handling | `ResolvePattern(pattern, name)` |

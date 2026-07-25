@@ -2,6 +2,7 @@
 #include "MemoryMgr.h"
 #include "Trampoline.h"
 #include "Patterns.h"
+#include <MinHook.h>
 #include <cstdint>
 #include <string>
 #include <map>
@@ -206,6 +207,47 @@ namespace ProcessPatch {
 	inline void ReplaceFunctionWith(Trampoline* tramp, uint64_t addr, void* replacement)
 	{
 		Memory::VP::InjectHook(addr, tramp->Jump(replacement), PATCH_JUMP);
+	}
+
+	// ── Proxy: intercept a function at its entry for all callers ──
+
+	/** Initializes MinHook. Called automatically on first ProxyFunctionAt call.
+	 *  Safe to call multiple times. */
+	inline void InitHookEngine()
+	{
+		static bool initialized = false;
+		if (!initialized)
+		{
+			MH_Initialize();
+			initialized = true;
+		}
+	}
+
+	/** Proxies a function at its entry point for all callers, preserving the original as callable.
+	 *  Unlike ProxyCallAt (which patches one call instruction), this intercepts ALL callers.
+	 *  Unlike ReplaceFunctionWith (which destroys the original), this keeps it callable via trampoline.
+	 *  Works for any function including statically linked library functions.
+	 *  @param targetAddr    Address of the function to proxy
+	 *  @param proxyFunc     Your proxy function (must match the target's calling convention and signature)
+	 *  @param originalFunc  Pointer to store the callable original function (via trampoline)
+	 *  @return true on success */
+	template <typename T>
+	inline bool ProxyFunctionAt(uint64_t targetAddr, void* proxyFunc, T** originalFunc)
+	{
+		InitHookEngine();
+		if (MH_CreateHook((LPVOID)targetAddr, proxyFunc, (LPVOID*)originalFunc) != MH_OK)
+			return false;
+		return MH_EnableHook((LPVOID)targetAddr) == MH_OK;
+	}
+
+	/** Removes a proxy previously set with ProxyFunctionAt, restoring the original entry point.
+	 *  @param targetAddr  Address of the proxied function
+	 *  @return true on success */
+	inline bool UnproxyFunctionAt(uint64_t targetAddr)
+	{
+		if (MH_DisableHook((LPVOID)targetAddr) != MH_OK)
+			return false;
+		return MH_RemoveHook((LPVOID)targetAddr) == MH_OK;
 	}
 
 	// ── Utility ──

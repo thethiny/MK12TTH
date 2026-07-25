@@ -29,6 +29,10 @@
     <ClCompile Include="source\utils\ProcessPatch.cpp" />
     <ClCompile Include="source\utils\Patterns.cpp" />
     <ClCompile Include="source\utils\prettyprint.cpp" />
+    <ClCompile Include="source\utils\MinHook\src\buffer.c" />
+    <ClCompile Include="source\utils\MinHook\src\hook.c" />
+    <ClCompile Include="source\utils\MinHook\src\trampoline.c" />
+    <ClCompile Include="source\utils\MinHook\src\hde\hde64.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
@@ -133,7 +137,7 @@
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;$(ProjectDir)source\utils\MinHook\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,7 +156,7 @@
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;$(ProjectDir)source\utils\MinHook\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -173,7 +177,7 @@
       <ConformanceMode>false</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%LocalAppData%\Programs\Python\Python38\Include;$(ProjectDir)source\utils;$(ProjectDir)source\utils\CPPython;$(ProjectDir)source\utils\MinHook\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

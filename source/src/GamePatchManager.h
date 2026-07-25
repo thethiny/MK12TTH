@@ -193,6 +193,42 @@ public:
 		ProcessPatch::ReplaceFunctionWith(Tramp, addr, replacement);
 		return true;
 	}
+
+	// ── Proxy: intercept a function at its entry for all callers ──
+
+	/** Proxies a function at its entry point for all callers, preserving the original as callable.
+	 *  Use for statically linked functions where call-site proxying is not possible.
+	 *  @param targetAddr    Address of the function to proxy
+	 *  @param proxyFunc     Your proxy function
+	 *  @param originalFunc  Pointer to store the callable original
+	 *  @param name          Hook name for logging
+	 *  @return true on success */
+	template <typename T>
+	bool ProxyFunctionAt(uint64_t targetAddr, void* proxyFunc, T** originalFunc, const char* name)
+	{
+		if (ProcessPatch::ProxyFunctionAt(targetAddr, proxyFunc, originalFunc))
+		{
+			printfSuccess("%s entry hooked at %p", name, (void*)targetAddr);
+			return true;
+		}
+		printfError("Failed to hook %s at %p", name, (void*)targetAddr);
+		return false;
+	}
+
+	/** Removes a proxy previously set with ProxyFunctionAt, restoring the original entry point.
+	 *  @param targetAddr  Address of the proxied function
+	 *  @param name        Hook name for logging
+	 *  @return true on success */
+	bool UnproxyFunctionAt(uint64_t targetAddr, const char* name)
+	{
+		if (ProcessPatch::UnproxyFunctionAt(targetAddr))
+		{
+			printfSuccess("%s unhooked", name);
+			return true;
+		}
+		printfError("Failed to unhook %s", name);
+		return false;
+	}
 };
 
 extern GamePatchManager* GamePatcher;
