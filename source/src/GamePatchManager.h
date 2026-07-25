@@ -98,7 +98,7 @@ public:
 			return 0;
 		}
 
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Verbose))
 			printf("%s Pattern found at: %p\n", name, result);
 
 		return (uint64_t)result;

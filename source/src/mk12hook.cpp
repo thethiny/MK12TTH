@@ -20,7 +20,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Debug))
 		{
 			printf("Proxy FNameToWStrId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -32,7 +32,7 @@ namespace MK12Hook::Proxies {
 	}
 	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Debug))
 		{
 			printf("Proxy FNameToWStrNoId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -45,7 +45,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Debug))
 		{
 			printf("Proxy FNameToWStrCommon::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -59,7 +59,7 @@ namespace MK12Hook::Proxies {
 	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
 		const char* name = MK12::FNameFunc::ToStr(Name);
-		if (SettingsMgr->bDebug && containsCaseInsensitive(name, "skin007_pal004"))
+		if (SettingsMgr->ShouldLog(Log::Debug) && containsCaseInsensitive(name, "skin007_pal004"))
 		{
 			printf("DEBUGME");
 		}
@@ -70,7 +70,7 @@ namespace MK12Hook::Proxies {
 			return &Name;
 		}
 
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Verbose))
 		{
 			printf("Swap To::");
 			MK12::FNameFunc::Print(*swap);
@@ -175,12 +175,12 @@ namespace MK12Hook::Proxies {
 					HookMetadata::UserProfileInfo.OfflineProfileId = new wchar_t[len];
 					mbstowcs(HookMetadata::UserProfileInfo.OfflineProfileId, pipeParts[1].c_str(), len);
 
-					if (SettingsMgr->iLogLevel)
+					if (SettingsMgr->ShouldLog(Log::Verbose))
 						printf("OfflineProfileId extracted: %ls\n", HookMetadata::UserProfileInfo.OfflineProfileId);
 				}
 				else
 				{
-					if (SettingsMgr->iLogLevel)
+					if (SettingsMgr->ShouldLog(Log::Verbose))
 						printf("OfflineProfileId not found. Single User Profile only.\n");
 				}
 			}
@@ -191,7 +191,7 @@ namespace MK12Hook::Proxies {
 				size_t len = parts[1].size() + 1;
 				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len];
 				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len);
-				if (SettingsMgr->iLogLevel)
+				if (SettingsMgr->ShouldLog(Log::Verbose))
 					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
 			}
 			else if (parts.size() >= 3 && !HookMetadata::UserProfileInfo.WBId)
@@ -208,7 +208,7 @@ namespace MK12Hook::Proxies {
 				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len1);
 				mbstowcs(HookMetadata::UserProfileInfo.WBId, parts[2].c_str(), len2);
 
-				if (SettingsMgr->iLogLevel)
+				if (SettingsMgr->ShouldLog(Log::Verbose))
 				{
 					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
 					printf("WBId extracted: %ls\n", HookMetadata::UserProfileInfo.WBId);
@@ -216,7 +216,7 @@ namespace MK12Hook::Proxies {
 
 			}
 			else {
-				if (SettingsMgr->iLogLevel)
+				if (SettingsMgr->ShouldLog(Log::Verbose))
 					printf("Offline Mode Floyd String Hash Detected!");
 			}
 		}
@@ -270,7 +270,7 @@ namespace MK12Hook::Proxies {
 			HookMetadata::UserProfileInfo.PlatformId = SafeStringCopy(arg1);
 			HookMetadata::UserProfileInfo.SaveKey = SafeStringCopy(arg2);
 
-			if (SettingsMgr->iLogLevel)
+			if (SettingsMgr->ShouldLog(Log::Verbose))
 				printf("Stored Profile Info:\nPlatform: %ws\nPlatformId: %ws\nSaveKey: %ws\n", arg0, arg1, arg2);
 		}
 
@@ -540,7 +540,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			MK12::ReadFNameToWStrWithIdStart = (uint64_t*)func_start;
-			if (SettingsMgr->iLogLevel)
+			if (SettingsMgr->ShouldLog(Log::Verbose))
 				printf("FPathLoad Func Start is at: %p\n", MK12::ReadFNameToWStrWithIdStart);
 		}
 
@@ -566,7 +566,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			MK12::ReadFNameToWStrNoIdStart = (uint64_t*)func_start;
-			if (SettingsMgr->iLogLevel)
+			if (SettingsMgr->ShouldLog(Log::Verbose))
 				printf("FPath2Load Func Start is at: %p\n", MK12::ReadFNameToWStrNoIdStart);
 		}
 
@@ -592,7 +592,7 @@ namespace MK12Hook::Hooks {
 		else
 		{
 			MK12::ReadFNameToWStrCommonStart = (uint64_t*)func_start;
-			if (SettingsMgr->iLogLevel)
+			if (SettingsMgr->ShouldLog(Log::Verbose))
 				printf("FPathCLoad Func Start is at: %p\n", MK12::ReadFNameToWStrCommonStart);
 		}
 
@@ -612,7 +612,7 @@ namespace MK12Hook::Hooks {
 		uint64_t UNameMain	= ProcessPatch::ResolveDestination((uint64_t)lpPattern, 2, 7, 4) - 0x8;
 		uint64_t UNameSub	= ProcessPatch::ResolveDestination((uint64_t)lpPattern + 0x12, 3, 7, 4);
 
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Verbose))
 		{
 			printf("UNameMain Object found at: %p\n", (uint64_t*)UNameMain);
 			printf("UNameSub Object found at: %p\n", (uint64_t*)UNameSub);
@@ -632,7 +632,7 @@ namespace MK12Hook::Hooks {
 			printfError("InitializeNameTable Function not found!\n");
 			return false;
 		}
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Verbose))
 		{
 			printf("InitializeNameTable Function found at: %p\n", (uint64_t*)InitNameTableFuncAddr);
 		}
@@ -645,7 +645,7 @@ namespace MK12Hook::Hooks {
 
 	bool OverrideFNameToWStrFuncs()
 	{
-		if (SettingsMgr->iLogLevel)
+		if (SettingsMgr->ShouldLog(Log::Verbose))
 			printfYellow("String Swap Mode set to Override!\n");
 
 		if (!SettingsMgr->bUNameGetter)

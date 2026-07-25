@@ -114,10 +114,10 @@ void eSettingsManager::Init()
 	bPauseOnStart				= ini.ReadBoolean	("Settings.Debug",		"bPauseOnStart",			false);
 	bDebug						= ini.ReadBoolean	("Settings.Debug",		"bDebug",					false);
 	bAllowNonMK					= ini.ReadBoolean	("Settings.Debug",		"bAllowNonMK",				false);
-	
+
 	// Settings
 	iLogSize					= ini.ReadInteger	("Settings",			"iLogSize",					50);
-	iLogLevel					= ini.ReadInteger	("Settings",			"iLogLevel",				0);
+	iLogLevel					= ini.ReadInteger	("Settings",			"iLogLevel",				Log::None);
 	szGameVer					= ini.ReadString	("Settings",			"szGameVer",				"0.103");
 	szModLoader					= ini.ReadString	("Settings",			"szModLoader",				"Kernel32.CreateFileW");
 	szAntiCheatEngine			= ini.ReadString	("Settings",			"szAntiCheatEngine",		"User32.EnumChildWindows");

@@ -3,9 +3,24 @@
 #include<unordered_map>
 #include "..\IniReader.h"
 
+namespace Log {
+	enum Level : int {
+		None    = 0,  // Production: no verbose output
+		Info    = 1,  // Hook results summary
+		Verbose = 2,  // Pattern addresses, function starts, swap details
+		Debug   = 10  // Per-call proxy logging, breakpoint checks, DEBUGME
+	};
+}
+
 class eSettingsManager {
 public:
 	void Init();
+
+	/** Check if logging should occur at the given level.
+	 *  bDebug=true grants all log levels automatically.
+	 *  Usage: if (SettingsMgr->ShouldLog(Log::Verbose)) printf(...);
+	 *  @param level  Log::None, Log::Info, Log::Verbose, or Log::Debug */
+	inline bool ShouldLog(int level) { return bDebug || iLogLevel >= level; }
 
 public:
 	// Settings
