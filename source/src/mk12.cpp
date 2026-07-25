@@ -75,7 +75,7 @@ uint64_t __fastcall	MK12::Remake::FNameInfoToWString(MK12::FNameInfoStruct* FNam
 uint64_t __fastcall MK12::Remake::FNameObjectToWString(MK12::FName* Name, char* Destination) // This is the function that we jmp to
 {
 	uint64_t NameSize = FNameObjectToWStringCommon(Name, Destination);
-	if (SettingsMgr->bVerboseFName)
+	if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		printf("FNameObjectToWString::%p = %ls\n", (void*)Name, (wchar_t*)Destination);
 	return NameSize;
 }
@@ -96,7 +96,7 @@ uint64_t __fastcall MK12::Remake::FNameObjectToWStringCommon(MK12::FName* Name, 
 uint64_t __fastcall	MK12::Remake::FNameInfoToWStringNoId(MK12::FNameInfoStruct* FNameInfo, char* Destination)
 {
 	uint64_t NameSize = FNameInfoToWString(FNameInfo, Destination);
-	if (SettingsMgr->bVerboseFName)
+	if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		printf("FNameInfoToWStringNoId::%p = %ls\n", (void*)FNameInfo, (wchar_t*)Destination);
 	return NameSize;
 }
@@ -106,7 +106,7 @@ uint64_t __fastcall	MK12::Remake::FNameInfoToWStringWithId(MK12::FNameInfoStruct
 	uint64_t NameSize = FNameInfoToWString(FNameInfo, Destination);
 
 	uint64_t DupId = FNameInfo->DuplicateId;
-	if (SettingsMgr->bVerboseFName)
+	if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		printf("FNameInfoToWStringWithId::%p = %ls dup %lld\n", (void*)FNameInfo, (wchar_t*)Destination, DupId);
 
 	if (!DupId)

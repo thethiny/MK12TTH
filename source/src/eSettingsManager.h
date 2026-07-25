@@ -5,10 +5,12 @@
 
 namespace Log {
 	enum Level : int {
-		None    = 0,  // Production: no verbose output
-		Info    = 1,  // Hook results summary
-		Verbose = 2,  // Pattern addresses, function starts, swap details
-		Debug   = 10  // Per-call proxy logging, breakpoint checks, DEBUGME
+		None    = 0,   // Production: colored prints only
+		Info    = 1,   // Reserved for future use
+		Verbose = 2,   // Pattern addresses, function starts
+		Debug   = 5,   // Debug breakpoint checks, DEBUGME
+		Flood   = 10,  // Per-call spam, respects FloodToggles
+		Drown   = 100  // Everything, ignores all toggles
 	};
 }
 
@@ -17,10 +19,15 @@ public:
 	void Init();
 
 	/** Check if logging should occur at the given level.
-	 *  bDebug=true grants all log levels automatically.
-	 *  Usage: if (SettingsMgr->ShouldLog(Log::Verbose)) printf(...);
-	 *  @param level  Log::None, Log::Info, Log::Verbose, or Log::Debug */
-	inline bool ShouldLog(int level) { return bDebug || iLogLevel >= level; }
+	 *  bDebug=true grants up to Log::Debug (not Flood/Drown).
+	 *  @param level  Log::None through Log::Drown */
+	inline bool ShouldLog(int level) { return (bDebug && level <= Log::Debug) || iLogLevel >= level; }
+
+	/** Check if a specific flood source should print.
+	 *  At Log::Drown, ignores the toggle and always prints.
+	 *  At Log::Flood, respects the toggle.
+	 *  @param toggle  The specific FloodToggles member */
+	inline bool ShouldFlood(bool toggle) { return iLogLevel >= Log::Drown || (iLogLevel >= Log::Flood && toggle); }
 
 public:
 	// Settings
@@ -32,8 +39,11 @@ public:
 	bool bPauseOnStart;
 	int	iLogLevel;
 	bool bDebug;
-	bool bVerboseFName;
 	bool bAllowNonMK;
+	struct {
+		bool bFName = false;
+		bool bEndpoint = false;
+	} Floods;
 
 
 	// Toggles

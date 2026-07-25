@@ -20,7 +20,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->bVerboseFName)
+		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -32,7 +32,7 @@ namespace MK12Hook::Proxies {
 	}
 	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->bVerboseFName)
+		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrNoId::Captured::");
 			MK12::FNameFunc::Print(Name);
@@ -45,7 +45,7 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
 	{
-		if (SettingsMgr->bVerboseFName)
+		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrCommon::Captured::");
 			MK12::FNameFunc::Print(Name);

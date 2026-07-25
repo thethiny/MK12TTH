@@ -113,8 +113,11 @@ void eSettingsManager::Init()
 	bEnableConsoleWindow		= ini.ReadBoolean	("Settings.Debug",		"bEnableConsoleWindow",		false);
 	bPauseOnStart				= ini.ReadBoolean	("Settings.Debug",		"bPauseOnStart",			false);
 	bDebug						= ini.ReadBoolean	("Settings.Debug",		"bDebug",					false);
-	bVerboseFName				= ini.ReadBoolean	("Settings.Debug",		"bVerboseFName",			false);
 	bAllowNonMK					= ini.ReadBoolean	("Settings.Debug",		"bAllowNonMK",				false);
+
+	// Flood Toggles
+	Floods.bFName				= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bFName",			false);
+	Floods.bEndpoint			= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bEndpoint",		false);
 
 	// Settings
 	iLogSize					= ini.ReadInteger	("Settings",			"iLogSize",					50);

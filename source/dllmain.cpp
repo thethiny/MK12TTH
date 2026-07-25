@@ -129,9 +129,13 @@ void PreGameHooks()
 
 	if (SettingsMgr->AnnouncerSwap.bEnable)
 	{
-		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		if (!SettingsMgr->bFNameToStrHook)
 		{
-			printfError("AnnouncerSwap requires bFPathLoader to be enabled and working! Skipping.");
+			printfError("AnnouncerSwap requires bFPathLoader to be enabled! Skipping.");
+		}
+		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("AnnouncerSwap: bFPathLoader is enabled but FPathIdLoader failed! Skipping.");
 		}
 		else
 		{
@@ -140,9 +144,13 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bEnableStringSwap)
 	{
-		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		if (!SettingsMgr->bFNameToStrHook)
 		{
-			printfError("StringSwap requires bFPathLoader to be enabled and working! Skipping.");
+			printfError("StringSwap requires bFPathLoader to be enabled! Skipping.");
+		}
+		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
+		{
+			printfError("StringSwap: bFPathLoader is enabled but FPathIdLoader failed! Skipping.");
 		}
 		else
 		{
@@ -151,11 +159,29 @@ void PreGameHooks()
 	}
 	if (SettingsMgr->bEnableServerProxy)
 	{
-		HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData();
+		if (SettingsMgr->szServerUrl.empty())
+		{
+			printfWarning("bEnableServerProxy is enabled but szServerUrl is empty! Skipping.");
+		}
+		else
+		{
+			HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData();
+		}
 	}
 	if (SettingsMgr->bGetFightMetadata)
 	{
 		HookMetadata::ActiveModsMap["bFightMetadata"]		= MK12Hook::Hooks::ExtractFightMetadataFromSecretFightSetupStage();
+	}
+	if (SettingsMgr->bSerializeSecretFights)
+	{
+		if (!SettingsMgr->bGetFightMetadata)
+		{
+			printfWarning("bSerializeSecretFights requires bGetFightMetadata to be enabled! Skipping.");
+		}
+		else if (!HookMetadata::ActiveModsMap["UNameTableGetter"])
+		{
+			printfWarning("bSerializeSecretFights requires bUNameGetter to be enabled and working! Skipping.");
+		}
 	}
 	if (SettingsMgr->bEnableFloydTracking)
 	{
