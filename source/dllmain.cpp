@@ -7,7 +7,7 @@
 #include <tlhelp32.h> 
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.3.1";
+constexpr const char * CURRENT_HOOK_VERSION = "0.4.0";
 
 
 void CreateConsole();
@@ -66,7 +66,7 @@ void CreateConsole()
 void PreGameHooks()
 {
 	GamePatcher->Init(GetModuleHandle(nullptr), CURRENT_HOOK_VERSION);
-	if (SettingsMgr->iLogLevel)
+	if (SettingsMgr->ShouldLog(Log::Verbose))
 		printf("Generated Trampolines\n");
 	 IATable = ProcessPatch::ParseImportTable();
 
@@ -250,8 +250,7 @@ bool OnInitializeHook()
 
 	if (SettingsMgr->bPauseOnStart)
 	{
-		std::cout << "Current cOut Log Level" << SettingsMgr->iLogLevel << std::endl;
-		printf("Current stdOut Log Level -> %d\n", SettingsMgr->iLogLevel);
+		printf("Current Log Level -> %d\n", SettingsMgr->iLogLevel);
 		MessageBoxA(0, "Freezing Game Until OK", ":)", MB_ICONINFORMATION);
 	}
 
