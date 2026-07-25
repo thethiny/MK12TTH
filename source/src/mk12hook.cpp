@@ -20,8 +20,11 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
-		printf("Proxy FNameToWStrId::Captured::");
-		MK12::FNameFunc::Print(Name);
+		if (SettingsMgr->iLogLevel)
+		{
+			printf("Proxy FNameToWStrId::Captured::");
+			MK12::FNameFunc::Print(Name);
+		}
 
 		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
 
@@ -29,8 +32,11 @@ namespace MK12Hook::Proxies {
 	}
 	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
-		printf("Proxy FNameToWStrNoId::Captured::");
-		MK12::FNameFunc::Print(Name);
+		if (SettingsMgr->iLogLevel)
+		{
+			printf("Proxy FNameToWStrNoId::Captured::");
+			MK12::FNameFunc::Print(Name);
+		}
 
 		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
 
@@ -39,8 +45,11 @@ namespace MK12Hook::Proxies {
 
 	void ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
 	{
-		printf("Proxy FNameToWStrCommon::Captured::");
-		MK12::FNameFunc::Print(Name);
+		if (SettingsMgr->iLogLevel)
+		{
+			printf("Proxy FNameToWStrCommon::Captured::");
+			MK12::FNameFunc::Print(Name);
+		}
 
 		MK12::FName* current_fname = ReadFNameToWStr(Name, dest);
 
@@ -50,7 +59,7 @@ namespace MK12Hook::Proxies {
 	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
 		const char* name = MK12::FNameFunc::ToStr(Name);
-		if (containsCaseInsensitive(name, "skin007_pal004"))
+		if (SettingsMgr->bDebug && containsCaseInsensitive(name, "skin007_pal004"))
 		{
 			printf("DEBUGME");
 		}
@@ -60,41 +69,44 @@ namespace MK12Hook::Proxies {
 			MK12::FNameToWStr(Name, dest);
 			return &Name;
 		}
-		
-		printf("Swap To::");
-		MK12::FNameFunc::Print(*swap);
+
+		if (SettingsMgr->iLogLevel)
+		{
+			printf("Swap To::");
+			MK12::FNameFunc::Print(*swap);
+		}
 		MK12::FNameToWStr(*swap, dest);
-		
+
 		return swap;
 	}
 
 	wchar_t** OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t** EndpointAddress)
 	{
-		CPPython::string ServerUrl = SettingsMgr->szServerUrl;
+		static wchar_t* cachedServerUrl = nullptr;
+		static int cachedServerLen = 0;
 
-		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"] && !ServerUrl.empty())
+		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"] && !SettingsMgr->szServerUrl.empty())
 		{
-			ServerUrl = ServerUrl.strip("/");
+			if (!cachedServerUrl)
+			{
+				CPPython::string ServerUrl = SettingsMgr->szServerUrl;
+				ServerUrl = ServerUrl.strip("/");
 
 #pragma warning(push)
 #pragma warning(disable: 4267)
-			int StringLength = (ServerUrl.size() + 1) * 2;
-			std::wstring wServerUrl = std::wstring(ServerUrl.begin(), ServerUrl.end());
+				int StringLength = (ServerUrl.size() + 1) * 2;
+				std::wstring wServerUrl = std::wstring(ServerUrl.begin(), ServerUrl.end());
 
-			wprintf(L"Replacing endpoint \"%s\" with \"%s\"!\n", obj.ValuePointer, wServerUrl.c_str());
-
-			static wchar_t* cachedServerUrl = nullptr;
-			static int cachedServerLen = 0;
-			if (!cachedServerUrl)
-			{
 				cachedServerUrl = new wchar_t[StringLength];
 				memcpy(cachedServerUrl, wServerUrl.c_str(), StringLength);
 				cachedServerLen = ServerUrl.size() + 1;
+#pragma warning(pop)
+
+				wprintf(L"Replacing endpoint with \"%s\"!\n", wServerUrl.c_str());
 			}
 
-#pragma warning(pop)
 			obj.ValuePointer = cachedServerUrl;
-			obj.ValueLength = cachedServerLen; // Characters count in str and not wstr
+			obj.ValueLength = cachedServerLen;
 			obj.ValueLength8BAligned = (obj.ValueLength + 7) & (~7);
 
 			MK12::GetEndpointKeyValue(obj, EndpointAddress);
