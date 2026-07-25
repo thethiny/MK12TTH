@@ -1,5 +1,6 @@
 #include "mkutils.h"
 #include "mk12.h"
+#include "mk12hook.h"
 
 
 uint64_t*							MK12::lpGameVersionFull			= nullptr;
@@ -80,9 +81,12 @@ uint64_t __fastcall MK12::Remake::FNameObjectToWString(MK12::FName* Name, char* 
 
 uint64_t __fastcall MK12::Remake::FNameObjectToWStringCommon(MK12::FName* Name, char* Destination)
 {
-	// Swap should be here in this function
-	uint64_t NameSize = MK12::FNameFunc::GetSize(*Name);
-	MK12::FNameToWStr(*Name, Destination);
+	const char* nameStr = MK12::FNameFunc::ToStr(*Name);
+	MK12::FName* swap = HookMetadata::FSwapTable.get(nameStr);
+	MK12::FName* target = swap ? swap : Name;
+
+	uint64_t NameSize = MK12::FNameFunc::GetSize(*target);
+	MK12::FNameToWStr(*target, Destination);
 	*(wchar_t*)&Destination[2 * NameSize] = L'\0';
 
 	return NameSize;

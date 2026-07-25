@@ -25,7 +25,7 @@ LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
 	//if (code >= 0 && !state) // State 0 -> Down
 	//{
 	//	if (!transition) // Transition 0 -> Being Pressed (PosEdge), 1 -> Being Held.
-	//	{
+	//	{t
 	//		if (wParam == SettingsMgr->iVKMenuToggle)
 	//		{
 	//			// GuiMenu->ToggleActive();
@@ -143,10 +143,6 @@ void PreGameHooks()
 		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
 		{
 			printfError("StringSwap requires bFPathLoader to be enabled and working! Skipping.");
-		}
-		else if (HookMetadata::ActiveModsMap["UNameTableGetter"])
-		{
-			printfWarning("StringSwap is not available in Remake Mode.");
 		}
 		else
 		{

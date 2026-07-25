@@ -931,12 +931,6 @@ namespace MK12Hook::Mods {
 			printfError("No FPath Swapper has been loaded. FNameToStrWithIdLoader Patching was unsuccessful.");
 			return -1;
 		}
-		if (HookMetadata::ActiveModsMap["UNameTableGetter"])
-		{
-			printfWarning("StringSwap is not available in Remake Mode.");
-			return -1;
-		}
-
 		std::ifstream file("string_swaps.txt");
 
 		CPPython::string line;
