@@ -268,7 +268,15 @@ bool OnInitializeHook()
 	ProcessSettings(); // Parse Settings
 
 	uint64_t EXEHash = ProcessPatch::HashTextSection();
-	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION, GamePatcher->GetModuleName().c_str());
+	char dllPath[MAX_PATH];
+	GetModuleFileNameA(HookMetadata::CurrentDllModule, dllPath, MAX_PATH);
+	std::string dllName = dllPath;
+	size_t lastSlash = dllName.find_last_of("\\/");
+	if (lastSlash != std::string::npos) dllName = dllName.substr(lastSlash + 1);
+	size_t dot = dllName.find_last_of('.');
+	if (dot != std::string::npos) dllName = dllName.substr(0, dot);
+	for (size_t i = 0; i < dllName.length(); i++) dllName[i] = std::tolower(dllName[i]);
+	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION, dllName.c_str());
 
 	PreGameHooks(); // Queue Blocker
 
