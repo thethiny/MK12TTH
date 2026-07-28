@@ -22,6 +22,7 @@
     <ClCompile Include="source\src\eSettingsManager.cpp" />
     <ClCompile Include="source\src\mk12.cpp" />
     <ClCompile Include="source\src\mk12hook.cpp" />
+    <ClCompile Include="source\src\AGBinary.cpp" />
     <ClCompile Include="source\src\mkutils.cpp" />
     <ClCompile Include="source\src\GamePatchManager.cpp" />
     <ClCompile Include="source\src\MK12Unlocker.cpp" />

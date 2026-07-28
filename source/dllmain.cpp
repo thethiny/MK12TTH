@@ -478,25 +478,19 @@ void MK12HookPlugin::TabFunction()
 			MK12HOOKSDK::ImGui_Checkbox("Response Capture", &bResponseCapture);
 		}
 
-		if (!HookMetadata::sUserKeys.PlatformTicket.empty())
-		{
-			MK12HOOKSDK::ImGui_Separator();
+		MK12HOOKSDK::ImGui_Separator();
 
-			static char platformBuffer[16];
-			strncpy(platformBuffer, HookMetadata::sUserKeys.Platform.c_str(), sizeof(platformBuffer) - 1);
-			MK12HOOKSDK::ImGui_InputText("Auth Platform", platformBuffer, sizeof(platformBuffer));
+		static char platformBuffer[16];
+		strncpy(platformBuffer, HookMetadata::sUserKeys.Platform.c_str(), sizeof(platformBuffer) - 1);
+		MK12HOOKSDK::ImGui_InputText("Auth Platform", platformBuffer, sizeof(platformBuffer));
 
-			static char ticketBuffer[2048];
-			strncpy(ticketBuffer, HookMetadata::sUserKeys.PlatformTicket.c_str(), sizeof(ticketBuffer) - 1);
-			MK12HOOKSDK::ImGui_InputText("Auth Ticket", ticketBuffer, sizeof(ticketBuffer));
-		}
+		static char ticketBuffer[2048];
+		strncpy(ticketBuffer, HookMetadata::sUserKeys.PlatformTicket.c_str(), sizeof(ticketBuffer) - 1);
+		MK12HOOKSDK::ImGui_InputText("Auth Ticket", ticketBuffer, sizeof(ticketBuffer));
 
-		if (!HookMetadata::sUserKeys.AccessToken.empty())
-		{
-			static char tokenBuffer[2048];
-			strncpy(tokenBuffer, HookMetadata::sUserKeys.AccessToken.c_str(), sizeof(tokenBuffer) - 1);
-			MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
-		}
+		static char tokenBuffer[2048];
+		strncpy(tokenBuffer, HookMetadata::sUserKeys.AccessToken.c_str(), sizeof(tokenBuffer) - 1);
+		MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
 	}
 
 	if (HookMetadata::ActiveModsMap["bFloydTracking"])

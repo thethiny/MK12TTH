@@ -1,4 +1,5 @@
 #include "mk12hook.h"
+#include "AGBinary.h"
 #include "GamePatchManager.h"
 
 
@@ -14,7 +15,13 @@ HookMetadata::SwapTable				HookMetadata::FSwapTable;
 HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
-
+bool HookMetadata::HasResponseCapture() { return ActiveModsMap["bCurlResponseCapture"]; }
+bool HookMetadata::CurlCaptureComplete()
+{
+	if (sUserKeys.PlatformTicket.empty()) return false;
+	if (HasResponseCapture() && sUserKeys.AccessToken.empty()) return false;
+	return true;
+}
 
 namespace CurlOpt {
 	constexpr __int64 URL = 10002;
@@ -423,26 +430,37 @@ namespace MK12Hook::Proxies {
 		int32_t size = 0;
 		if (!wrapper->GetRequestBody(&data, &size)) return;
 
-		const char* marker = "fail_on_missing";
-		int markerLen = 15;
-		for (int32_t i = 0; i < size - markerLen; i++)
+		int32_t cursor = 0;
+		if (!AGBinary::FindKey(data, size, cursor, "auth")) return;
+
+		int32_t count = AGBinary::EnterMap(data, size, cursor);
+		if (count < 0) return;
+
+		for (int32_t i = 0; i < count; i++)
 		{
-			if (memcmp(data + i, marker, markerLen) != 0) continue;
-			int32_t cursor = i + markerLen;
-			if (cursor >= size) return;
-			cursor++; // skip bool tag
-
-			std::string platform = AGBinary::ReadString(data, size, cursor);
-			if (platform.empty()) return;
-			std::string ticket = AGBinary::ReadString(data, size, cursor);
-			if (ticket.empty()) return;
-
-			HookMetadata::sUserKeys.Platform = platform;
-			HookMetadata::sUserKeys.PlatformTicket = ticket;
-			printfSuccess("Platform: %s, ticket captured (%zu chars)", platform.c_str(), ticket.size());
-			CurlCleanupIfDone();
-			return;
+			std::string key = AGBinary::ReadString(data, size, cursor);
+			if (key == "fail_on_missing")
+			{
+				AGBinary::Skip(data, size, cursor);
+				continue;
+			}
+			if (!key.empty())
+			{
+				std::string ticket = AGBinary::ReadString(data, size, cursor);
+				if (!ticket.empty())
+				{
+					HookMetadata::sUserKeys.Platform = key;
+					HookMetadata::sUserKeys.PlatformTicket = ticket;
+					printfSuccess("Platform: %s, ticket captured (%zu chars)", key.c_str(), ticket.size());
+					if (SettingsMgr->ShouldLog(Log::Verbose))
+						printf("Stored Auth Info:\nPlatform: %s\nTicket: %s\n", key.c_str(), ticket.c_str());
+					CurlCleanupIfDone();
+					return;
+				}
+			}
+			AGBinary::Skip(data, size, cursor);
 		}
+		printfWarning("ParseAccessRequest: failed to extract platform ticket from %d bytes", size);
 	}
 
 	static void ParseAccessResponse(MK12::CURL::HTTPRequestWrapper* wrapper)
@@ -451,11 +469,13 @@ namespace MK12Hook::Proxies {
 		int32_t size = 0;
 		if (!wrapper->GetResponseBody(&data, &size)) return;
 
-		std::string token = AGBinary::FindValueAfterKey(data, size, "token");
+		std::string token = AGBinary::GetString(data, size, "token");
 		if (token.empty()) return;
 
 		HookMetadata::sUserKeys.AccessToken = token;
 		printfSuccess("Access token captured (%zu chars)", token.size());
+		if (SettingsMgr->ShouldLog(Log::Verbose))
+			printf("Stored Access Token: %s\n", token.c_str());
 		CurlCleanupIfDone();
 	}
 
@@ -466,13 +486,9 @@ namespace MK12Hook::Proxies {
 
 		if (HookMetadata::sUserKeys.PlatformTicket.empty())
 		{
-			auto urlIt = CurlHandleUrls.find(easyHandle);
-			if (urlIt != CurlHandleUrls.end() && urlIt->second.find("/access") != std::string::npos)
-			{
-				auto structIt = CurlHandleStructs.find(easyHandle);
-				if (structIt != CurlHandleStructs.end())
-					ParseAccessRequest(structIt->second);
-			}
+			auto structIt = CurlHandleStructs.find(easyHandle);
+			if (structIt != CurlHandleStructs.end())
+				ParseAccessRequest(structIt->second);
 		}
 
 		return MK12::CurlMultiAddHandle(multiHandle, easyHandle);
@@ -503,7 +519,6 @@ namespace MK12Hook::Proxies {
 				}
 
 				CurlHandleUrls.erase(easyHandle);
-				CurlHandleStructs.erase(easyHandle);
 			}
 		}
 

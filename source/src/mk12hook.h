@@ -153,11 +153,6 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	extern FloydCluesInfo		CurrentFloydInfo;
 	extern ProfileInfo			UserProfileInfo;
 
-	inline bool HasResponseCapture() { return ActiveModsMap["bCurlResponseCapture"]; }
-	inline bool CurlCaptureComplete()
-	{
-		if (sUserKeys.PlatformTicket.empty()) return false;
-		if (HasResponseCapture() && sUserKeys.AccessToken.empty()) return false;
-		return true;
-	}
+	bool HasResponseCapture();
+	bool CurlCaptureComplete();
 };

@@ -8,35 +8,6 @@
 
 #define			FNAME_STR(FName)			MK12::FNameFunc::ToStr(*FName)
 
-namespace AGBinary {
-	inline std::string ReadString(const char* data, int32_t size, int32_t& cursor)
-	{
-		if (cursor >= size) return "";
-		uint8_t tag = (uint8_t)data[cursor++];
-		if ((tag & 0xF0) != 0x30) return "";
-		int lenBytes = 1 << (tag & 0x03);
-		if (cursor + lenBytes > size) return "";
-		uint32_t strLen = 0;
-		for (int i = 0; i < lenBytes; i++)
-			strLen = (strLen << 8) | (uint8_t)data[cursor++];
-		if (cursor + (int32_t)strLen > size || strLen > 0x100000) return "";
-		std::string result(data + cursor, strLen);
-		cursor += strLen;
-		return result;
-	}
-
-	inline std::string FindValueAfterKey(const char* data, int32_t size, const char* key)
-	{
-		int keyLen = (int)strlen(key);
-		for (int32_t i = 0; i < size - keyLen; i++)
-		{
-			if (memcmp(data + i, key, keyLen) != 0) continue;
-			int32_t cursor = i + keyLen;
-			return ReadString(data, size, cursor);
-		}
-		return "";
-	}
-}
 
 std::string		GetProcessName();
 std::string		GetDirName();
