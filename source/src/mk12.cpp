@@ -23,6 +23,10 @@ MK12::SetupSecretFightConditionsType*	MK12::SetupSecretFightConditions	= nullptr
 MK12::GenerateFloydCluesFromHashType*	MK12::GenerateFloydCluesFromHash	= nullptr;
 MK12::CustomCityHashType*				MK12::CustomCityHash				= nullptr;
 MK12::MKWScanfType*						MK12::MKWScanf						= nullptr;
+// Curl
+MK12::CurlSetOptType*					MK12::CurlSetOpt					= nullptr;
+MK12::CurlMultiAddHandleType*			MK12::CurlMultiAddHandle			= nullptr;
+MK12::CurlMultiInfoReadType*			MK12::CurlMultiInfoRead				= nullptr;
 
 
 uint8_t									MK12::KlassicTowerSecretFightDataOffset   = 0;

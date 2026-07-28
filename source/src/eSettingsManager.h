@@ -43,6 +43,7 @@ public:
 	struct {
 		bool bFName = false;
 		bool bEndpoint = false;
+		bool bCurl = false;
 	} Floods;
 
 
@@ -76,6 +77,10 @@ public:
 	std::string pFPathCLoadPat;
 	std::string pEndpointLoader;
 	std::string pProfileGetter;
+	// Curl
+	std::string pCurlSetOpt;
+	std::string pCurlMultiAddHandle;
+	std::string pCurlMultiInfoRead;
 	//Floyd
 	std::string pSecretFightCondPat;
 	std::string pGetChallengesFromHash;

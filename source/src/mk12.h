@@ -89,64 +89,40 @@ namespace MK12 { // Namespace for game functions / structs
 
 	namespace CURL {
 
-		struct HTTPHeaderInstance
+		class HTTPRequestWrapper
 		{
-			char*		GameVersion;
-			uint64_t*	OtherHeaderStuff;
-			uint64_t	PAD;
-			uint32_t	UNK;
-			uint16_t	UNK2[2];
-			char		RemainderOfHeader[4]; // it's a string
+		public:
+			virtual ~HTTPRequestWrapper() = default;
+			char _pad08[0x58];           // 0x08 - 0x5F
+			void* CurlEasyHandle;        // 0x60
+			void* CurlHeaderList;        // 0x68
+			char _pad70[0x38];           // 0x70 - 0xA7
+			void* ResponseBuffer;        // 0xA8
+			char _padB0[0x08];           // 0xB0 - 0xB7
+			void* ContentProvider;       // 0xB8
 
+			bool GetRequestBody(char** out, int32_t* size)
+			{
+				if (!ContentProvider) return false;
+				char* data = *(char**)((char*)ContentProvider + 0x08);
+				int32_t len = *(int32_t*)((char*)ContentProvider + 0x10);
+				if (!data || len <= 0 || len > 0x100000) return false;
+				*out = data;
+				*size = len;
+				return true;
+			}
+
+			bool GetResponseBody(char** out, int32_t* size)
+			{
+				if (!ResponseBuffer) return false;
+				char* data = *(char**)((char*)ResponseBuffer + 0x10);
+				int32_t len = *(int32_t*)((char*)ResponseBuffer + 0x18);
+				if (!data || len <= 0 || len > 0x1000000) return false;
+				*out = data;
+				*size = len;
+				return true;
+			}
 		};
-
-		struct HTTPHeaderContainer
-		{
-			uint64_t HeaderSize;
-			HTTPHeaderInstance* Instance;
-		};
-
-		struct HTTPPostStruct
-		{
-			HTTPHeaderContainer* HeaderContainer; //0
-			char* ResponseBody; //8
-			int32_t ResponseBodySize; //10
-			int32_t UnknownSize; //14
-			char* ResponseStatus; //18
-			wchar_t* Unknown; //20
-			char* Body; //28
-			int32_t BodySize; //30
-			int32_t Unknown2; //34
-			uint64_t Unknown3;
-			uint64_t Unknown4;
-			char* HTTPEndpoint;
-			uint32_t HTTPEndpointSize;
-			uint32_t Unknown2Copy;
-			uint64_t Ignore[18];
-			char* Unk;
-			uint64_t UnkSize;
-			char* Platform;
-			uint64_t PlatformSize;
-			char* Unk2;
-			uint64_t Unk2Size;
-			char* Platform2;
-			uint64_t Platform2Size;
-			uint64_t Ignore3[4];
-			char* MainEndpoint;
-			uint64_t Ignore4;
-			char* Endpoint;
-			int32_t EndpointSize;
-		};
-
-		struct HTTPResponseStruct
-		{
-			uint64_t* ClassPointer;
-			char* ResponseBody;
-			uint32_t Sizes[2];
-			char* ResponseStatus;
-			wchar_t* Unknown;
-		};
-
 
 	};
 
@@ -374,6 +350,10 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			TArray<uint32_t>*				(__fastcall GenerateFloydCluesFromHashType)		(TArray<uint32_t>*, uint64_t, uint64_t, uint64_t);
 	typedef         uint32_t						(__fastcall CustomCityHashType)					(wchar_t**);
 	typedef			wchar_t*						(__fastcall MKWScanfType)						(wchar_t* ResultString, const wchar_t* Format, ...);
+	// Curl
+	typedef			__int64							(__fastcall CurlSetOptType)						(__int64 handle, __int64 option, __int64 value);
+	typedef			__int64							(__fastcall CurlMultiAddHandleType)				(__int64 multiHandle, __int64 easyHandle);
+	typedef			__int64							(__fastcall CurlMultiInfoReadType)				(__int64 multiHandle, __int64* msgsInQueue);
 	// ReCreated
 	namespace Remake {
 		uint64_t	__fastcall	FNameInfoToWString(FNameInfoStruct* FNameInfo, char* Destination); // Common between 1 & 2
@@ -412,5 +392,8 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GenerateFloydCluesFromHashType*				GenerateFloydCluesFromHash;
 	extern CustomCityHashType*							CustomCityHash;
 	extern MKWScanfType*								MKWScanf;
+	extern CurlSetOptType*								CurlSetOpt;
+	extern CurlMultiAddHandleType*						CurlMultiAddHandle;
+	extern CurlMultiInfoReadType*						CurlMultiInfoRead;
 
 }

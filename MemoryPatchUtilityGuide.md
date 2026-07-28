@@ -497,7 +497,10 @@ uint64_t target = pat.Resolve();
 
 Intercept a function at its entry point so ALL callers are redirected, while keeping the original callable. Combines the best of `ProxyCallAt` (original stays callable) and `ReplaceFunctionWith` (all callers intercepted).
 
-Use this for statically linked functions (like curl) where there's no single call instruction to patch, or when you need to intercept every caller.
+Use this when:
+- The function is statically linked (like curl) so there's no IAT entry or single call site to patch
+- The function is called from multiple call sites and you want to intercept all of them with one hook instead of patching each `call` instruction individually
+- You need before-and-after access (inspect args, call original, inspect result) for all callers
 
 **Assembly before:**
 ```asm

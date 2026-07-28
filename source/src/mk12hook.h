@@ -14,6 +14,9 @@ namespace MK12Hook {
 		MK12::TArray<uint32_t>*					__fastcall	GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2);
 		uint32_t								__fastcall	CustomCityHashProxy(wchar_t** StringToHash);
 		wchar_t*								__fastcall	MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...);
+		__int64									__fastcall	CurlSetOptProxy(__int64 handle, __int64 option, __int64 value);
+		__int64									__fastcall	CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle);
+		__int64									__fastcall	CurlMultiInfoReadProxy(__int64 multiHandle, __int64* msgsInQueue);
 	};
 
 	namespace Hooks {
@@ -31,6 +34,7 @@ namespace MK12Hook {
 		bool ExtractFightMetadataFromSecretFightSetupStage();
 		bool ProfileGetterHooks();
 		int	 FloydTrackingHooks();
+		bool PatchCurl();
 	};
 
 	namespace Mods {
@@ -50,18 +54,6 @@ namespace HookMetadata { //Namespace for helpers for game functions
 		LibFuncStruct CurlPerform;
 	};
 
-	struct GameReadyState
-	{
-		PyString szGameVersion	= "";
-		bool bSteamKey			= false;
-		bool bAuthToken			= false;
-		bool bAccessToken		= false;
-		bool bUsername			= false;
-		bool bSteamID			= false;
-		bool bGameVersion		= false;
-		bool bHash				= false;
-		bool bUnlock			= true;
-	};
 
 	struct CheatsStruct {
 		// Pointers
@@ -92,9 +84,9 @@ namespace HookMetadata { //Namespace for helpers for game functions
 
 	struct UserKeysStruct
 	{
-		PyString SteamKeyBody = ""; // Auth Token
-		PyString AuthTokenBody = ""; // Send to Access Token
-		PyString AuthTokenResponse = ""; // Access Token
+		PyString Platform = "";       // "steam" or "epic"
+		PyString PlatformTicket = ""; // Steam hex ticket or EGS JWT
+		PyString AccessToken = "";    // Session token from /access response
 	};
 
 	class SwapTable {
@@ -148,6 +140,8 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	};
 
 
+	enum ServerProxyMode { PROXY_NONE, PROXY_CONFIG, PROXY_CURL };
+	extern ServerProxyMode		eServerProxyMode;
 	extern ActiveMods			ActiveModsMap;
 	extern LibMapsStruct		sLFS;
 	extern CheatsStruct			sCheatsStruct;
@@ -155,9 +149,15 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	extern HHOOK				KeyboardProcHook;
 	extern HMODULE				CurrentDllModule;
 	extern HANDLE				Console;
-	extern GameReadyState		sGameState;
 	extern SwapTable			FSwapTable;
 	extern FloydCluesInfo		CurrentFloydInfo;
 	extern ProfileInfo			UserProfileInfo;
-	
+
+	inline bool HasResponseCapture() { return ActiveModsMap["bCurlResponseCapture"]; }
+	inline bool CurlCaptureComplete()
+	{
+		if (sUserKeys.PlatformTicket.empty()) return false;
+		if (HasResponseCapture() && sUserKeys.AccessToken.empty()) return false;
+		return true;
+	}
 };

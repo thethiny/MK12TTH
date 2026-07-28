@@ -2,11 +2,11 @@
 #include "GamePatchManager.h"
 
 
+HookMetadata::ServerProxyMode		HookMetadata::eServerProxyMode = HookMetadata::PROXY_NONE;
 HookMetadata::ActiveMods			HookMetadata::ActiveModsMap;
 HookMetadata::CheatsStruct			HookMetadata::sCheatsStruct;
 HookMetadata::LibMapsStruct			HookMetadata::sLFS;
 HookMetadata::UserKeysStruct		HookMetadata::sUserKeys;
-HookMetadata::GameReadyState		HookMetadata::sGameState;
 HookMetadata::SwapTable				HookMetadata::FSwapTable;
 // Thread safety note: FSwapTable is only written at startup (AnnouncerSwap/StringSwaps) and read-only after.
 // FloydCluesInfo and UserProfileInfo are written by NRS-to-UE proxies which are single-threaded within NRS's caller.
@@ -15,6 +15,12 @@ HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
 
+
+namespace CurlOpt {
+	constexpr __int64 URL = 10002;
+	constexpr __int64 HEADERDATA = 10029;
+	constexpr __int64 PRIVATE = 10103;
+}
 
 namespace MK12Hook::Proxies {
 
@@ -354,98 +360,157 @@ namespace MK12Hook::Proxies {
 
 		return mSecretFightDataRet;
 	}
+
+	static std::unordered_map<__int64, std::string> CurlHandleUrls;
+	static std::unordered_map<__int64, MK12::CURL::HTTPRequestWrapper*> CurlHandleStructs;
+
+	static void CurlCleanupIfDone()
+	{
+		if (HookMetadata::CurlCaptureComplete())
+		{
+			CurlHandleUrls.clear();
+			CurlHandleStructs.clear();
+		}
+	}
+
+	__int64 __fastcall CurlSetOptProxy(__int64 handle, __int64 option, __int64 value)
+	{
+		if (option == CurlOpt::URL && value)
+		{
+			CurlHandleUrls[handle] = (const char*)value;
+			if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
+				printf("[CURL] URL: %s\n", (const char*)value);
+
+			// Curl-based server proxy: rewrite URL only in Curl mode
+			if (HookMetadata::eServerProxyMode == HookMetadata::PROXY_CURL)
+			{
+				static std::string rewrittenUrl;
+				std::string originalUrl = (const char*)value;
+				std::string serverUrl = SettingsMgr->szServerUrl;
+
+				// Strip trailing slash
+				while (!serverUrl.empty() && serverUrl.back() == '/')
+					serverUrl.pop_back();
+
+				// Extract path from original URL (after the host)
+				size_t pathStart = originalUrl.find('/', 8); // skip https://
+				if (pathStart != std::string::npos)
+					rewrittenUrl = serverUrl + originalUrl.substr(pathStart);
+				else
+					rewrittenUrl = serverUrl;
+
+				if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
+					printf("[CURL] Rewriting URL to: %s\n", rewrittenUrl.c_str());
+
+				return MK12::CurlSetOpt(handle, option, (__int64)rewrittenUrl.c_str());
+			}
+		}
+		else
+		{
+			if ((option == CurlOpt::HEADERDATA || option == CurlOpt::PRIVATE) && value)
+				CurlHandleStructs[handle] = (MK12::CURL::HTTPRequestWrapper*)value;
+
+			if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
+				printf("[CURL] setopt handle=%p option=%lld value=%p\n", (void*)handle, option, (void*)value);
+		}
+
+		return MK12::CurlSetOpt(handle, option, value);
+	}
+
+	static void ParseAccessRequest(MK12::CURL::HTTPRequestWrapper* wrapper)
+	{
+		char* data = nullptr;
+		int32_t size = 0;
+		if (!wrapper->GetRequestBody(&data, &size)) return;
+
+		const char* marker = "fail_on_missing";
+		int markerLen = 15;
+		for (int32_t i = 0; i < size - markerLen; i++)
+		{
+			if (memcmp(data + i, marker, markerLen) != 0) continue;
+			int32_t cursor = i + markerLen;
+			if (cursor >= size) return;
+			cursor++; // skip bool tag
+
+			std::string platform = AGBinary::ReadString(data, size, cursor);
+			if (platform.empty()) return;
+			std::string ticket = AGBinary::ReadString(data, size, cursor);
+			if (ticket.empty()) return;
+
+			HookMetadata::sUserKeys.Platform = platform;
+			HookMetadata::sUserKeys.PlatformTicket = ticket;
+			printfSuccess("Platform: %s, ticket captured (%zu chars)", platform.c_str(), ticket.size());
+			CurlCleanupIfDone();
+			return;
+		}
+	}
+
+	static void ParseAccessResponse(MK12::CURL::HTTPRequestWrapper* wrapper)
+	{
+		char* data = nullptr;
+		int32_t size = 0;
+		if (!wrapper->GetResponseBody(&data, &size)) return;
+
+		std::string token = AGBinary::FindValueAfterKey(data, size, "token");
+		if (token.empty()) return;
+
+		HookMetadata::sUserKeys.AccessToken = token;
+		printfSuccess("Access token captured (%zu chars)", token.size());
+		CurlCleanupIfDone();
+	}
+
+	__int64 __fastcall CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle)
+	{
+		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
+			printf("[CURL] multi_add_handle multi=%p easy=%p\n", (void*)multiHandle, (void*)easyHandle);
+
+		if (HookMetadata::sUserKeys.PlatformTicket.empty())
+		{
+			auto urlIt = CurlHandleUrls.find(easyHandle);
+			if (urlIt != CurlHandleUrls.end() && urlIt->second.find("/access") != std::string::npos)
+			{
+				auto structIt = CurlHandleStructs.find(easyHandle);
+				if (structIt != CurlHandleStructs.end())
+					ParseAccessRequest(structIt->second);
+			}
+		}
+
+		return MK12::CurlMultiAddHandle(multiHandle, easyHandle);
+	}
+
+	__int64 __fastcall CurlMultiInfoReadProxy(__int64 multiHandle, __int64* msgsInQueue)
+	{
+		__int64 result = MK12::CurlMultiInfoRead(multiHandle, msgsInQueue);
+
+		if (result)
+		{
+			if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
+				printf("[CURL] multi_info_read result=%p msgs_in_queue=%lld\n", (void*)result, msgsInQueue ? *msgsInQueue : -1);
+
+			if (*(uint32_t*)result == 1)
+			{
+				__int64 easyHandle = *(__int64*)(result + 8);
+
+				if (HookMetadata::sUserKeys.AccessToken.empty())
+				{
+					auto urlIt = CurlHandleUrls.find(easyHandle);
+					if (urlIt != CurlHandleUrls.end() && urlIt->second.find("/access") != std::string::npos)
+					{
+						auto structIt = CurlHandleStructs.find(easyHandle);
+						if (structIt != CurlHandleStructs.end())
+							ParseAccessResponse(structIt->second);
+					}
+				}
+
+				CurlHandleUrls.erase(easyHandle);
+				CurlHandleStructs.erase(easyHandle);
+			}
+		}
+
+		return result;
+	}
 };
 
-// TODO: Curl interception not yet implemented. Below code is scaffolding for future use.
-std::map<int, const char*> CURL_MAP
-{
-	{46,	"CURLOPT_UPLOAD"},
-	{47,	"CURLOPT_POST"},
-	{10001,	"CURLOPT_WRITEDATA"},
-	{10029,	"CURLOPT_HEADERDATA"},
-	{10002,	"CURLOPT_URL"},
-	{10004,	"CURLOPT_PROXY"},
-	{10173,	"CURLOPT_USERNAME"},
-	{10005,	"CURLOPT_USERPWD"},
-	{10023,	"CURLOPT_HTTPHEADER"},
-	{60,	"CURLOPT_POSTFIELDSIZE"},
-	{20012,	"CURLOPT_READFUNCTION"},
-	{10009,	"CURLOPT_READDATA"},
-	{10010,	"CURLOPT_ERRORBUFFER"},
-	{8,		"CURLPROTO_FTPS"},
-	{10015,	"CURLOPT_POSTFIELDS"},
-	{20011,	"CURLOPT_WRITEFUNCTION"},
-	{10018,	"CURLOPT_USERAGENT"},
-	{80,	"CURLOPT_HTTPGET"},
-	{81,	"CURLOPT_SSL_VERIFYHOST"},
-	{14,	"CURLOPT_INFILESIZE"},
-	{64,	"CURLOPT_SSL_VERIFYPEER"},
-	{99,	"CURLOPT_NOSIGNAL"},
-	{41,	"CURLOPT_VERBOSE"},
-	{42,	"CURLOPT_HEADER"},
-	{43,	"CURLOPT_NOPROGRESS"},
-	{10086,	"CURLOPT_SSLCERTTYPE"},
-	{20079, "CURLOPT_HEADERFUNCTION"},
-	{20108, "CURLOPT_SSL_CTX_FUNCTION"},
-	{10065, "CURLOPT_CAINFO"},
-	{10097, "CURLOPT_CAPATH"},
-
-};
-
-bool bFirstPost = true;
-
-enum class ArgTypes {
-	ARGTYPE_NONE = 0, // UNK
-	ARGTYPE_STRING, // String Pointer
-	ARGTYPE_AGBINARY, // Data
-	ARGTYPE_FUNCTION, // Callback
-	ARGTYPE_CANCEL, // Return 0
-	ARGTYPE_SETZERO, // Arg3 becomes 0
-	ARGTYPE_INT, // Integer
-	ARGTYPE_STRUCT, // Struct Pointer
-};
-
-// TODO: Uses == pointer comparison instead of strcmp - fix when curl interception is implemented
-ArgTypes GetArgType(const char* arg_type)
-{
-	if (arg_type == "CURLOPT_URL")
-		return ArgTypes::ARGTYPE_STRING;
-	if (arg_type == "CURLOPT_USERAGENT")
-		return ArgTypes::ARGTYPE_STRING;
-	if (arg_type == "CURLOPT_WRITEDATA")
-		return ArgTypes::ARGTYPE_STRUCT;
-	if (arg_type == "CURLOPT_USERNAME")
-		return ArgTypes::ARGTYPE_STRUCT;
-	if (arg_type == "CURLOPT_USERPWD")
-		return ArgTypes::ARGTYPE_STRUCT;
-	if (arg_type == "CURLOPT_HEADERDATA")
-		return ArgTypes::ARGTYPE_AGBINARY;
-	if (arg_type == "CURLOPT_READDATA")
-		return ArgTypes::ARGTYPE_AGBINARY;
-	if (arg_type == "CURLOPT_WRITEFUNCTION")
-		return ArgTypes::ARGTYPE_FUNCTION;
-	if (arg_type == "CURLOPT_READFUNCTION")
-		return ArgTypes::ARGTYPE_FUNCTION;
-	if (arg_type == "CURLOPT_SSL_VERIFYPEER")
-		return ArgTypes::ARGTYPE_SETZERO;
-	if (arg_type == "CURLOPT_SSL_VERIFYHOST")
-		return ArgTypes::ARGTYPE_SETZERO;
-	if (arg_type == "CURLOPT_INFILESIZE")
-		return ArgTypes::ARGTYPE_INT;
-	if (arg_type == "CURLOPT_POSTFIELDSIZE")
-		return ArgTypes::ARGTYPE_INT;
-	if (arg_type == "CURLOPT_CAPATH")
-		return ArgTypes::ARGTYPE_STRING;
-	if (arg_type == "CURLOPT_CAINFO")
-		return ArgTypes::ARGTYPE_STRING;
-	if (arg_type == "CURLOPT_HEADERFUNCTION")
-		return ArgTypes::ARGTYPE_FUNCTION;
-	if (arg_type == "CURLOPT_SSL_CTX_FUNCTION")
-		return ArgTypes::ARGTYPE_FUNCTION;
-	if (arg_type == "CURLOPT_SSLCERTTYPE")
-		return ArgTypes::ARGTYPE_STRING;
-	return ArgTypes::ARGTYPE_NONE;
-}
 
 // Hooks
 namespace MK12Hook::Hooks {
@@ -800,6 +865,55 @@ namespace MK12Hook::Hooks {
 		printfSuccess("SecretFightConditionSetup Proxied");
 
 		return true;
+	}
+
+	bool PatchCurl()
+	{
+		printf("\n==PatchCurl==\n");
+		int capabilities = 0;
+
+		// URL Redirect capability
+		if (!SettingsMgr->pCurlSetOpt.empty())
+		{
+			uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pCurlSetOpt, "CurlSetOpt");
+			if (pat && GamePatcher->ProxyFunctionAt(pat - 0x12, MK12Hook::Proxies::CurlSetOptProxy, &MK12::CurlSetOpt, "curl_easy_setopt"))
+			{
+				HookMetadata::ActiveModsMap["bCurlRedirect"] = true;
+				printfSuccess("Curl: URL Redirect Enabled");
+				capabilities++;
+			}
+		}
+
+		// Request Capture capability
+		if (!SettingsMgr->pCurlMultiAddHandle.empty())
+		{
+			uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pCurlMultiAddHandle, "CurlMultiAddHandle");
+			if (pat && GamePatcher->ProxyFunctionAt(pat - 0xD, MK12Hook::Proxies::CurlMultiAddHandleProxy, &MK12::CurlMultiAddHandle, "curl_multi_add_handle"))
+			{
+				HookMetadata::ActiveModsMap["bCurlRequestCapture"] = true;
+				printfSuccess("Curl: Request Capture Enabled");
+				capabilities++;
+			}
+		}
+
+		// Response Capture capability
+		if (!SettingsMgr->pCurlMultiInfoRead.empty())
+		{
+			uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pCurlMultiInfoRead, "CurlMultiInfoRead");
+			if (pat && GamePatcher->ProxyFunctionAt(pat - 0x13, MK12Hook::Proxies::CurlMultiInfoReadProxy, &MK12::CurlMultiInfoRead, "curl_multi_info_read"))
+			{
+				HookMetadata::ActiveModsMap["bCurlResponseCapture"] = true;
+				printfSuccess("Curl: Response Capture Enabled");
+				capabilities++;
+			}
+		}
+
+		if (capabilities > 0)
+			printfSuccess("Curl Interception Active (%d/3)", capabilities);
+		else
+			printfError("Curl Interception: No capabilities enabled");
+
+		return capabilities > 0;
 	}
 
 };

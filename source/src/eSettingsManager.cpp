@@ -118,6 +118,7 @@ void eSettingsManager::Init()
 	// Flood Toggles
 	Floods.bFName				= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bFName",			false);
 	Floods.bEndpoint			= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bEndpoint",		false);
+	Floods.bCurl				= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bCurl",			false);
 
 	// Settings
 	iLogSize					= ini.ReadInteger	("Settings",			"iLogSize",					50);
@@ -159,6 +160,10 @@ void eSettingsManager::Init()
 	pFPathCLoadPat				= ini.ReadString	("Patterns",			"pFPathCLoadPat",			"");
 	pEndpointLoader				= ini.ReadString	("Patterns",			"pEndpointLoader",			"");
 	pProfileGetter				= ini.ReadString	("Patterns",			"pProfileGetter",			"");
+	// Curl
+	pCurlSetOpt					= ini.ReadString	("Patterns.Curl",		"pCurlSetOpt",				"");
+	pCurlMultiAddHandle			= ini.ReadString	("Patterns.Curl",		"pCurlMultiAddHandle",		"");
+	pCurlMultiInfoRead			= ini.ReadString	("Patterns.Curl",		"pCurlMultiInfoRead",		"");
 	// Floyd
 	pSecretFightCondPat			= ini.ReadString	("Patterns.Floyd",		"pSecretFightCondPat",		"");
 	pGetChallengesFromHash		= ini.ReadString	("Patterns.Floyd",		"pGetChallengesFromHash",	"");

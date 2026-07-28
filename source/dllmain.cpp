@@ -4,7 +4,7 @@
 #include "src/mk12hook.h"
 #include "src/GamePatchManager.h"
 #include "mk12sdk/sdk.h"
-#include <tlhelp32.h> 
+#include <tlhelp32.h>
 #include <VersionHelpers.h>
 
 constexpr const char * CURRENT_HOOK_VERSION = "0.4.1";
@@ -157,6 +157,10 @@ void PreGameHooks()
 			int swaps = MK12Hook::Mods::StringSwaps();
 		}
 	}
+	if (SettingsMgr->bPatchCurl)
+	{
+		HookMetadata::ActiveModsMap["bPatchCurl"] = MK12Hook::Hooks::PatchCurl();
+	}
 	if (SettingsMgr->bEnableServerProxy)
 	{
 		if (SettingsMgr->szServerUrl.empty())
@@ -165,7 +169,21 @@ void PreGameHooks()
 		}
 		else
 		{
-			HookMetadata::ActiveModsMap["bGameEndpointSwap"]	= MK12Hook::Hooks::OverrideGameEndpointsData();
+			HookMetadata::ActiveModsMap["bGameEndpointSwap"] = MK12Hook::Hooks::OverrideGameEndpointsData();
+			if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
+			{
+				HookMetadata::eServerProxyMode = HookMetadata::PROXY_CONFIG;
+				printfInfo("Server Proxy Mode: Config");
+			}
+			else if (HookMetadata::ActiveModsMap["bPatchCurl"])
+			{
+				HookMetadata::eServerProxyMode = HookMetadata::PROXY_CURL;
+				printfInfo("Server Proxy Mode: Curl");
+			}
+			else
+			{
+				printfError("Server Proxy: EndpointLoader pattern failed and Curl is not enabled. Cannot proxy.");
+			}
 		}
 	}
 	if (SettingsMgr->bGetFightMetadata)
@@ -428,15 +446,57 @@ void MK12HookPlugin::TabFunction()
 		MK12HOOKSDK::ImGui_Text("UName Object Not Patched - UName Info Disabled");
 	}
 
-	if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
+	if (MK12HOOKSDK::ImGui_CollapsingHeader("Network"))
 	{
-		char buffer[512];
-		snprintf(buffer, sizeof(buffer), "Game Server: %s", SettingsMgr->szServerUrl.c_str());
-		MK12HOOKSDK::ImGui_Text(buffer);
-	}
-	else
-	{
-		MK12HOOKSDK::ImGui_Text("Game Server: Default");
+		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
+		{
+			char buffer[512];
+			snprintf(buffer, sizeof(buffer), "Server Proxy: %s (Config)", SettingsMgr->szServerUrl.c_str());
+			MK12HOOKSDK::ImGui_Text(buffer);
+		}
+		else if (HookMetadata::eServerProxyMode == HookMetadata::PROXY_CURL)
+		{
+			char buffer[512];
+			snprintf(buffer, sizeof(buffer), "Server Proxy: %s (Curl)", SettingsMgr->szServerUrl.c_str());
+			MK12HOOKSDK::ImGui_Text(buffer);
+		}
+		else
+		{
+			MK12HOOKSDK::ImGui_Text("Server Proxy: Disabled");
+		}
+
+		if (HookMetadata::ActiveModsMap["bPatchCurl"])
+		{
+			MK12HOOKSDK::ImGui_Separator();
+
+			bool bRedirect = HookMetadata::ActiveModsMap["bCurlRedirect"];
+			bool bRequestCapture = HookMetadata::ActiveModsMap["bCurlRequestCapture"];
+			bool bResponseCapture = HookMetadata::ActiveModsMap["bCurlResponseCapture"];
+
+			MK12HOOKSDK::ImGui_Checkbox("URL Redirect", &bRedirect);
+			MK12HOOKSDK::ImGui_Checkbox("Request Capture", &bRequestCapture);
+			MK12HOOKSDK::ImGui_Checkbox("Response Capture", &bResponseCapture);
+		}
+
+		if (!HookMetadata::sUserKeys.PlatformTicket.empty())
+		{
+			MK12HOOKSDK::ImGui_Separator();
+
+			static char platformBuffer[16];
+			strncpy(platformBuffer, HookMetadata::sUserKeys.Platform.c_str(), sizeof(platformBuffer) - 1);
+			MK12HOOKSDK::ImGui_InputText("Auth Platform", platformBuffer, sizeof(platformBuffer));
+
+			static char ticketBuffer[2048];
+			strncpy(ticketBuffer, HookMetadata::sUserKeys.PlatformTicket.c_str(), sizeof(ticketBuffer) - 1);
+			MK12HOOKSDK::ImGui_InputText("Auth Ticket", ticketBuffer, sizeof(ticketBuffer));
+		}
+
+		if (!HookMetadata::sUserKeys.AccessToken.empty())
+		{
+			static char tokenBuffer[2048];
+			strncpy(tokenBuffer, HookMetadata::sUserKeys.AccessToken.c_str(), sizeof(tokenBuffer) - 1);
+			MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
+		}
 	}
 
 	if (HookMetadata::ActiveModsMap["bFloydTracking"])
@@ -533,7 +593,6 @@ void MK12HookPlugin::TabFunction()
 	{
 		MK12HOOKSDK::ImGui_Text("Profile Info Extraction is not enabled");
 	}
-
 
 	/*if (MK12HOOKSDK::ImGui_CollapsingHeader("Input"))
 	{
