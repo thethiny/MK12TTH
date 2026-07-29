@@ -307,7 +307,9 @@ bool OnInitializeHook()
 	if (SettingsMgr->bPauseOnStart)
 	{
 		printf("Current Log Level -> %d\n", SettingsMgr->iLogLevel);
-		MessageBoxA(0, "Freezing Game Until OK", ":)", MB_ICONINFORMATION);
+		int result = MessageBoxA(0, "Press OK to continue, Cancel to quit.", "MK12TTH - Paused", MB_OKCANCEL | MB_ICONINFORMATION);
+		if (result == IDCANCEL)
+			ExitProcess(0);
 	}
 
 	ProcessSettings(); // Parse Settings
