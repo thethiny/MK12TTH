@@ -836,6 +836,58 @@ namespace MK12Hook::Hooks {
 			MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
 	}
 
+	bool ResolveVersionFunctions()
+	{
+		printf("\n==ResolveVersionFunctions==\n");
+		uint64_t pat;
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pNRSClientVersion, "NRSClientVersion");
+		if (pat) MK12::GetNRSClientVersion = (MK12::GetNRSClientVersionType*)ProcessPatch::ResolveDestination(pat + 3);
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pBuildVersion, "BuildVersion");
+		if (pat) MK12::GetBuildVersion = (MK12::GetBuildVersionType*)ProcessPatch::ResolveDestination(pat + 29);
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pBuildDate, "BuildDate");
+		if (pat)
+		{
+			uint64_t intermediate = ProcessPatch::ResolveDestination(pat + 23);
+			if (intermediate) MK12::GetBuildDate = (MK12::GetBuildDateType*)ProcessPatch::ResolveDestination(intermediate + 0xD);
+		}
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pChangelist, "Changelist");
+		if (pat) MK12::GetChangelist = (MK12::GetChangelistType*)ProcessPatch::ResolveDestination(pat + 15);
+
+		int resolved = 0;
+		if (MK12::GetBuildDate)
+		{
+			if (SettingsMgr->ShouldLog(Log::Verbose))
+				printf("Build Date: %ws\n", MK12::GetBuildDate());
+			resolved++;
+		}
+		if (MK12::GetBuildVersion)
+		{
+			if (SettingsMgr->ShouldLog(Log::Verbose))
+				printf("Build Version: %ws\n", MK12::GetBuildVersion());
+			resolved++;
+		}
+		if (MK12::GetChangelist)
+		{
+			if (SettingsMgr->ShouldLog(Log::Verbose))
+				printf("Changelist: %d\n", MK12::GetChangelist());
+			resolved++;
+		}
+		if (MK12::GetNRSClientVersion) // Cannot print because not yet initialized
+			resolved++;
+
+		if (resolved == 4)
+			printfSuccess("Resolved %d/4 version functions", resolved);
+		else if (resolved > 0)
+			printfWarning("Resolved %d/4 version functions", resolved);
+		else
+			printfError("Resolved %d/4 version functions", resolved);
+		return resolved > 0;
+	}
+
 	int FloydTrackingHooks()
 	{
 		printf("\n==FloydTrackingHooks==\n");

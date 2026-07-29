@@ -70,6 +70,17 @@ namespace MK12 { // Namespace for game functions / structs
 		FName*			FromStr(const char* string);
 	}
 
+	class FString {
+	public:
+		wchar_t*	Data;
+		int32_t		Count;
+		int32_t		Max;
+
+		const wchar_t* c_str() const;
+		int32_t Len() const;
+		bool IsEmpty() const;
+	};
+
 	template <typename T>
 	class TArray {
 	public:
@@ -101,27 +112,8 @@ namespace MK12 { // Namespace for game functions / structs
 			char _padB0[0x08];           // 0xB0 - 0xB7
 			void* ContentProvider;       // 0xB8
 
-			bool GetRequestBody(char** out, int32_t* size)
-			{
-				if (!ContentProvider) return false;
-				char* data = *(char**)((char*)ContentProvider + 0x08);
-				int32_t len = *(int32_t*)((char*)ContentProvider + 0x10);
-				if (!data || len <= 0 || len > 0x100000) return false;
-				*out = data;
-				*size = len;
-				return true;
-			}
-
-			bool GetResponseBody(char** out, int32_t* size)
-			{
-				if (!ResponseBuffer) return false;
-				char* data = *(char**)((char*)ResponseBuffer + 0x10);
-				int32_t len = *(int32_t*)((char*)ResponseBuffer + 0x18);
-				if (!data || len <= 0 || len > 0x1000000) return false;
-				*out = data;
-				*size = len;
-				return true;
-			}
+			bool GetRequestBody(char** out, int32_t* size);
+			bool GetResponseBody(char** out, int32_t* size);
 		};
 
 	};
@@ -350,6 +342,11 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			TArray<uint32_t>*				(__fastcall GenerateFloydCluesFromHashType)		(TArray<uint32_t>*, uint64_t, uint64_t, uint64_t);
 	typedef         uint32_t						(__fastcall CustomCityHashType)					(wchar_t**);
 	typedef			wchar_t*						(__fastcall MKWScanfType)						(wchar_t* ResultString, const wchar_t* Format, ...);
+	// Version
+	typedef			FString*						(__fastcall GetNRSClientVersionType)			();
+	typedef			const wchar_t*					(__fastcall GetBuildVersionType)				();
+	typedef			const wchar_t*					(__fastcall GetBuildDateType)					();
+	typedef			int								(__fastcall GetChangelistType)					();
 	// Curl
 	typedef			__int64							(__fastcall CurlSetOptType)						(__int64 handle, __int64 option, __int64 value);
 	typedef			__int64							(__fastcall CurlMultiAddHandleType)				(__int64 multiHandle, __int64 easyHandle);
@@ -392,6 +389,10 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GenerateFloydCluesFromHashType*				GenerateFloydCluesFromHash;
 	extern CustomCityHashType*							CustomCityHash;
 	extern MKWScanfType*								MKWScanf;
+	extern GetNRSClientVersionType*						GetNRSClientVersion;
+	extern GetBuildVersionType*							GetBuildVersion;
+	extern GetBuildDateType*							GetBuildDate;
+	extern GetChangelistType*							GetChangelist;
 	extern CurlSetOptType*								CurlSetOpt;
 	extern CurlMultiAddHandleType*						CurlMultiAddHandle;
 	extern CurlMultiInfoReadType*						CurlMultiInfoRead;

@@ -61,6 +61,7 @@ public:
 	bool bEnableStringSwap;
 	bool bEnableFloydTracking;
 	bool bEnableProfileGetter;
+	bool bEnableVersionInfo;
 
 	// Addresses
 
@@ -81,6 +82,11 @@ public:
 	std::string pCurlSetOpt;
 	std::string pCurlMultiAddHandle;
 	std::string pCurlMultiInfoRead;
+	// Version
+	std::string pNRSClientVersion;
+	std::string pBuildVersion;
+	std::string pBuildDate;
+	std::string pChangelist;
 	//Floyd
 	std::string pSecretFightCondPat;
 	std::string pGetChallengesFromHash;

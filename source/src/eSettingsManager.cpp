@@ -138,6 +138,7 @@ void eSettingsManager::Init()
 	bEnableStringSwap			= ini.ReadBoolean	("Patches",				"bEnableStringSwap",		false);
 	bEnableFloydTracking		= ini.ReadBoolean	("Patches",				"bEnableFloydTracking",		false);
 	bEnableProfileGetter		= ini.ReadBoolean	("Patches",				"bEnableProfileGetter",		false);
+	bEnableVersionInfo			= ini.ReadBoolean	("Patches",				"bEnableVersionInfo",		false);
 
 	// Patches.AntiCheat
 	bDisableSignatureCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureCheck",	true);
@@ -164,6 +165,11 @@ void eSettingsManager::Init()
 	pCurlSetOpt					= ini.ReadString	("Patterns.Curl",		"pCurlSetOpt",				"");
 	pCurlMultiAddHandle			= ini.ReadString	("Patterns.Curl",		"pCurlMultiAddHandle",		"");
 	pCurlMultiInfoRead			= ini.ReadString	("Patterns.Curl",		"pCurlMultiInfoRead",		"");
+	// Version
+	pNRSClientVersion			= ini.ReadString	("Patterns.Version",	"pNRSClientVersion",		"");
+	pBuildVersion				= ini.ReadString	("Patterns.Version",	"pBuildVersion",			"");
+	pBuildDate					= ini.ReadString	("Patterns.Version",	"pBuildDate",				"");
+	pChangelist					= ini.ReadString	("Patterns.Version",	"pChangelist",				"");
 	// Floyd
 	pSecretFightCondPat			= ini.ReadString	("Patterns.Floyd",		"pSecretFightCondPat",		"");
 	pGetChallengesFromHash		= ini.ReadString	("Patterns.Floyd",		"pGetChallengesFromHash",	"");

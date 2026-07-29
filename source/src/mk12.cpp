@@ -23,6 +23,11 @@ MK12::SetupSecretFightConditionsType*	MK12::SetupSecretFightConditions	= nullptr
 MK12::GenerateFloydCluesFromHashType*	MK12::GenerateFloydCluesFromHash	= nullptr;
 MK12::CustomCityHashType*				MK12::CustomCityHash				= nullptr;
 MK12::MKWScanfType*						MK12::MKWScanf						= nullptr;
+// Version
+MK12::GetNRSClientVersionType*			MK12::GetNRSClientVersion			= nullptr;
+MK12::GetBuildVersionType*				MK12::GetBuildVersion				= nullptr;
+MK12::GetBuildDateType*					MK12::GetBuildDate					= nullptr;
+MK12::GetChangelistType*				MK12::GetChangelist					= nullptr;
 // Curl
 MK12::CurlSetOptType*					MK12::CurlSetOpt					= nullptr;
 MK12::CurlMultiAddHandleType*			MK12::CurlMultiAddHandle			= nullptr;
@@ -30,6 +35,32 @@ MK12::CurlMultiInfoReadType*			MK12::CurlMultiInfoRead				= nullptr;
 
 
 uint8_t									MK12::KlassicTowerSecretFightDataOffset   = 0;
+
+const wchar_t* MK12::FString::c_str() const { return Data ? Data : L""; }
+int32_t MK12::FString::Len() const { return Count > 0 ? Count - 1 : 0; }
+bool MK12::FString::IsEmpty() const { return Count <= 1; }
+
+bool MK12::CURL::HTTPRequestWrapper::GetRequestBody(char** out, int32_t* size)
+{
+	if (!ContentProvider) return false;
+	char* data = *(char**)((char*)ContentProvider + 0x08);
+	int32_t len = *(int32_t*)((char*)ContentProvider + 0x10);
+	if (!data || len <= 0 || len > 0x100000) return false;
+	*out = data;
+	*size = len;
+	return true;
+}
+
+bool MK12::CURL::HTTPRequestWrapper::GetResponseBody(char** out, int32_t* size)
+{
+	if (!ResponseBuffer) return false;
+	char* data = *(char**)((char*)ResponseBuffer + 0x10);
+	int32_t len = *(int32_t*)((char*)ResponseBuffer + 0x18);
+	if (!data || len <= 0 || len > 0x1000000) return false;
+	*out = data;
+	*size = len;
+	return true;
+}
 
 bool containsFloydCaseInsensitive(const wchar_t* str) {
 	std::wstring wstr(str);

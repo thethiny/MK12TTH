@@ -33,6 +33,7 @@ namespace MK12Hook {
 		bool OverrideGameEndpointsData();
 		bool ExtractFightMetadataFromSecretFightSetupStage();
 		bool ProfileGetterHooks();
+		bool ResolveVersionFunctions();
 		int	 FloydTrackingHooks();
 		bool PatchCurl();
 	};

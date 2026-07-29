@@ -70,6 +70,11 @@ void PreGameHooks()
 		printf("Generated Trampolines\n");
 	 IATable = ProcessPatch::ParseImportTable();
 
+	// First check to print version info
+	if (SettingsMgr->bEnableVersionInfo)
+	{
+		HookMetadata::ActiveModsMap["bVersionInfo"]			= MK12Hook::Hooks::ResolveVersionFunctions();
+	}
 
 	if (SettingsMgr->bDisableSignatureCheck)
 	{
@@ -391,6 +396,41 @@ void MK12HookPlugin::TabFunction()
 	static int counter = 0;
 	MK12HOOKSDK::ImGui_Text(GetVersionedHookName());
 
+	if (HookMetadata::ActiveModsMap["bVersionInfo"])
+	{
+		static char versionLabel[256] = {};
+		static bool versionResolved = false;
+
+		if (!versionResolved)
+		{
+			const wchar_t* buildDate = MK12::GetBuildDate ? MK12::GetBuildDate() : nullptr;
+			int changelist = MK12::GetChangelist ? MK12::GetChangelist() : 0;
+			const wchar_t* nrsVer = nullptr;
+
+			if (MK12::GetNRSClientVersion)
+			{
+				MK12::FString* ver = MK12::GetNRSClientVersion();
+				if (ver && !ver->IsEmpty())
+					nrsVer = ver->c_str();
+			}
+
+			if (buildDate || changelist || nrsVer)
+			{
+				snprintf(versionLabel, sizeof(versionLabel), "Game: %ws | %s%ws | CL-%d",
+					buildDate ? buildDate : L"",
+					nrsVer ? "v" : "",
+					nrsVer ? nrsVer : L"",
+					changelist);
+
+				if (nrsVer)
+					versionResolved = true;
+			}
+		}
+
+		if (versionLabel[0])
+			MK12HOOKSDK::ImGui_Text(versionLabel);
+	}
+
 	if (MK12HOOKSDK::ImGui_CollapsingHeader("Patches"))
 	{
 		std::vector<std::pair<std::string, bool>> toggles = {
@@ -422,8 +462,6 @@ void MK12HookPlugin::TabFunction()
 			MK12HOOKSDK::ImGui_Checkbox(label.c_str(), &tempValue);
 		}
 	}
-
-	MK12HOOKSDK::ImGui_Separator();
 
 	if (HookMetadata::ActiveModsMap["UNameTableGetter"])
 	{
