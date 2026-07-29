@@ -72,10 +72,6 @@ namespace MK12Hook::Proxies {
 	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
 		const char* name = MK12::FNameFunc::ToStr(Name);
-		if (SettingsMgr->ShouldLog(Log::Debug) && containsCaseInsensitive(name, "skin007_pal004"))
-		{
-			printf("DEBUGME");
-		}
 		MK12::FName* swap = HookMetadata::FSwapTable.get(name);
 		if (swap == nullptr)
 		{
