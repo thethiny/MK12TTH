@@ -36,19 +36,19 @@ namespace MK12Hook::Proxies {
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrId::Captured::");
-			MK12::FNameFunc::Print(Name);
+			Name.Print();
 		}
 
 		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
 
-		RegisterHacks::MoveToRBX(MK12::FNameFunc::GetSize(*current_fname));
+		RegisterHacks::MoveToRBX(current_fname->GetSize());
 	}
 	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrNoId::Captured::");
-			MK12::FNameFunc::Print(Name);
+			Name.Print();
 		}
 
 		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
@@ -61,7 +61,7 @@ namespace MK12Hook::Proxies {
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
 			printf("Proxy FNameToWStrCommon::Captured::");
-			MK12::FNameFunc::Print(Name);
+			Name.Print();
 		}
 
 		MK12::FName* current_fname = ReadFNameToWStr(Name, dest);
@@ -71,7 +71,7 @@ namespace MK12Hook::Proxies {
 
 	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
-		const char* name = MK12::FNameFunc::ToStr(Name);
+		const char* name = Name.ToStr();
 		MK12::FName* swap = HookMetadata::FSwapTable.get(name);
 		if (swap == nullptr)
 		{
@@ -82,7 +82,7 @@ namespace MK12Hook::Proxies {
 		if (SettingsMgr->ShouldLog(Log::Verbose))
 		{
 			printf("Swap To::");
-			MK12::FNameFunc::Print(*swap);
+			swap->Print();
 		}
 		MK12::FNameToWStr(*swap, dest);
 
@@ -332,22 +332,22 @@ namespace MK12Hook::Proxies {
 				continue;
 			}
 
-			if (strncmp(ScriptType->Name, FightingStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			if (strncmp(ScriptType->Name, FightingStatCondition, ScriptType->GetSize()) == 0)
 			{
 				MK12::FLadderSecretFightCondition_FightingStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_FightingStatCondition*>(CurrentCondition->StructPtrInstance);
 				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
 			}
-			else if (strncmp(ScriptType->Name, MultiFightingStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			else if (strncmp(ScriptType->Name, MultiFightingStatCondition, ScriptType->GetSize()) == 0)
 			{
 				MK12::FLadderSecretFightCondition_MultiFightingStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_MultiFightingStatCondition*>(CurrentCondition->StructPtrInstance);
 				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
 			}
-			else if (strncmp(ScriptType->Name, MoveTraceCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			else if (strncmp(ScriptType->Name, MoveTraceCondition, ScriptType->GetSize()) == 0)
 			{
 				MK12::FLadderSecretFightCondition_MoveTraceConditions* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_MoveTraceConditions*>(CurrentCondition->StructPtrInstance);
 				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);
 			}
-			else if (strncmp(ScriptType->Name, ProfileStatCondition, MK12::FNameFunc::GetSize(*ScriptType)) == 0)
+			else if (strncmp(ScriptType->Name, ProfileStatCondition, ScriptType->GetSize()) == 0)
 			{
 				MK12::FLadderSecretFightCondition_ProfileStatCondition* RetypedCondition = static_cast<MK12::FLadderSecretFightCondition_ProfileStatCondition*>(CurrentCondition->StructPtrInstance);
 				MK12::Remake::SecretFight::PrintTypedConditions(RetypedCondition);

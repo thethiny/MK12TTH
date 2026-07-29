@@ -24,9 +24,16 @@ namespace MK12 { // Namespace for game functions / structs
 #pragma warning(push)
 #pragma warning(disable: 4200)
 	// Structs
-	struct FName {
+	class FName {
+	public:
 		uint16_t	NameSize;
 		char		Name[];
+
+		uint16_t GetSize() const;
+		char* GetName();
+		void Print();
+		char* ToStr();
+		static FName* FromStr(const char* string);
 	};
 
 	struct FNameInfoStruct {
@@ -62,13 +69,6 @@ namespace MK12 { // Namespace for game functions / structs
 	};
 
 
-	namespace FNameFunc {
-		inline uint16_t	GetSize(FName& F);
-		inline char*	GetName(FName& F);
-		void			Print(FName& F);
-		char*			ToStr(FName& F);
-		FName*			FromStr(const char* string);
-	}
 
 	class FString {
 	public:

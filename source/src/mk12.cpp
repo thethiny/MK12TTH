@@ -117,11 +117,11 @@ uint64_t __fastcall MK12::Remake::FNameObjectToWString(MK12::FName* Name, char* 
 
 uint64_t __fastcall MK12::Remake::FNameObjectToWStringCommon(MK12::FName* Name, char* Destination)
 {
-	const char* nameStr = MK12::FNameFunc::ToStr(*Name);
+	const char* nameStr = Name->ToStr();
 	MK12::FName* swap = HookMetadata::FSwapTable.get(nameStr);
 	MK12::FName* target = swap ? swap : Name;
 
-	uint64_t NameSize = MK12::FNameFunc::GetSize(*target);
+	uint64_t NameSize = target->GetSize();
 	MK12::FNameToWStr(*target, Destination);
 	*(wchar_t*)&Destination[2 * NameSize] = L'\0';
 
@@ -266,41 +266,34 @@ std::string MK12::GetGameVersionFull()
 };
 
 
-namespace MK12::FNameFunc {
-	inline uint16_t GetSize(FName& F)
-	{
-		return F.NameSize >> 6;
-	};
-	inline char* GetName(FName& F)
-	{
-		return F.Name;
-	}
-	void Print(FName& F)
-	{
-		uint16_t s = GetSize(F);
-		fwrite(F.Name, 1, s, stdout);
-		printf("\n");
-	}
-	char* ToStr(FName& F)
-	{
-		static char name[4096];
-		uint16_t s = GetSize(F);
-		if (s >= sizeof(name))
-			s = sizeof(name) - 1;
-		strncpy(name, F.Name, s);
-		name[s] = '\0';
-		return name;
-	}
-	// No null termination intentional - mirrors UE's length-prefixed FName, consumers use GetSize() not strlen
-	FName* FromStr(const char* string)
-	{
-		uint16_t length = (uint16_t)strlen(string);
-		FName* f = (FName*)(new uint8_t[length + 2]);
-		f->NameSize = (length << 6) + 0xC; // IDK where C comes from
-		strncpy(f->Name, string, length);
+uint16_t MK12::FName::GetSize() const { return NameSize >> 6; }
+char* MK12::FName::GetName() { return Name; }
 
-		return f;
-	}
+void MK12::FName::Print()
+{
+	uint16_t s = GetSize();
+	fwrite(Name, 1, s, stdout);
+	printf("\n");
+}
+
+char* MK12::FName::ToStr()
+{
+	static char name[4096];
+	uint16_t s = GetSize();
+	if (s >= sizeof(name))
+		s = sizeof(name) - 1;
+	strncpy(name, Name, s);
+	name[s] = '\0';
+	return name;
+}
+
+MK12::FName* MK12::FName::FromStr(const char* string)
+{
+	uint16_t length = (uint16_t)strlen(string);
+	FName* f = (FName*)(new uint8_t[length + 2]);
+	f->NameSize = (length << 6) + 0xC;
+	strncpy(f->Name, string, length);
+	return f;
 }
 
 namespace MK12::Remake::SecretFight {

@@ -97,7 +97,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	public:
 		void insert(const char* k, const char* v)
 		{
-			FMap[k] = MK12::FNameFunc::FromStr(v);
+			FMap[k] = MK12::FName::FromStr(v);
 			count++;
 		}
 		void insert(const char* k, MK12::FName* v)

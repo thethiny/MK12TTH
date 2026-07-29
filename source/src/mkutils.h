@@ -6,7 +6,7 @@
 #undef in
 #include "eSettingsManager.h"
 
-#define			FNAME_STR(FName)			MK12::FNameFunc::ToStr(*FName)
+#define			FNAME_STR(FName)			(FName)->ToStr()
 
 
 std::string		GetProcessName();
