@@ -258,8 +258,6 @@ bool HandleWindowsVersion()
 	
 }
 
-#include <string>
-
 inline bool VerifyProcessName(std::string expected_process) {
 	std::string process_name = GetProcessName();
 
@@ -452,6 +450,7 @@ void MK12HookPlugin::TabFunction()
 
 			{ "Floyd Tracking",				HookMetadata::ActiveModsMap["bFloydTracking"] },
 			{ "Profile Getter" ,			HookMetadata::ActiveModsMap["bProfileGetter"]},
+			{ "Version Info",				HookMetadata::ActiveModsMap["bVersionInfo"] },
 
 			{ "Game Endpoint Swap",			HookMetadata::ActiveModsMap["bGameEndpointSwap"] }
 		};
@@ -578,49 +577,21 @@ void MK12HookPlugin::TabFunction()
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("Profile Information"))
 		{
-			char buffer[512];
+			auto DisplayWCharField = [](const char* label, const wchar_t* value) {
+				static char buffer[512];
+				if (value)
+					snprintf(buffer, sizeof(buffer), "%ws", value);
+				else
+					buffer[0] = '\0';
+				MK12HOOKSDK::ImGui_InputText(label, buffer, sizeof(buffer));
+			};
 
-			// Platform
-			if (HookMetadata::UserProfileInfo.Platform)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.Platform);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("Platform", buffer, sizeof(buffer));
-
-			// PlatformId
-			if (HookMetadata::UserProfileInfo.PlatformId)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.PlatformId);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("PlatformId", buffer, sizeof(buffer));
-
-			// SaveKey
-			if (HookMetadata::UserProfileInfo.SaveKey)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.SaveKey);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("SaveKey", buffer, sizeof(buffer));
-
-			// HydraId
-			if (HookMetadata::UserProfileInfo.HydraId)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.HydraId);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("HydraId", buffer, sizeof(buffer));
-
-			// WBId
-			if (HookMetadata::UserProfileInfo.WBId)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.WBId);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("WBId", buffer, sizeof(buffer));
-
-			// OfflineProfileId
-			if (HookMetadata::UserProfileInfo.OfflineProfileId)
-				snprintf(buffer, sizeof(buffer), "%ws", HookMetadata::UserProfileInfo.OfflineProfileId);
-			else
-				buffer[0] = '\0';
-			MK12HOOKSDK::ImGui_InputText("OfflineProfileId", buffer, sizeof(buffer));
+			DisplayWCharField("Platform", HookMetadata::UserProfileInfo.Platform);
+			DisplayWCharField("PlatformId", HookMetadata::UserProfileInfo.PlatformId);
+			DisplayWCharField("SaveKey", HookMetadata::UserProfileInfo.SaveKey);
+			DisplayWCharField("HydraId", HookMetadata::UserProfileInfo.HydraId);
+			DisplayWCharField("WBId", HookMetadata::UserProfileInfo.WBId);
+			DisplayWCharField("OfflineProfileId", HookMetadata::UserProfileInfo.OfflineProfileId);
 		}
 	}
 	else

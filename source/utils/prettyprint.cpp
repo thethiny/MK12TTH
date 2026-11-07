@@ -14,7 +14,14 @@ void printfColor(const char* color, const char* const Format, ...)
 
 void printfColorNl(const char* color, const char* const Format, ...)
 {
-	printfColor(color, Format);
+	SetColor(color);
+
+	va_list args;
+	va_start(args, Format);
+	vfprintf(stdout, Format, args);
+	va_end(args);
+
+	ResetColors();
 	printf("\n");
 }
 

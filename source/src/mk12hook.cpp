@@ -31,7 +31,7 @@ namespace CurlOpt {
 
 namespace MK12Hook::Proxies {
 
-	void ReadFNameToWStrId(MK12::FName& Name, char* dest)
+	void __fastcall ReadFNameToWStrId(MK12::FName& Name, char* dest)
 	{
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
@@ -43,7 +43,7 @@ namespace MK12Hook::Proxies {
 
 		RegisterHacks::MoveToRBX(current_fname->GetSize());
 	}
-	void ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
+	void __fastcall ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
 	{
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
@@ -56,7 +56,7 @@ namespace MK12Hook::Proxies {
 		RegisterHacks::MoveToRBX((uint64_t)&current_fname->NameSize);
 	}
 
-	void ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
+	void __fastcall ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
 	{
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
 		{
@@ -69,7 +69,7 @@ namespace MK12Hook::Proxies {
 		RegisterHacks::MoveToRBX((uint64_t)&current_fname->NameSize); // Needs testing
 	}
 
-	MK12::FName* ReadFNameToWStr(MK12::FName &Name, char* dest)
+	MK12::FName* __fastcall ReadFNameToWStr(MK12::FName &Name, char* dest)
 	{
 		const char* name = Name.ToStr();
 		MK12::FName* swap = HookMetadata::FSwapTable.get(name);
@@ -89,7 +89,7 @@ namespace MK12Hook::Proxies {
 		return swap;
 	}
 
-	wchar_t** OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t** EndpointAddress)
+	wchar_t** __fastcall OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t** EndpointAddress)
 	{
 		static wchar_t* cachedServerUrl = nullptr;
 		static int cachedServerLen = 0;
@@ -126,7 +126,7 @@ namespace MK12Hook::Proxies {
 
 	}
 
-	MK12::TArray<uint32_t>* GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2)
+	MK12::TArray<uint32_t>* __fastcall GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2)
 	{ // Use hash to create 10 challenges
 
 		printf("Floyd Shuffle Seed: %llX\n", (uint64_t)ShuffleSeed);
@@ -164,7 +164,7 @@ namespace MK12Hook::Proxies {
 		return ReturnedArrayLocation;
 	}
 
-	uint32_t CustomCityHashProxy(wchar_t** StringToHash)
+	uint32_t __fastcall CustomCityHashProxy(wchar_t** StringToHash)
 	{ // Hash the floyd string
 		if (StringToHash && *StringToHash) {
 			printf("StringToHash: %ls\n", *StringToHash); // %ls for wchar_t*
@@ -289,7 +289,7 @@ namespace MK12Hook::Proxies {
 
 
 
-	MK12::FKlassicLadderSecretFightData* SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData* mSecretFightData)
+	MK12::FKlassicLadderSecretFightData* __fastcall SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData* mSecretFightData)
 	{
  		MK12::UKlassicTowerSecretFightData* mKlassicTowerSecretFightInstance = (MK12::UKlassicTowerSecretFightData*)(((uint64_t)(mSecretFightData)) - MK12::KlassicTowerSecretFightDataOffset);
 		if (SettingsMgr->ShouldLog(Log::Debug))
@@ -756,7 +756,7 @@ namespace MK12Hook::Hooks {
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
 				printfYellow("FNameToWStrId replacing Proxy Loader\n");
 			else
-				printfSuccess("Overrided FNameToWStrId skipping Proxy Loader");
+				printfSuccess("Overrode FNameToWStrId skipping Proxy Loader");
 		}
 
 		if (MK12::ReadFNameToWStrNoIdStart == nullptr)
@@ -779,7 +779,7 @@ namespace MK12Hook::Hooks {
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
 				printfYellow("FNameToWStrNoId replacing Proxy Loader\n");
 			else
-				printfSuccess("Overrided FNameToWStrNoId skipping Proxy Loader");
+				printfSuccess("Overrode FNameToWStrNoId skipping Proxy Loader");
 		}
 
 		if (MK12::ReadFNameToWStrCommonStart == nullptr)
@@ -802,7 +802,7 @@ namespace MK12Hook::Hooks {
 			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathCommonLoader"])
 				printfYellow("FNameToWStrCommon replacing Proxy Loader\n");
 			else
-				printfSuccess("Overrided FNameToWStrCommon skipping Proxy Loader");
+				printfSuccess("Overrode FNameToWStrCommon skipping Proxy Loader");
 		}
 
 		bool anyOverride = MK12::ReadFNameToWStrWithIdStart || MK12::ReadFNameToWStrNoIdStart || MK12::ReadFNameToWStrCommonStart;

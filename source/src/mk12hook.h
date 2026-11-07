@@ -93,24 +93,18 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	class SwapTable {
 	private:
 		std::unordered_map<std::string, MK12::FName*> FMap;
-		uint64_t count; // unused tracking, real count is FMap.size()
 	public:
 		void insert(const char* k, const char* v)
 		{
 			FMap[k] = MK12::FName::FromStr(v);
-			count++;
 		}
 		void insert(const char* k, MK12::FName* v)
 		{
 			FMap[k] = v;
-			count++;
 		}
 		void remove(const char* k) {
 			if (has(k))
-			{
 				FMap.erase(k);
-				count++;
-			}
 		}
 		bool has(const char* k)
 		{
@@ -122,7 +116,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 				return FMap[k];
 			return nullptr;
 		}
-		uint64_t size() { return count; }
+		uint64_t size() { return FMap.size(); }
 	};
 
 	struct FloydCluesInfo {
