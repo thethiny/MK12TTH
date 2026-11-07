@@ -60,6 +60,9 @@
     <ClCompile Include="source\src\MK12Unlocker.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
+    <ClCompile Include="source\src\FloydTower.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
     <ClCompile Include="source\mk12sdk\sdk.cpp">
       <Filter>MK12SDK</Filter>
     </ClCompile>
@@ -108,6 +111,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="source\src\MK12Unlocker.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\FloydTower.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\mk12sdk\sdk.h">

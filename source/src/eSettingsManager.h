@@ -29,6 +29,14 @@ public:
 	 *  @param toggle  The specific FloodToggles member */
 	inline bool ShouldFlood(bool toggle) { return iLogLevel >= Log::Drown || (iLogLevel >= Log::Flood && toggle); }
 
+	/** Check if Floyd dev logs should print (hash inputs, seeds, extracted ids).
+	 *  bFloydDebug works on its own, Log::Verbose and up still show them. */
+	inline bool ShouldLogFloyd() { return bFloydDebug || ShouldLog(Log::Verbose); }
+
+	/** Check if profile dev logs should print (platform, platform id, save key).
+	 *  bProfileDebug works on its own, Log::Verbose and up still show them. */
+	inline bool ShouldLogProfile() { return bProfileDebug || ShouldLog(Log::Verbose); }
+
 public:
 	// Settings
 
@@ -40,6 +48,8 @@ public:
 	int	iLogLevel;
 	bool bDebug;
 	bool bAllowNonMK;
+	bool bFloydDebug;
+	bool bProfileDebug;
 	struct {
 		bool bFName = false;
 		bool bEndpoint = false;
@@ -60,6 +70,8 @@ public:
 	bool bSerializeSecretFights;
 	bool bEnableStringSwap;
 	bool bEnableFloydTracking;
+	std::string szFloydTowerMode;
+	bool bFloydTowerFromGame; // szFloydTowerMode is Game, otherwise Calculated
 	bool bEnableProfileGetter;
 	bool bEnableVersionInfo;
 
@@ -92,6 +104,8 @@ public:
 	std::string pGetChallengesFromHash;
 	std::string pGetFloydHashInputString;
 	std::string pGetFloydHashInputString2;
+	std::string pGetTacoHashInputString;
+	std::string pGetTacoSchedule;
 
 
 	// Menu Section

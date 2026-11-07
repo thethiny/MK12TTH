@@ -22,6 +22,7 @@ MK12::SetupSecretFightConditionsType*	MK12::SetupSecretFightConditions	= nullptr
 // Floyd
 MK12::GenerateFloydCluesFromHashType*	MK12::GenerateFloydCluesFromHash	= nullptr;
 MK12::CustomCityHashType*				MK12::CustomCityHash				= nullptr;
+MK12::UpdateTacoScheduleType*			MK12::UpdateTacoSchedule			= nullptr;
 MK12::MKWScanfType*						MK12::MKWScanf						= nullptr;
 // Version
 MK12::GetNRSClientVersionType*			MK12::GetNRSClientVersion			= nullptr;

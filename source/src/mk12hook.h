@@ -13,6 +13,8 @@ namespace MK12Hook {
 		MK12::FKlassicLadderSecretFightData*	__fastcall	SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData*);
 		MK12::TArray<uint32_t>*					__fastcall	GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2);
 		uint32_t								__fastcall	CustomCityHashProxy(wchar_t** StringToHash);
+		uint32_t								__fastcall	TacoCityHashProxy(wchar_t** StringToHash);
+		__int64									__fastcall	TacoScheduleProxy(MK12::UTacoTowerSchedule* Schedule, int64_t NowTicks);
 		wchar_t*								__fastcall	MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...);
 		__int64									__fastcall	CurlSetOptProxy(__int64 handle, __int64 option, __int64 value);
 		__int64									__fastcall	CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle);
@@ -123,6 +125,11 @@ namespace HookMetadata { //Namespace for helpers for game functions
 		std::vector<uint8_t> Clues;
 		uint32_t UserProfileHash = 0;
 		uint32_t FloydEncounters = 0;
+		bool HasClues = false; // Encounters starts at 0, so the first set needs its own flag
+	};
+
+	struct TacoTowerInfo {
+		uint32_t UserProfileHash = 0;
 	};
 
 	struct ProfileInfo {
@@ -146,6 +153,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	extern HANDLE				Console;
 	extern SwapTable			FSwapTable;
 	extern FloydCluesInfo		CurrentFloydInfo;
+	extern TacoTowerInfo		CurrentTacoInfo;
 	extern ProfileInfo			UserProfileInfo;
 
 	bool HasResponseCapture();

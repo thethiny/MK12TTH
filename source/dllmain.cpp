@@ -3,6 +3,7 @@
 #include "src/mk12.h"
 #include "src/mk12hook.h"
 #include "src/GamePatchManager.h"
+#include "src/FloydTower.h"
 #include "mk12sdk/sdk.h"
 #include <tlhelp32.h>
 #include <VersionHelpers.h>
@@ -206,12 +207,17 @@ void PreGameHooks()
 			printfWarning("bSerializeSecretFights requires bUNameGetter to be enabled and working! Skipping.");
 		}
 	}
-	if (SettingsMgr->bEnableFloydTracking)
+	// Debug logs come from these hooks, so they bring them in when they're off
+	if (SettingsMgr->bEnableFloydTracking || SettingsMgr->bFloydDebug)
 	{
+		if (!SettingsMgr->bEnableFloydTracking)
+			printfInfo("bFloydDebug requires Floyd Tracking, enabling it.");
 		HookMetadata::ActiveModsMap["bFloydTracking"]		= MK12Hook::Hooks::FloydTrackingHooks();
 	}
-	if (SettingsMgr->bEnableProfileGetter)
+	if (SettingsMgr->bEnableProfileGetter || SettingsMgr->bProfileDebug)
 	{
+		if (!SettingsMgr->bEnableProfileGetter)
+			printfInfo("bProfileDebug requires Profile Getter, enabling it.");
 		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks();
 	}
 
@@ -567,6 +573,60 @@ void MK12HookPlugin::TabFunction()
 				MK12HOOKSDK::ImGui_Text("No Floyd clues generated yet.");
 			}
 		}
+
+		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Tower"))
+		{
+			uint32_t TacoHash = HookMetadata::CurrentTacoInfo.UserProfileHash;
+			time_t Now = time(nullptr);
+			FloydTower::Window window;
+			bool HasWindow = false;
+
+			// Source picked by szFloydTowerMode
+			if (SettingsMgr->bFloydTowerFromGame)
+			{
+				MK12HOOKSDK::ImGui_Text("Source: Game");
+				HasWindow = FloydTower::GetGameWindow(Now, window);
+				if (!FloydTower::HasGameWindows())
+					MK12HOOKSDK::ImGui_Text("No schedule yet. Open Living Towers.");
+				else if (!HasWindow)
+					MK12HOOKSDK::ImGui_Text("Not in the game's schedule. Beat Floyd once to unlock it.");
+			}
+			else
+			{
+				MK12HOOKSDK::ImGui_Text("Source: Calculated");
+				HasWindow = TacoHash != 0;
+				if (HasWindow)
+					window = FloydTower::GetWindow(TacoHash, Now);
+				else
+					MK12HOOKSDK::ImGui_Text("No schedule yet. Beat Floyd once, then open Living Towers."); // The game only hashes once Floyd was beaten
+			}
+
+			if (HasWindow)
+			{
+				char buffer[128], When[32], Duration[32];
+
+				if (window.Start <= Now)
+				{
+					FloydTower::FormatLocalTime(window.End, When, sizeof(When));
+					FloydTower::FormatDuration(window.End - Now, Duration, sizeof(Duration));
+					snprintf(buffer, sizeof(buffer), "Up now! Ends in %s", Duration);
+					MK12HOOKSDK::ImGui_Text(buffer);
+					snprintf(buffer, sizeof(buffer), "Until %s", When);
+				}
+				else
+				{
+					FloydTower::FormatLocalTime(window.Start, When, sizeof(When));
+					FloydTower::FormatDuration(window.Start - Now, Duration, sizeof(Duration));
+					snprintf(buffer, sizeof(buffer), "Next in %s", Duration);
+					MK12HOOKSDK::ImGui_Text(buffer);
+					snprintf(buffer, sizeof(buffer), "At %s", When);
+				}
+				MK12HOOKSDK::ImGui_Text(buffer);
+
+				snprintf(buffer, sizeof(buffer), "Slot: %s", FloydTower::SlotName(window.Slot));
+				MK12HOOKSDK::ImGui_Text(buffer);
+			}
+		}
 	}
 	else
 	{
@@ -589,9 +649,18 @@ void MK12HookPlugin::TabFunction()
 			DisplayWCharField("Platform", HookMetadata::UserProfileInfo.Platform);
 			DisplayWCharField("PlatformId", HookMetadata::UserProfileInfo.PlatformId);
 			DisplayWCharField("SaveKey", HookMetadata::UserProfileInfo.SaveKey);
-			DisplayWCharField("HydraId", HookMetadata::UserProfileInfo.HydraId);
-			DisplayWCharField("WBId", HookMetadata::UserProfileInfo.WBId);
-			DisplayWCharField("OfflineProfileId", HookMetadata::UserProfileInfo.OfflineProfileId);
+
+			// These come from the floyd hash string, not the profile getter
+			if (HookMetadata::ActiveModsMap["bFloydTracking"])
+			{
+				DisplayWCharField("HydraId", HookMetadata::UserProfileInfo.HydraId);
+				DisplayWCharField("WBId", HookMetadata::UserProfileInfo.WBId);
+				DisplayWCharField("OfflineProfileId", HookMetadata::UserProfileInfo.OfflineProfileId);
+			}
+			else
+			{
+				MK12HOOKSDK::ImGui_Text("HydraId, WBId and OfflineProfileId need Floyd Tracking");
+			}
 		}
 	}
 	else

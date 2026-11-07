@@ -1,6 +1,7 @@
 #include "mk12hook.h"
 #include "AGBinary.h"
 #include "GamePatchManager.h"
+#include "FloydTower.h"
 
 
 HookMetadata::ServerProxyMode		HookMetadata::eServerProxyMode = HookMetadata::PROXY_NONE;
@@ -10,9 +11,10 @@ HookMetadata::LibMapsStruct			HookMetadata::sLFS;
 HookMetadata::UserKeysStruct		HookMetadata::sUserKeys;
 HookMetadata::SwapTable				HookMetadata::FSwapTable;
 // Thread safety note: FSwapTable is only written at startup (AnnouncerSwap/StringSwaps) and read-only after.
-// FloydCluesInfo and UserProfileInfo are written by NRS-to-UE proxies which are single-threaded within NRS's caller.
+// FloydCluesInfo, TacoTowerInfo and UserProfileInfo are written by NRS-to-UE proxies which are single-threaded within NRS's caller.
 // If additional hooks are added that write to these from different call sites, add synchronization.
 HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
+HookMetadata::TacoTowerInfo			HookMetadata::CurrentTacoInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
 bool HookMetadata::HasResponseCapture() { return ActiveModsMap["bCurlResponseCapture"]; }
@@ -129,7 +131,8 @@ namespace MK12Hook::Proxies {
 	MK12::TArray<uint32_t>* __fastcall GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2)
 	{ // Use hash to create 10 challenges
 
-		printf("Floyd Shuffle Seed: %llX\n", (uint64_t)ShuffleSeed);
+		if (SettingsMgr->ShouldLogFloyd())
+			printf("Floyd Shuffle Seed: %llX\n", (uint64_t)ShuffleSeed);
 		MK12::TArray<uint32_t>* ReturnedArrayLocation = MK12::GenerateFloydCluesFromHash(ArrayLocation, ShuffleSeed, unk, unk2); // 8 bytes location and 4 bytes count
 
 		if (ReturnedArrayLocation && ReturnedArrayLocation->Data) {
@@ -138,8 +141,9 @@ namespace MK12Hook::Proxies {
 			uint32_t newUserProfileHash = (uint32_t)(ShuffleSeed >> 32);
 			uint32_t newFloydEncounters = (uint32_t)(ShuffleSeed & 0xFFFFFFFF);
 
-			if (newFloydEncounters > HookMetadata::CurrentFloydInfo.FloydEncounters)
+			if (!HookMetadata::CurrentFloydInfo.HasClues || newFloydEncounters > HookMetadata::CurrentFloydInfo.FloydEncounters)
 			{
+				HookMetadata::CurrentFloydInfo.HasClues = true;
 				HookMetadata::CurrentFloydInfo.Clues.clear();
 
 				for (uint8_t i = 0; i < ReturnedArrayLocation->ElementsCount; i++)
@@ -167,7 +171,8 @@ namespace MK12Hook::Proxies {
 	uint32_t __fastcall CustomCityHashProxy(wchar_t** StringToHash)
 	{ // Hash the floyd string
 		if (StringToHash && *StringToHash) {
-			printf("StringToHash: %ls\n", *StringToHash); // %ls for wchar_t*
+			if (SettingsMgr->ShouldLogFloyd())
+				printf("StringToHash: %ls\n", *StringToHash); // %ls for wchar_t*
 
 			CPPython::string str(*StringToHash);
 			std::vector<CPPython::string> parts = str.split("/");
@@ -184,12 +189,12 @@ namespace MK12Hook::Proxies {
 					HookMetadata::UserProfileInfo.OfflineProfileId = new wchar_t[len];
 					mbstowcs(HookMetadata::UserProfileInfo.OfflineProfileId, pipeParts[1].c_str(), len);
 
-					if (SettingsMgr->ShouldLog(Log::Verbose))
+					if (SettingsMgr->ShouldLogFloyd())
 						printf("OfflineProfileId extracted: %ls\n", HookMetadata::UserProfileInfo.OfflineProfileId);
 				}
 				else
 				{
-					if (SettingsMgr->ShouldLog(Log::Verbose))
+					if (SettingsMgr->ShouldLogFloyd())
 						printf("OfflineProfileId not found. Single User Profile only.\n");
 				}
 			}
@@ -200,7 +205,7 @@ namespace MK12Hook::Proxies {
 				size_t len = parts[1].size() + 1;
 				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len];
 				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len);
-				if (SettingsMgr->ShouldLog(Log::Verbose))
+				if (SettingsMgr->ShouldLogFloyd())
 					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
 			}
 			else if (parts.size() >= 3 && !HookMetadata::UserProfileInfo.WBId)
@@ -217,7 +222,7 @@ namespace MK12Hook::Proxies {
 				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len1);
 				mbstowcs(HookMetadata::UserProfileInfo.WBId, parts[2].c_str(), len2);
 
-				if (SettingsMgr->ShouldLog(Log::Verbose))
+				if (SettingsMgr->ShouldLogFloyd())
 				{
 					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
 					printf("WBId extracted: %ls\n", HookMetadata::UserProfileInfo.WBId);
@@ -225,8 +230,8 @@ namespace MK12Hook::Proxies {
 
 			}
 			else {
-				if (SettingsMgr->ShouldLog(Log::Verbose))
-					printf("Offline Mode Floyd String Hash Detected!");
+				if (SettingsMgr->ShouldLogFloyd())
+					printf("Offline Mode Floyd String Hash Detected!\n");
 			}
 		}
 		else
@@ -235,11 +240,70 @@ namespace MK12Hook::Proxies {
 		}
 		
 		uint32_t HashResult = MK12::CustomCityHash(StringToHash);
-		printf("HashResult: %X\n", (uint32_t)HashResult);
+		if (SettingsMgr->ShouldLogFloyd())
+			printf("HashResult: %X\n", (uint32_t)HashResult);
 
 		return HashResult;
 	}
 
+	uint32_t __fastcall TacoCityHashProxy(wchar_t** StringToHash)
+	{ // Hash the taco tower schedule string. Runs for today and yesterday on every schedule rebuild, so only print on change
+		uint32_t HashResult = MK12::CustomCityHash(StringToHash);
+
+		if (HashResult != HookMetadata::CurrentTacoInfo.UserProfileHash)
+		{
+			HookMetadata::CurrentTacoInfo.UserProfileHash = HashResult;
+
+			if (SettingsMgr->ShouldLogFloyd())
+			{
+				if (StringToHash && *StringToHash)
+					printf("Taco StringToHash: %ls\n", *StringToHash);
+				else
+					printf("Taco StringToHash: <empty>\n");
+				printf("Taco HashResult: %X\n", HashResult);
+			}
+
+			if (!SettingsMgr->bFloydTowerFromGame)
+				FloydTower::LogSchedule(HashResult);
+		}
+
+		return HashResult;
+	}
+
+
+	__int64 __fastcall TacoScheduleProxy(MK12::UTacoTowerSchedule* Schedule, int64_t NowTicks)
+	{ // Game's own Floyd Tower windows, read right after it rebuilds them. Runs often, so only log on change
+		__int64 Result = MK12::UpdateTacoSchedule(Schedule, NowTicks);
+		if (!Schedule)
+			return Result;
+
+		std::vector<FloydTower::Window> Windows;
+		for (int32_t i = 0; i < Schedule->Entries.ElementsCount; i++)
+		{
+			MK12::FTacoTowerEntry& Entry = Schedule->Entries.Data[i];
+			FloydTower::Window window;
+			window.Start = FloydTower::TicksToUnix(Entry.StartTicks);
+			window.End = FloydTower::TicksToUnix(Entry.EndTicks);
+			window.Slot = FloydTower::SlotFromSplineName(Entry.SplineName.c_str());
+			Windows.push_back(window);
+		}
+
+		if (FloydTower::SetGameWindows(Windows))
+		{
+			if (SettingsMgr->ShouldLogFloyd())
+			{
+				printf("Taco Schedule: %d entries\n", Schedule->Entries.ElementsCount);
+				for (int32_t i = 0; i < Schedule->Entries.ElementsCount; i++)
+				{
+					MK12::FTacoTowerEntry& Entry = Schedule->Entries.Data[i];
+					printf("  %ls @ %ls: %lld -> %lld\n", Entry.LadderName.c_str(), Entry.SplineName.c_str(), Entry.StartTicks, Entry.EndTicks);
+				}
+			}
+			FloydTower::LogGameSchedule();
+		}
+
+		return Result;
+	}
 
 	// Hooks a specific NRS call site that always passes exactly 3 wchar_t* args (Platform, PlatformId, SaveKey)
 	wchar_t* MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...)
@@ -279,7 +343,7 @@ namespace MK12Hook::Proxies {
 			HookMetadata::UserProfileInfo.PlatformId = SafeStringCopy(arg1);
 			HookMetadata::UserProfileInfo.SaveKey = SafeStringCopy(arg2);
 
-			if (SettingsMgr->ShouldLog(Log::Verbose))
+			if (SettingsMgr->ShouldLogProfile())
 				printf("Stored Profile Info:\nPlatform: %ws\nPlatformId: %ws\nSaveKey: %ws\n", arg0, arg1, arg2);
 		}
 
@@ -893,7 +957,7 @@ namespace MK12Hook::Hooks {
 		printf("\n==FloydTrackingHooks==\n");
 
 		int HooksCtr = 0;
-		int ExpectedHooksCtr = 3;
+		int ExpectedHooksCtr = SettingsMgr->bFloydTowerFromGame ? 5 : 4;
 
 		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetChallengesFromHash, "GetChallengesFromHash", 14,
 			MK12Hook::Proxies::GenerateFloydCluesFromHashProxy, &MK12::GenerateFloydCluesFromHash, PATCH_CALL);
@@ -903,6 +967,19 @@ namespace MK12Hook::Hooks {
 
 		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetFloydHashInputString2, "GetFloydHashInputString2", 11,
 			MK12Hook::Proxies::CustomCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
+
+		HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetTacoHashInputString, "GetTacoHashInputString", 10,
+			MK12Hook::Proxies::TacoCityHashProxy, &MK12::CustomCityHash, PATCH_CALL);
+
+		// Floyd Tower source picked by szFloydTowerMode, Calculated needs no extra hook
+		if (_stricmp(SettingsMgr->szFloydTowerMode.c_str(), "Game") && _stricmp(SettingsMgr->szFloydTowerMode.c_str(), "Calculated"))
+			printfWarning("Unknown szFloydTowerMode \"%s\", using Game", SettingsMgr->szFloydTowerMode.c_str());
+		if (SettingsMgr->bFloydTowerFromGame)
+		{
+			HooksCtr += GamePatcher->ProxyByPattern(SettingsMgr->pGetTacoSchedule, "GetTacoSchedule", 14,
+				MK12Hook::Proxies::TacoScheduleProxy, &MK12::UpdateTacoSchedule, PATCH_CALL);
+		}
+		printfInfo("Floyd Tower Mode: %s", SettingsMgr->bFloydTowerFromGame ? "Game" : "Calculated");
 
 		if (HooksCtr == ExpectedHooksCtr)
 			printfSuccess("Floyd Tracking On");

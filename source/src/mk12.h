@@ -317,6 +317,26 @@ namespace MK12 { // Namespace for game functions / structs
 		virtual void Function0();
 	}; // Total Size: 0xF8
 
+	// Floyd (Taco) Tower window, built by PC sub_142134440
+	class FTacoTowerEntry
+	{
+	public:
+		FString LadderName; // 0x00 Taco_Tower_CharacterTrialLadder_1
+		FString SplineName; // 0x10 MapMode_MeshSpline_BP_C_x, the Living Towers slot
+		char Unknown[0x20]; // 0x20 Tower class path
+		int64_t StartTicks; // 0x40 FDateTime ticks (UTC)
+		int64_t EndTicks; // 0x48
+	}; // Total Size: 0x50
+
+	// Owner of the schedule passed to PC sub_14213B380, only the list is read
+	class UTacoTowerSchedule
+	{
+	public:
+		char Unknown[0x20];
+		TArray<FTacoTowerEntry> Entries; // 0x20 Today's and yesterday's windows
+		int64_t CachedDayTicks; // 0x30 Rebuilds when the UTC day changes
+	};
+
 	
 	// Vars
 	extern uint64_t*									lpGameVersion;
@@ -341,6 +361,7 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			FKlassicLadderSecretFightData*	(__fastcall	SetupSecretFightConditionsType)		(FKlassicLadderSecretFightData*);
 	typedef			TArray<uint32_t>*				(__fastcall GenerateFloydCluesFromHashType)		(TArray<uint32_t>*, uint64_t, uint64_t, uint64_t);
 	typedef         uint32_t						(__fastcall CustomCityHashType)					(wchar_t**);
+	typedef			__int64							(__fastcall UpdateTacoScheduleType)				(UTacoTowerSchedule*, int64_t NowTicks);
 	typedef			wchar_t*						(__fastcall MKWScanfType)						(wchar_t* ResultString, const wchar_t* Format, ...);
 	// Version
 	typedef			FString*						(__fastcall GetNRSClientVersionType)			();
@@ -388,6 +409,7 @@ namespace MK12 { // Namespace for game functions / structs
 	extern SetupSecretFightConditionsType*				SetupSecretFightConditions;
 	extern GenerateFloydCluesFromHashType*				GenerateFloydCluesFromHash;
 	extern CustomCityHashType*							CustomCityHash;
+	extern UpdateTacoScheduleType*						UpdateTacoSchedule;
 	extern MKWScanfType*								MKWScanf;
 	extern GetNRSClientVersionType*						GetNRSClientVersion;
 	extern GetBuildVersionType*							GetBuildVersion;

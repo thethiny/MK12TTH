@@ -114,6 +114,8 @@ void eSettingsManager::Init()
 	bPauseOnStart				= ini.ReadBoolean	("Settings.Debug",		"bPauseOnStart",			false);
 	bDebug						= ini.ReadBoolean	("Settings.Debug",		"bDebug",					false);
 	bAllowNonMK					= ini.ReadBoolean	("Settings.Debug",		"bAllowNonMK",				false);
+	bFloydDebug					= ini.ReadBoolean	("Settings.Debug",		"bFloydDebug",				false);
+	bProfileDebug				= ini.ReadBoolean	("Settings.Debug",		"bProfileDebug",			false);
 
 	// Flood Toggles
 	Floods.bFName				= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bFName",			false);
@@ -137,6 +139,8 @@ void eSettingsManager::Init()
 	bSerializeSecretFights		= ini.ReadBoolean	("Patches",				"bSerializeSecretFights",	false);
 	bEnableStringSwap			= ini.ReadBoolean	("Patches",				"bEnableStringSwap",		false);
 	bEnableFloydTracking		= ini.ReadBoolean	("Patches",				"bEnableFloydTracking",		false);
+	szFloydTowerMode			= ini.ReadString	("Patches",				"szFloydTowerMode",			"Game");
+	bFloydTowerFromGame			= _stricmp(szFloydTowerMode.c_str(), "Calculated") != 0;
 	bEnableProfileGetter		= ini.ReadBoolean	("Patches",				"bEnableProfileGetter",		false);
 	bEnableVersionInfo			= ini.ReadBoolean	("Patches",				"bEnableVersionInfo",		false);
 
@@ -175,6 +179,8 @@ void eSettingsManager::Init()
 	pGetChallengesFromHash		= ini.ReadString	("Patterns.Floyd",		"pGetChallengesFromHash",	"");
 	pGetFloydHashInputString	= ini.ReadString	("Patterns.Floyd",		"pGetFloydHashInputString",	"");
 	pGetFloydHashInputString2	= ini.ReadString	("Patterns.Floyd",		"pGetFloydHashInputString2","");
+	pGetTacoHashInputString		= ini.ReadString	("Patterns.Floyd",		"pGetTacoHashInputString",	"");
+	pGetTacoSchedule			= ini.ReadString	("Patterns.Floyd",		"pGetTacoSchedule",			"");
 
 
 	// Keybinds
