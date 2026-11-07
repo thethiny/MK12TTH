@@ -145,6 +145,9 @@ void eSettingsManager::Init()
 	bEnableVersionInfo			= ini.ReadBoolean	("Patches",				"bEnableVersionInfo",		false);
 
 	// Patches.AntiCheat
+	// Hidden from sample.ini. Unsigned unbinds the pak signing keys, Legacy uses the bDisable* patches below
+	szModLoaderMode				= ini.ReadString	("Patches.AntiCheat",	"szModLoaderMode",			"Unsigned");
+	bLegacyModLoader			= _stricmp(szModLoaderMode.c_str(), "Legacy") == 0;
 	bDisableSignatureCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureCheck",	true);
 	bDisableChunkSigCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableChunkSigCheck",	true);
 	//bDisableSignatureWarn		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureWarn",	false);

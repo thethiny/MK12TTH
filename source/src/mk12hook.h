@@ -16,6 +16,7 @@ namespace MK12Hook {
 		uint32_t								__fastcall	TacoCityHashProxy(wchar_t** StringToHash);
 		__int64									__fastcall	TacoScheduleProxy(MK12::UTacoTowerSchedule* Schedule, int64_t NowTicks);
 		wchar_t*								__fastcall	MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...);
+		uint64_t*								__fastcall	GetUnboundPakSigningKeysDelegate();
 		__int64									__fastcall	CurlSetOptProxy(__int64 handle, __int64 option, __int64 value);
 		__int64									__fastcall	CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle);
 		__int64									__fastcall	CurlMultiInfoReadProxy(__int64 multiHandle, __int64* msgsInQueue);
@@ -27,6 +28,7 @@ namespace MK12Hook {
 		bool DisableChunkSigCheck();
 		bool DisableTOCSigCheck();
 		bool DisablePakTOCCheck();
+		bool DisablePakSigning();
 		bool UNameTableGetter();
 		bool FNameToStrWithIdLoader();
 		bool FNameToStrNoIdLoader();

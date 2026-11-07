@@ -305,6 +305,15 @@ namespace MK12Hook::Proxies {
 		return Result;
 	}
 
+	// Stand in for FCoreDelegates::GetPakSigningKeysDelegate(). Every caller checks the delegate's
+	// allocation and size before using it, so all zeros reads as unbound: no .sig loading, no signed
+	// pak readers, no chunk CRC checks and no IoStore TOC signatures, same as a build without keys
+	uint64_t* __fastcall GetUnboundPakSigningKeysDelegate()
+	{
+		static uint64_t UnboundDelegate[4] = {};
+		return UnboundDelegate;
+	}
+
 	// Hooks a specific NRS call site that always passes exactly 3 wchar_t* args (Platform, PlatformId, SaveKey)
 	wchar_t* MKWScanfProxyForCrypto(wchar_t* ResultString, const wchar_t* Format, ...)
 	{
@@ -660,6 +669,32 @@ namespace MK12Hook::Hooks {
 
 		GamePatcher->PatchConditionalToUnconditional(patAddr + 0x12);
 		printfSuccess("PakTocCheck Patched");
+
+		return true;
+	}
+
+	bool DisablePakSigning()
+	{
+		printf("\n==DisablePakSigning==\n");
+
+		// Same site as PakTocCheck, the 2nd call is the signing keys delegate getter
+		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pPakTocCheck, "PakTocCheck");
+		if (!patAddr)
+			return false;
+
+		uint64_t getterAddr = ProcessPatch::ResolveDestination(patAddr + 9);
+		if (!getterAddr)
+		{
+			printfError("Couldn't resolve the pak signing keys getter");
+			return false;
+		}
+
+		if (!GamePatcher->ReplaceFunctionWith(getterAddr, MK12Hook::Proxies::GetUnboundPakSigningKeysDelegate))
+			return false;
+
+		if (SettingsMgr->ShouldLog(Log::Verbose))
+			printf("Pak signing keys getter at: %p\n", (void*)getterAddr);
+		printfSuccess("Pak Signing Disabled");
 
 		return true;
 	}

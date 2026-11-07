@@ -77,25 +77,36 @@ void PreGameHooks()
 		HookMetadata::ActiveModsMap["bVersionInfo"]			= MK12Hook::Hooks::ResolveVersionFunctions();
 	}
 
-	if (SettingsMgr->bDisableSignatureCheck)
+	// Unsigned removes signing at its source, Legacy patches each check on its own
+	if (!SettingsMgr->bLegacyModLoader)
 	{
-		HookMetadata::ActiveModsMap["bAntiSigCheck"]		= MK12Hook::Hooks::DisableSignatureCheck();
+		if (_stricmp(SettingsMgr->szModLoaderMode.c_str(), "Unsigned"))
+			printfWarning("Unknown szModLoaderMode \"%s\", using Unsigned", SettingsMgr->szModLoaderMode.c_str());
+		HookMetadata::ActiveModsMap["bAntiPakSigning"]		= MK12Hook::Hooks::DisablePakSigning();
 	}
-	if (SettingsMgr->bDisableSignatureWarn)
+	else
 	{
-		HookMetadata::ActiveModsMap["bAntiSigWarn"]			= MK12Hook::Hooks::DisableSignatureWarn();
-	}
-	if (SettingsMgr->bDisableChunkSigCheck)
-	{
-		HookMetadata::ActiveModsMap["bAntiChunkSigCheck"]	= MK12Hook::Hooks::DisableChunkSigCheck();
-	}
-	if (SettingsMgr->bDisableTOCSigCheck)
-	{
-		HookMetadata::ActiveModsMap["bAntiTocSigCheck"]		= MK12Hook::Hooks::DisableTOCSigCheck();
-	}
-	if (SettingsMgr->bDisablePakTOCCheck)
-	{
-		HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
+		printfInfo("Mod Loader Mode: Legacy");
+		if (SettingsMgr->bDisableSignatureCheck)
+		{
+			HookMetadata::ActiveModsMap["bAntiSigCheck"]		= MK12Hook::Hooks::DisableSignatureCheck();
+		}
+		if (SettingsMgr->bDisableSignatureWarn)
+		{
+			HookMetadata::ActiveModsMap["bAntiSigWarn"]			= MK12Hook::Hooks::DisableSignatureWarn();
+		}
+		if (SettingsMgr->bDisableChunkSigCheck)
+		{
+			HookMetadata::ActiveModsMap["bAntiChunkSigCheck"]	= MK12Hook::Hooks::DisableChunkSigCheck();
+		}
+		if (SettingsMgr->bDisableTOCSigCheck)
+		{
+			HookMetadata::ActiveModsMap["bAntiTocSigCheck"]		= MK12Hook::Hooks::DisableTOCSigCheck();
+		}
+		if (SettingsMgr->bDisablePakTOCCheck)
+		{
+			HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
+		}
 	}
 
 	if (SettingsMgr->bFNameToStrHook)
@@ -440,6 +451,7 @@ void MK12HookPlugin::TabFunction()
 	if (MK12HOOKSDK::ImGui_CollapsingHeader("Patches"))
 	{
 		std::vector<std::pair<std::string, bool>> toggles = {
+			{ "Pak Signing (Unsigned)",		HookMetadata::ActiveModsMap["bAntiPakSigning"] },
 			{ "Pak Signature",				HookMetadata::ActiveModsMap["bAntiSigCheck"] },
 			{ "Chunk Signature",			HookMetadata::ActiveModsMap["bAntiChunkSigCheck"] },
 			{ "TOC Signature",				HookMetadata::ActiveModsMap["bAntiTocSigCheck"] },

@@ -58,6 +58,8 @@ public:
 
 
 	// Toggles
+	std::string szModLoaderMode;
+	bool bLegacyModLoader; // szModLoaderMode is Legacy, otherwise Unsigned
 	bool bDisableSignatureCheck;
 	bool bDisableSignatureWarn;
 	bool bDisableTOCSigCheck;
