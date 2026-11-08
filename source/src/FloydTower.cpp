@@ -51,21 +51,6 @@ namespace FloydTower {
 		}
 	};
 
-	std::vector<uint8_t> FloydChallenges(uint64_t Seed)
-	{
-		Pcg32 Rng(~Seed);
-		uint8_t Order[CHALLENGE_COUNT];
-		for (int i = 0; i < CHALLENGE_COUNT; i++)
-			Order[i] = (uint8_t)i;
-		for (int i = 0; i < CHALLENGE_COUNT; i++)
-			std::swap(Order[i], Order[i + Rng.Bounded(CHALLENGE_COUNT - i)]);
-
-		std::vector<uint8_t> Challenges;
-		for (int i = 0; i < PLAYER_CHALLENGES; i++)
-			Challenges.push_back(Order[i] + 1);
-		return Challenges;
-	}
-
 	static Window DayWindow(uint32_t ProfileHash, time_t DayStart)
 	{
 		int64_t DayTicks = UNIX_EPOCH_TICKS + (int64_t)DayStart * TICKS_PER_SECOND;
@@ -163,7 +148,7 @@ namespace FloydTower {
 		if (GetGameWindow(Now, window))
 			LogWindow(window, Now);
 		else
-			printf("Floyd Tower: Not in the game's schedule. Beat Floyd once to unlock it.\n"); // Empty list means the game's unlock check failed
+			printf("Floyd Tower: Not in the game's schedule (Floyd not beaten yet, or the tower already showed up)\n");
 	}
 
 	bool PickWindow(const std::vector<Window>& Windows, time_t Now, Window& Out)

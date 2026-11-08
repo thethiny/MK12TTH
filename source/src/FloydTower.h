@@ -30,14 +30,11 @@ namespace FloydTower {
 	enum class Status {
 		Ready,			// Out is the current window if it's up, else the next one
 		NoSchedule,		// Nothing read yet: Living Towers wasn't opened, or Floyd wasn't beaten (Calculated)
-		NotUnlocked,	// The game's schedule has no Floyd Tower: Floyd wasn't beaten yet
+		NotUnlocked,	// The game's schedule has no Floyd Tower: Floyd wasn't beaten yet, or the tower already showed up
 	};
 	Status		Find(time_t Now, uint32_t ProfileHash, bool bFromGame, Window& Out);
 
-	// Floyd's challenges, the same generator shuffles all of them. Seed: the profile hash high, Floyd encounters low
-	constexpr int CHALLENGE_COUNT = 37;
-	constexpr int PLAYER_CHALLENGES = 10;
-	std::vector<uint8_t> FloydChallenges(uint64_t Seed); // The player's, numbered from 1 like the Floyd tracker
+	constexpr int CHALLENGE_COUNT = 37; // Floyd's challenges, the player gets 10 of them from the game
 
 	// Shared
 	bool		PickWindow(const std::vector<Window>& Windows, time_t Now, Window& Out);
