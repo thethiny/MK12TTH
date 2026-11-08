@@ -1,5 +1,6 @@
 #pragma once
 #include <functional>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,7 @@ namespace Features {
 		AttractMode,
 		KeepRunning,
 		FastBoot,
+		FloydFight,
 		Count
 	};
 
@@ -60,6 +62,8 @@ namespace Features {
 		bool					bLiveDefault = true;	// Live switch when the state file has none
 		const char*				IniSection = "Patches"; // Null: nothing to hook, so no startup switch, only the live one
 		std::function<void(bool)> OnSwitch;			// Live: runs when it's installed and on each change, with the new state
+		std::vector<std::pair<const wchar_t*, const char*>> Modes; // Startup choices (label, ini value) instead of OFF / ON.
+													// The first is off, bIniDefault picks the second or the first
 	};
 
 	void DefineAll(); // The feature list, FeatureList.cpp
@@ -75,6 +79,7 @@ namespace Features {
 	void SetActive(Id Which, bool bActive); // Ignored unless it's installed with a live switch. Saved
 
 	bool HasStartupSwitch(Id Which); // Has a row in Settings, MK12TTH
+	int StartupMode(Id Which); // Index into its Modes, from MK12TTH.ini (0 is off)
 
 	// Why it isn't running, for the player: empty when it's installed
 	std::wstring Explain(Id Which);

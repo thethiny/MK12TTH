@@ -52,12 +52,37 @@ namespace Features {
 		entry.bDefined = true;
 	}
 
+	static int ReadIniMode(const Definition& Feature)
+	{
+		CIniReader ini("");
+		const auto& Modes = Feature.Modes;
+		char* Saved = ini.ReadString((char*)Feature.IniSection, (char*)Feature.IniKey, Modes[Feature.bIniDefault ? 1 : 0].second);
+		int Mode = Feature.bIniDefault ? 1 : 0;
+		for (int i = 0; i < (int)Modes.size(); i++)
+		{
+			if (!_stricmp(Saved, Modes[i].second))
+				Mode = i;
+		}
+		delete[] Saved;
+		return Mode;
+	}
+
 	static bool ReadIniSwitch(const Definition& Feature)
 	{
 		if (!Feature.IniKey || !Feature.IniSection)
 			return true;
+		if (!Feature.Modes.empty())
+			return ReadIniMode(Feature) != 0;
 		CIniReader ini("");
 		return ini.ReadBoolean((char*)Feature.IniSection, (char*)Feature.IniKey, Feature.bIniDefault);
+	}
+
+	int StartupMode(Id Which)
+	{
+		const Definition& Feature = Get(Which);
+		if (Feature.Modes.empty())
+			return ReadIniSwitch(Feature) ? 1 : 0;
+		return ReadIniMode(Feature);
 	}
 
 	static bool ReadLiveSwitch(const Definition& Feature)

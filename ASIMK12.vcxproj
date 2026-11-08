@@ -31,8 +31,10 @@
     <ClCompile Include="source\src\GameState.cpp" />
     <ClCompile Include="source\src\ModSettings.cpp" />
     <ClCompile Include="source\src\ModMenu.cpp" />
+    <ClCompile Include="source\src\PauseMenu.cpp" />
     <ClCompile Include="source\src\PakMods.cpp" />
     <ClCompile Include="source\src\EngineConfig.cpp" />
+    <ClCompile Include="source\src\FloydFight.cpp" />
     <ClCompile Include="source\src\Announcer.cpp" />
     <ClCompile Include="source\src\AttractMode.cpp" />
     <ClCompile Include="source\src\FloydTowerAlert.cpp" />
@@ -69,8 +71,11 @@
     <ClInclude Include="source\src\GameState.h" />
     <ClInclude Include="source\src\ModSettings.h" />
     <ClInclude Include="source\src\ModMenu.h" />
+    <ClInclude Include="source\src\PauseMenu.h" />
+    <ClInclude Include="source\src\Changelog.h" />
     <ClInclude Include="source\src\PakMods.h" />
     <ClInclude Include="source\src\EngineConfig.h" />
+    <ClInclude Include="source\src\FloydFight.h" />
     <ClInclude Include="source\src\Announcer.h" />
     <ClInclude Include="source\src\AttractMode.h" />
     <ClInclude Include="source\src\FloydTowerAlert.h" />

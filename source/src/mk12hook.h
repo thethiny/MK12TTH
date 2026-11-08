@@ -26,14 +26,21 @@ namespace MK12Hook {
 		void									__fastcall	SettingsCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB);
 		MK12::FText*							__fastcall	FindTextProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key);
 		MK12::FString*							__fastcall	SettingsVersionTextProxy();
+		__int64									__fastcall	FooterBuildProxy(MK12::USettingsScreen* Screen, MK12::TArray<MK12::FText>* Labels, void* FocusedRow, bool bNarrate, MK12::TArray<uint8_t>* Bits);
 		void									__fastcall	SettingsRunProxy(void* Screen, void* Player, int64_t Mode);
+		void									__fastcall	PauseCollectEntriesProxy(void* Source, void* Player, MK12::TArray<MK12::FPauseEntry>* Out);
+		void									__fastcall	PausePanelPageSetupProxy(MK12::USettingsScreen* Screen, void* Player, int64_t Mode);
 		void									__fastcall	MainMenuCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB);
 		__int64									__fastcall	PakMountProxy(void* PakPlatformFile, const wchar_t* PakFilename, uint32_t PakOrder, const wchar_t* MountPath, bool bLoadIndex);
 		MK12::FText*							__fastcall	FindTextPlatformProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key);
 		bool									__fastcall	AttractModeIdleProxy(void* ModeManager, void* ModeClass);
 		char									__fastcall	TowersSetupProxy(void* TacoSchedule);
 		bool									__fastcall	BootScreenWaitProxy(int32_t FirstBootFrames, int32_t Frames, int32_t Counter);
+		bool									__fastcall	StudioLogosProxy(const wchar_t* Name, int32_t A, int32_t B, int32_t C, int32_t D, void* Out);
+		bool									__fastcall	SkipBootMovieProxy(const wchar_t* CommandLine, const wchar_t* Param);
 		__int64									__fastcall	AnnouncerRerollProxy(void* AudioSettings);
+		void									__fastcall	PauseCloseProxy(void* Pause);
+		uint8_t*								__fastcall	FloydSetLevelProxy(uint8_t* AI, uint8_t Level);
 		void									__fastcall	ConfigInitProxy();
 		__int64									__fastcall	AnnouncerMenuApplyProxy(void* AudioSettings, MK12::FString* ItemId);
 		void									__fastcall	FocusLostStepProxy();
@@ -56,6 +63,7 @@ namespace MK12Hook {
 		void SetKeepRunning(bool bOn);
 		bool FastBootHooks();
 		bool AnnouncerHooks();
+		bool FloydFightHooks();
 		bool EngineConfigHooks();
 		bool PatchCurl();
 		bool GameStateHooks();
@@ -159,7 +167,6 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	struct ProfileInfo {
 		wchar_t* Platform = nullptr;
 		wchar_t* PlatformId = nullptr;
-		wchar_t* OfflineProfileId = nullptr;
 		wchar_t* SaveKey = nullptr;
 		wchar_t* HydraId = nullptr;
 		wchar_t* WBId = nullptr;

@@ -477,6 +477,19 @@ namespace MK12 { // Namespace for game functions / structs
 		void* DefaultContext; // 0x108
 	}; // Total Size: 0x110
 
+	// A link row: no value, Confirm calls Activate with its context and the player (like REMAP KONTROLS)
+	class FSettingsLinkOption
+	{
+	public:
+		typedef bool (__fastcall ActivateType)(void* Context, void* Player); // False closes the screen, ours always return true
+		static constexpr size_t Size = 0xE0;
+
+		char Base[0xC8]; // 0x00 FSettingsOption without its tail
+		ActivateType* Activate; // 0xC8
+		void* Context; // 0xD0
+		char UnknownD8[0x8]; // 0xD8
+	}; // Total Size: 0xE0
+
 	// One page of the settings screen, a tab shows the page with the same index
 	struct FSettingsPage
 	{
@@ -516,13 +529,34 @@ namespace MK12 { // Namespace for game functions / structs
 		char Unknown10[0x10]; // 0x10
 	}; // Total Size: 0x20
 
-	// The settings screen, only the page lists are named
+	// One entry of the in-fight pause menu: its label and the panel it opens (KONTROLS, MOVE LIST...). Moved around
+	// bit for bit, the menu owns the holder and deletes it through its vtable
+	struct alignas(8) FPauseEntry
+	{
+		FSettingsTab Tab; // 0x00
+		void* PanelHolder; // 0x20 Keeps the panel object alive, the object is at +0x10
+	}; // Total Size: 0x28
+	constexpr uint32_t PanelHolderObjectOffset = 0x10;
+	constexpr size_t PanelHolderSize = 0x18;
+	constexpr uint32_t PauseEntriesOffset = 0x240; // In the pause menu, the list of FPauseEntry
+	constexpr uint32_t PauseMenuListOffset = 0x98; // In the pause menu, its entry list (PauseSelectedIndex reads it)
+
+	// The settings screen, only the fields we use are named
 	class USettingsScreen
 	{
 	public:
-		char Unknown0[0x6AC];
+		char Unknown0[0x3A4];
+		int32_t FocusedRow; // 0x3A4 Index in the page showing
+		char Unknown3A8[0x439 - 0x3A8];
+		bool bOpen; // 0x439 Set while the screen is up
+		char Unknown43A[0x6A9 - 0x43A];
+		bool bNoRowFocusA; // 0x6A9 The game's page switch only gives the rows focus while these three are clear
+		bool bNoRowFocusB; // 0x6AA
+		char Unknown6AB[0x6AC - 0x6AB];
 		int32_t CurrentPage; // 0x6AC The page (and tab) on screen
-		char Unknown6B0[0x6F8 - 0x6B0];
+		char Unknown6B0[0x6B1 - 0x6B0];
+		bool bNoRowFocusC; // 0x6B1
+		char Unknown6B2[0x6F8 - 0x6B2];
 		TArray<FSettingsPage> Pages; // 0x6F8
 		TArray<FString> PageDescriptions; // 0x708 Text keys in the Settings table, one per page
 	};
@@ -577,8 +611,11 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			void							(__fastcall MessageBoxDestructType)				(UIMessageBox* Box);
 	typedef			void*							(__fastcall GetLocalPlayerInfoType)				(int32_t Index); // Its player sits at +0x38
 	typedef			void*							(__fastcall ToastDriverType)						(); // Null unless the main menu is the top mode
-	typedef			void							(__fastcall ToastEnqueueType)					(void* Driver, FText* Title, FText* Subtitle, bool bLong, int32_t DurationFrames, uint8_t Priority,
-		FMenuEntryCallback* CallbackA, FMenuEntryCallback* CallbackB, FMenuEntryCallback* CallbackC); // Takes over and releases both texts
+	// bWithButtons: ACCEPT (A) and DECLINE (B) prompts, the press runs that delegate; C runs when it times out unpressed.
+	// Takes over and releases both texts and the three delegates
+	typedef			void							(__fastcall ToastEnqueueType)					(void* Driver, FText* Title, FText* Subtitle, bool bWithButtons, int32_t DurationFrames, uint8_t Priority,
+		FMenuEntryCallback* CallbackA, FMenuEntryCallback* CallbackB, FMenuEntryCallback* CallbackC);
+	typedef			void*							(__fastcall ReallocType)						(void* Memory, size_t Size, uint32_t Alignment); // The game's allocator, size 0 frees
 	typedef			void							(__fastcall PlayerInputUpdateType)				(FPlayerInput* Input, void* Sample); // Once per frame per player, before anything reads presses
 	typedef			bool							(__fastcall PlayerInputPressedType)				(void* Player, int32_t Input, FString* Id, uint32_t Flags); // Screens read one player's presses through it
 	// Game State
@@ -597,6 +634,18 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			void							(__fastcall SettingsRunType)						(void* Screen, void* Player, int64_t Mode); // Builds the settings screen and runs it until the player backs out
 	typedef			FString*						(__fastcall SettingsVersionTextType)				(); // The version shown at the bottom left of the settings screen
 	typedef			void							(__fastcall MemoryFreeType)						(void* Memory); // Frees the game's own allocations
+	typedef			void							(__fastcall SettingsScreenStepType)				(USettingsScreen* Screen); // Steps of the game's page switch, see SwitchPage
+	typedef			bool							(__fastcall SettingsFocusRowsType)				(USettingsScreen* Screen, bool bFirst); // Page switch: the rows take the keyboard and controller again
+	typedef			__int64							(__fastcall FooterBuildType)					(USettingsScreen* Screen, TArray<FText>* Labels, void* FocusedRow, bool bNarrate, TArray<uint8_t>* Bits); // The footer prompts, Bits holds each one's input bit number
+	typedef			FText*							(__fastcall PromptTextType)						(FText* Out, uint32_t InputMask, FText* Label); // "<key> LABEL", the key as the player has it bound
+	typedef			void							(__fastcall SettingsPageSetupType)				(USettingsScreen* Screen, void* Player, int64_t Mode); // Fills the pages for a mode (5 main menu settings, 2 pause KONTROLS)
+	typedef			void							(__fastcall PauseCollectEntriesType)			(void* Source, void* Player, TArray<FPauseEntry>* Out); // Fills the pause menu's entries, sorted
+	typedef			void							(__fastcall GrowPauseEntriesType)				(TArray<FPauseEntry>* Array, int32_t OldCount); // After its count was bumped
+	typedef			void*							(__fastcall GameAllocType)						(size_t Size);
+	typedef			void*							(__fastcall PanelHolderConstructType)			(void* Memory, void* Object);
+	typedef			int32_t							(__fastcall PauseSelectedIndexType)				(void* MenuList, int32_t Player); // The highlighted entry
+	typedef			void							(__fastcall PauseCloseType)						(void* Pause); // The pause menu closing: its panels shut, its entries go
+	typedef			uint8_t*						(__fastcall FloydSetLevelType)					(uint8_t* AI, uint8_t Level); // Floyd's fight: the AI level of each of his fighters (AI + 1)
 	// Main menu, Living Towers
 	typedef			bool							(__fastcall IsModeOnTopType)					(void* ModeManager, void* ModeClass); // The attract mode idle timer restarts while it's false
 	typedef			char							(__fastcall TowersSetupType)					(void* TacoSchedule); // Sets up the towers as Living Towers loads, the schedule sits in the map mode
@@ -605,12 +654,12 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			uint32_t						(__fastcall GetProfileStatType)					(void* Stats, uint8_t ScopeMask, int32_t StatId); // Scope 2, ids from MKProfileStatID
 	typedef			uint64_t						(__fastcall GetProfileStatBitsType)				(void* Stats, uint8_t ScopeMask, int32_t StatId); // Scope 8, the stats that are bit sets
 	typedef			uint32_t						(__fastcall FloydProfileHashType)				(void** Profile); // Hash of the profile's online ids, Floyd's challenges are picked from it
-	typedef			void*							(__fastcall GetProfileSaveType)					(void* Profile); // The profile's save holder
-	typedef			void*							(__fastcall GetClassType)						(); // A game class, for the IsA check
 	// Window focus
 	typedef			void							(__fastcall FocusLostStepType)					(); // First step of the game's focus lost handler
 	typedef			void							(__fastcall FocusLostPauseType)					(void* Mode); // Pauses with the "paused" message
 	typedef			bool							(__fastcall BootScreenWaitType)					(int32_t FirstBootFrames, int32_t Frames, int32_t Counter); // True once a logo or legal screen waited long enough
+	typedef			bool							(__fastcall PlayMovieType)						(const wchar_t* Name, int32_t A, int32_t B, int32_t C, int32_t D, void* Out); // False: it didn't start
+	typedef			bool							(__fastcall CommandLineParamType)				(const wchar_t* CommandLine, const wchar_t* Param); // FParse::Param
 	// Engine config
 	typedef			void							(__fastcall InitializeConfigSystemType)			(); // Loads the engine's ini files into its config
 	typedef			bool							(__fastcall LoadFileToStringType)				(FString* Out, const wchar_t* FileName, uint8_t VerifyFlags, uint32_t ReadFlags); // Through the game's file system, paks included
@@ -683,6 +732,7 @@ namespace MK12 { // Namespace for game functions / structs
 	extern PlayerInputUpdateType*						PlayerInputUpdate;
 	extern ToastDriverType*								ToastDriver;
 	extern ToastEnqueueType*							ToastEnqueue;
+	extern ReallocType*									Realloc;
 	extern GetLocalPlayerInfoType*						GetLocalPlayerInfo;
 	extern FMessageBoxCallbackParts						MessageBoxCallback;
 	constexpr uint32_t								LocalPlayerInfoPlayerOffset = 0x38;
@@ -698,6 +748,22 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GrowArrayType*								GrowArray;
 	extern StringReserveType*							StringReserve;
 	extern MemoryFreeType*								MemoryFree;
+	extern SettingsScreenStepType*						SettingsUnfocusRow;
+	extern SettingsScreenStepType*						SettingsShowPage;
+	extern SettingsScreenStepType*						SettingsRefreshFooter;
+	extern SettingsFocusRowsType*						SettingsFocusRows;
+	extern FooterBuildType*								FooterBuild;
+	extern PromptTextType*								PromptText;
+	extern SettingsPageSetupType*						PausePanelPageSetup; // The call that sets up the pause menu's KONTROLS panel
+	extern PauseCollectEntriesType*						PauseCollectEntries;
+	extern GrowPauseEntriesType*						GrowPauseEntries;
+	extern GameAllocType*								GameAlloc;
+	extern PanelHolderConstructType*					PanelHolderConstruct;
+	extern PauseSelectedIndexType*						PauseSelectedIndex;
+	extern PauseCloseType*								PauseClose;
+	extern FloydSetLevelType*							FloydSetLevel;
+	// One of the game's own settings rows, found by its title key and kind. They are static objects, there from startup
+	FSettingsOption*									FindStaticOption(const wchar_t* Key, int32_t Type);
 	extern SettingsVersionTextType*						SettingsVersionText;
 	extern SettingsRunType*								SettingsRun;
 	extern SettingsCopyTabsType*						MainMenuCopyTabs; // Same copy, the call that builds the main menu's entries
@@ -709,11 +775,11 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GetProfileStatType*							GetProfileStat;
 	extern GetProfileStatBitsType*						GetProfileStatBits;
 	extern FloydProfileHashType*						FloydProfileHash;
-	extern GetProfileSaveType*							GetProfileSave;
-	extern GetClassType*								GetStatsSaveClass;
 	extern FocusLostStepType*							FocusLostStep;
 	extern FocusLostPauseType*							FocusLostPause;
 	extern BootScreenWaitType*							BootScreenWait;
+	extern PlayMovieType*								PlayMovie;
+	extern CommandLineParamType*						CommandLineParam;
 	extern InitializeConfigSystemType*					InitializeConfigSystem;
 	extern LoadFileToStringType*						LoadFileToString;
 	extern AnnouncerRerollType*							AnnouncerReroll;
@@ -725,7 +791,10 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GetTeamDefinitionsType*						GetTeamDefinitions;
 	constexpr uint8_t								ProfileStatScope = 2;
 	constexpr uint8_t								ProfileStatBitsScope = 8;
-	uint64_t										FloydStoredSeed(void* Profile); // The seed the game keeps for Floyd's current challenges, 0 when it has none
+	constexpr uint32_t								StatSetSlot = 0x60 / 8; // Virtual, on a stat object: sets its value
+	// Writes a stat in this PC's copy of the profile only. The game's own setter also marks the stat changed, which sends
+	// it to the server after the next match; this one doesn't, so the server copy only changes when the game writes it
+	bool											SetProfileStatLocal(void* Stats, uint8_t ScopeMask, int32_t StatId, uint64_t Value);
 	constexpr uint32_t								MapModeTacoScheduleOffset = 0x368;
 	constexpr uint32_t								MapModeGetProfileSlot = 0x2D0 / 8; // Virtual
 	void*											MapModeGetProfile(void* MapMode); // The local player's profile, null without one

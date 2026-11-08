@@ -7,6 +7,8 @@
 #include "GameToast.h"
 #include "ModSettings.h"
 #include "ModMenu.h"
+#include "PauseMenu.h"
+#include "FloydFight.h"
 #include "PakMods.h"
 #include "Features.h"
 #include "Announcer.h"
@@ -97,7 +99,7 @@ namespace MK12Hook::Proxies {
 			uint32_t newUserProfileHash = (uint32_t)(ShuffleSeed >> 32);
 			uint32_t newFloydEncounters = (uint32_t)(ShuffleSeed & 0xFFFFFFFF);
 
-			if (!HookMetadata::CurrentFloydInfo.HasClues || newFloydEncounters > HookMetadata::CurrentFloydInfo.FloydEncounters)
+			// The game's latest list is the one in use: it regenerates them in the Floyd fight, and keeps an offline and an online list
 			{
 				HookMetadata::CurrentFloydInfo.HasClues = true;
 				HookMetadata::CurrentFloydInfo.Clues.clear();
@@ -180,6 +182,21 @@ namespace MK12Hook::Proxies {
 		if (!Schedule || !Features::IsActive(Features::Id::FloydTracking))
 			return Result;
 
+		// FLOYD TOWER NOW: today's slot, as the game built it, moved to start now
+		MK12::FTacoTowerEntry* Today = nullptr;
+		for (int32_t i = 0; i < Schedule->Entries.ElementsCount; i++)
+		{
+			MK12::FTacoTowerEntry& Entry = Schedule->Entries.Data[i];
+			if (!Today || Entry.StartTicks > Today->StartTicks)
+				Today = &Entry;
+		}
+		int64_t Start = 0, End = 0;
+		if (Today && Features::IsInstalled(Features::Id::FloydFight) && FloydFight::MoveTowerSlot(NowTicks, Today->StartTicks, Today->EndTicks, Start, End))
+		{
+			Today->StartTicks = Start;
+			Today->EndTicks = End;
+		}
+
 		std::vector<FloydTower::Window> Windows;
 		for (int32_t i = 0; i < Schedule->Entries.ElementsCount; i++)
 		{
@@ -235,6 +252,7 @@ namespace MK12Hook::Proxies {
 		FloydTowerAlert::Tick();
 		OnlineIds::Tick();
 		ModSettings::Tick();
+		PauseMenu::Tick();
 		return Result;
 	}
 
@@ -257,7 +275,28 @@ namespace MK12Hook::Proxies {
 	}
 
 	bool __fastcall BootScreenWaitProxy(int32_t FirstBootFrames, int32_t Frames, int32_t Counter)
-	{ // The logo and legal screens ask it whether they waited long enough
+	{ // The logo and legal screens ask it whether they waited long enough (or Skip was pressed): always yes
+		static int32_t LastFrames = -1;
+		if (Frames != LastFrames)
+		{
+			LastFrames = Frames;
+			if (SettingsMgr->ShouldLog(Log::Debug))
+				printf("Fast Boot: A boot screen goes on right away instead of waiting %d frames\n", FirstBootFrames > Frames ? FirstBootFrames : Frames);
+		}
+		return true;
+	}
+
+	bool __fastcall StudioLogosProxy(const wchar_t* Name, int32_t A, int32_t B, int32_t C, int32_t D, void* Out)
+	{ // The studio logos movie at boot: "didn't start", the boot screens go on as the game does when it can't play
+		if (SettingsMgr->ShouldLog(Log::Debug))
+			printf("Fast Boot: Skipped the studio logos\n");
+		return false;
+	}
+
+	bool __fastcall SkipBootMovieProxy(const wchar_t* CommandLine, const wchar_t* Param)
+	{ // The intro movie asks for -skipbootmovie: yes, the game's own skip
+		if (SettingsMgr->ShouldLog(Log::Debug))
+			printf("Fast Boot: Skipped the intro movie\n");
 		return true;
 	}
 
@@ -265,6 +304,20 @@ namespace MK12Hook::Proxies {
 	{ // The engine just loaded its ini files, nothing read them yet
 		MK12::InitializeConfigSystem();
 		EngineConfig::Inject();
+	}
+
+	uint8_t* __fastcall FloydSetLevelProxy(uint8_t* AI, uint8_t Level)
+	{ // Floyd's fight being built (a retry too): the level the game picked for this attempt, or ours
+		uint8_t Ours = 0;
+		if (!FloydFight::OverrideLevel(Level, Ours))
+			return MK12::FloydSetLevel(AI, Level);
+		return MK12::FloydSetLevel(AI, Ours);
+	}
+
+	void __fastcall PauseCloseProxy(void* Pause)
+	{ // The pause menu closing, MOD SETTINGS lets go of it first
+		PauseMenu::OnPauseClosed(Pause);
+		MK12::PauseClose(Pause);
 	}
 
 	__int64 __fastcall AnnouncerRerollProxy(void* AudioSettings)
@@ -293,6 +346,26 @@ namespace MK12Hook::Proxies {
 		ModSettings::OnScreenOpened();
 		MK12::SettingsRun(Screen, Player, Mode);
 		ModSettings::OnScreenClosed();
+	}
+
+	void __fastcall PauseCollectEntriesProxy(void* Source, void* Player, MK12::TArray<MK12::FPauseEntry>* Out)
+	{ // The pause menu listing its entries, ours goes in after KONTROLS
+		MK12::PauseCollectEntries(Source, Player, Out);
+		PauseMenu::OnEntriesCollected(Out);
+	}
+
+	void __fastcall PausePanelPageSetupProxy(MK12::USettingsScreen* Screen, void* Player, int64_t Mode)
+	{ // The pause menu's KONTROLS panel filling its pages, MOD SETTINGS uses the same panel
+		MK12::PausePanelPageSetup(Screen, Player, Mode);
+		PauseMenu::OnPanelSetUp(Screen, Player, Mode);
+	}
+
+	__int64 __fastcall FooterBuildProxy(MK12::USettingsScreen* Screen, MK12::TArray<MK12::FText>* Labels, void* FocusedRow, bool bNarrate, MK12::TArray<uint8_t>* Bits)
+	{ // The settings screen's footer prompts, COPY joins them on our rows with a value
+		__int64 Result = MK12::FooterBuild(Screen, Labels, FocusedRow, bNarrate, Bits);
+		if (!bNarrate)
+			ModSettings::OnFooterBuilt(Screen, Labels, FocusedRow, Bits);
+		return Result;
 	}
 
 	MK12::FString* __fastcall SettingsVersionTextProxy()
@@ -894,6 +967,7 @@ namespace MK12Hook::Hooks {
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pToastDriverCall, "ToastDriverCall");
 		if (pat) MK12::ToastDriver = (MK12::ToastDriverType*)ProcessPatch::ResolveDestination(pat);
 		MK12::ToastEnqueue = (MK12::ToastEnqueueType*)GamePatcher->ResolvePattern(SettingsMgr->pToastEnqueue, "ToastEnqueue");
+		MK12::Realloc = (MK12::ReallocType*)GamePatcher->ResolvePattern(SettingsMgr->pRealloc, "Realloc");
 		if (!GameToast::IsReady())
 			printfWarning("Game Toast not found, notifications won't show");
 		if (!MK12::MessageBoxSetTitle)
@@ -953,6 +1027,48 @@ namespace MK12Hook::Hooks {
 		uint64_t RunStart = GamePatcher->ResolvePattern(SettingsMgr->pSettingsRun, "SettingsRun");
 		if (!RunStart || !GamePatcher->ProxyFunctionAt(RunStart, MK12Hook::Proxies::SettingsRunProxy, &MK12::SettingsRun, "SettingsRun"))
 			printfWarning("Mod Settings: The restart question shows while you're still in the menu");
+
+		// The game's page switch steps, for SECTION rows
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pSettingsPageSwitch, "SettingsPageSwitch");
+		if (pat && *(uint8_t*)(pat + 5) == 0xE8 && *(uint8_t*)(pat + 19) == 0xE8 && *(uint8_t*)(pat + 64) == 0xE8)
+		{
+			MK12::SettingsUnfocusRow = (MK12::SettingsScreenStepType*)ProcessPatch::ResolveDestination(pat + 5);
+			MK12::SettingsShowPage = (MK12::SettingsScreenStepType*)ProcessPatch::ResolveDestination(pat + 19);
+			MK12::SettingsRefreshFooter = (MK12::SettingsScreenStepType*)ProcessPatch::ResolveDestination(pat + 64);
+			if (*(uint8_t*)(pat + 56) == 0xE8)
+				MK12::SettingsFocusRows = (MK12::SettingsFocusRowsType*)ProcessPatch::ResolveDestination(pat + 56);
+		}
+		if (!MK12::SettingsUnfocusRow)
+			printfWarning("Mod Settings: No SECTION rows, each page gets its own entry");
+
+		// COPY in the footer: the game's prompt text, and its footer build
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pPromptText, "PromptText");
+		if (pat && *(uint8_t*)(pat + 12) == 0xE8)
+			MK12::PromptText = (MK12::PromptTextType*)ProcessPatch::ResolveDestination(pat + 12);
+		if (!MK12::PromptText || !MK12::Realloc || !GamePatcher->ProxyByPattern(SettingsMgr->pFooterBuild, "FooterBuild", 0,
+			MK12Hook::Proxies::FooterBuildProxy, &MK12::FooterBuild, PATCH_CALL))
+			printfWarning("Mod Settings: No COPY button, values can be read in the description");
+
+		// MOD SETTINGS in the pause menu: the entry list, its growth, the panel holder, and the KONTROLS panel setup
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGrowPauseEntries, "GrowPauseEntries");
+		if (pat) MK12::GrowPauseEntries = (MK12::GrowPauseEntriesType*)ProcessPatch::ResolveDestination(pat + 32);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pPanelHolder, "PanelHolder");
+		if (pat && *(uint8_t*)(pat + 25) == 0xE8 && *(uint8_t*)(pat + 41) == 0xE8)
+		{
+			MK12::GameAlloc = (MK12::GameAllocType*)ProcessPatch::ResolveDestination(pat + 25);
+			MK12::PanelHolderConstruct = (MK12::PanelHolderConstructType*)ProcessPatch::ResolveDestination(pat + 41);
+		}
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pPauseSelectedIndex, "PauseSelectedIndex");
+		if (pat) MK12::PauseSelectedIndex = (MK12::PauseSelectedIndexType*)ProcessPatch::ResolveDestination(pat + 12);
+		uint64_t CloseStart = GamePatcher->ResolvePattern(SettingsMgr->pPauseClose, "PauseClose");
+		bool bPause = MK12::GrowPauseEntries && MK12::GameAlloc && MK12::PanelHolderConstruct && MK12::PauseSelectedIndex
+			&& CloseStart && GamePatcher->ProxyFunctionAt(CloseStart, MK12Hook::Proxies::PauseCloseProxy, &MK12::PauseClose, "PauseClose")
+			&& GamePatcher->ProxyByPattern(SettingsMgr->pPausePanelPageSetup, "PausePanelPageSetup", 13,
+				MK12Hook::Proxies::PausePanelPageSetupProxy, &MK12::PausePanelPageSetup, PATCH_CALL)
+			&& GamePatcher->ProxyByPattern(SettingsMgr->pPauseCollectEntries, "PauseCollectEntries", 8,
+				MK12Hook::Proxies::PauseCollectEntriesProxy, &MK12::PauseCollectEntries, PATCH_CALL);
+		if (!bPause)
+			printfWarning("Mod Settings: No MOD SETTINGS in the pause menu");
 
 		printfSuccess("Mod Settings On");
 		return true;
@@ -1036,14 +1152,10 @@ namespace MK12Hook::Hooks {
 		MK12::GetProfileStat = (MK12::GetProfileStatType*)GamePatcher->ResolvePattern(SettingsMgr->pGetProfileStat, "GetProfileStat");
 		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pGetProfileStatBits, "GetProfileStatBits");
 		if (pat) MK12::GetProfileStatBits = (MK12::GetProfileStatBitsType*)ProcessPatch::ResolveDestination(pat + 11);
-		// The seed function: the profile hash, then the save holder and its class, read but never called
+		// The seed function: the profile hash it calls
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pFloydSeed, "FloydSeed");
-		if (pat && *(uint8_t*)(pat + 0x34) == 0xE8 && *(uint8_t*)(pat + 0x45) == 0xE8 && *(uint8_t*)(pat + 0x5F) == 0xE8)
-		{
+		if (pat && *(uint8_t*)(pat + 0x34) == 0xE8)
 			MK12::FloydProfileHash = (MK12::FloydProfileHashType*)ProcessPatch::ResolveDestination(pat + 0x34);
-			MK12::GetProfileSave = (MK12::GetProfileSaveType*)ProcessPatch::ResolveDestination(pat + 0x45);
-			MK12::GetStatsSaveClass = (MK12::GetClassType*)ProcessPatch::ResolveDestination(pat + 0x5F);
-		}
 		if (!MK12::FloydProfileHash)
 			printfWarning("Floyd Tower Alert: Floyd's challenges show once a tower starts");
 		if (!MK12::GetFloydVictories || !GamePatcher->ProxyByPattern(SettingsMgr->pTowersSetup, "TowersSetup", 16,
@@ -1059,7 +1171,8 @@ namespace MK12Hook::Hooks {
 	}
 
 	static int32_t* KeepRunningFlag = nullptr; // The game's own "don't pause without focus" setting, its config can reset it
-	static int32_t KeepRunningGameValue = 0;
+	static bool bKeepRunningForced = false;
+	static int32_t KeepRunningGameValue = 0; // What the game had before we set it, given back when it's turned off
 	static uint8_t* FocusLostFlag = nullptr; // The game's "paused because it lost focus"
 
 	bool KeepRunningHooks()
@@ -1069,13 +1182,16 @@ namespace MK12Hook::Hooks {
 		if (!pat)
 			return false;
 		KeepRunningFlag = (int32_t*)ProcessPatch::ResolveDestination(pat, 2, 7, 4);
-		KeepRunningGameValue = *KeepRunningFlag;
 
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pFocusLost, "FocusLost");
+		bool bStep = false;
 		if (pat)
+		{
 			FocusLostFlag = (uint8_t*)ProcessPatch::ResolveDestination(pat + 6, 2, 7, 4);
-		bool bStep = GamePatcher->ProxyByPattern(SettingsMgr->pFocusLost, "FocusLost", 13,
-			MK12Hook::Proxies::FocusLostStepProxy, &MK12::FocusLostStep, PATCH_CALL);
+			bStep = GamePatcher->ProxyCallAt(pat + 13, MK12Hook::Proxies::FocusLostStepProxy, &MK12::FocusLostStep, PATCH_CALL);
+			if (bStep)
+				printfSuccess("FocusLost Hooked");
+		}
 		bool bPause = FocusLostFlag && GamePatcher->ProxyByPattern(SettingsMgr->pFocusLostPause, "FocusLostPause", 8,
 			MK12Hook::Proxies::FocusLostPauseProxy, &MK12::FocusLostPause, PATCH_JUMP);
 		if (!bStep || !bPause)
@@ -1085,9 +1201,22 @@ namespace MK12Hook::Hooks {
 	}
 
 	void SetKeepRunning(bool bOn)
-	{ // Read each time the window loses focus
-		if (KeepRunningFlag)
-			*KeepRunningFlag = bOn ? 1 : KeepRunningGameValue;
+	{ // Read each time the window loses focus. Off leaves the game's own value alone, or gives back the one it had
+		if (!KeepRunningFlag)
+			return;
+		if (bOn)
+		{
+			if (!bKeepRunningForced)
+				KeepRunningGameValue = *KeepRunningFlag;
+			bKeepRunningForced = true;
+			*KeepRunningFlag = 1;
+		}
+		else if (bKeepRunningForced)
+		{
+			bKeepRunningForced = false;
+			if (*KeepRunningFlag == 1) // Unless the game changed it since
+				*KeepRunningFlag = KeepRunningGameValue;
+		}
 	}
 }
 
@@ -1113,8 +1242,10 @@ namespace MK12Hook::Proxies {
 
 namespace MK12Hook::Hooks {
 
+	constexpr int FAST_BOOT_FULL = 2; // Fast boot's modes: off, splash, full
+
 	bool FastBootHooks()
-	{ // The three waits of the logo and legal screens
+	{ // The three waits of the logo and legal screens, and in FULL the studio logos and intro movies
 		printf("\n==FastBootHooks==\n");
 		int Hooked = 0;
 		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootWaitFirst, "BootWaitFirst", 3,
@@ -1123,11 +1254,51 @@ namespace MK12Hook::Hooks {
 			MK12Hook::Proxies::BootScreenWaitProxy, &MK12::BootScreenWait, PATCH_CALL);
 		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootWaitThird, "BootWaitThird", 5,
 			MK12Hook::Proxies::BootScreenWaitProxy, &MK12::BootScreenWait, PATCH_CALL);
+		int Wanted = 3;
+		if (Features::StartupMode(Features::Id::FastBoot) == FAST_BOOT_FULL)
+		{
+			Wanted += 2;
+			Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootStudioLogos, "BootStudioLogos", 38,
+				MK12Hook::Proxies::StudioLogosProxy, &MK12::PlayMovie, PATCH_CALL);
+			Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootMovieSkip, "BootMovieSkip", 44,
+				MK12Hook::Proxies::SkipBootMovieProxy, &MK12::CommandLineParam, PATCH_CALL);
+		}
 		if (Hooked)
-			printfSuccess("Fast Boot On (%d/3)", Hooked);
+			printfSuccess("Fast Boot On (%d/%d)", Hooked, Wanted);
 		else
 			printfError("Fast Boot not working!");
 		return Hooked > 0;
+	}
+
+	bool FloydFightHooks()
+	{ // Floyd's AI level as his fight is built, and the game's retry limit (read when a match ends and in the pause menu)
+		printf("\n==FloydFightHooks==\n");
+		int Hooked = GamePatcher->ProxyByPattern(SettingsMgr->pFloydLevel, "FloydLevel", 11,
+			MK12Hook::Proxies::FloydSetLevelProxy, &MK12::FloydSetLevel, PATCH_CALL);
+		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pFloydLevelSession, "FloydLevelSession", 11,
+			MK12Hook::Proxies::FloydSetLevelProxy, &MK12::FloydSetLevel, PATCH_CALL);
+		if (Hooked < 2)
+		{
+			printfError("Floyd Fight: Floyd's level hooks not found");
+			return false;
+		}
+
+		// The secret fight data's vtable, its slot 7 returns the retry limit: mov eax, [limit]; ret
+		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pFloydRetries, "FloydRetries");
+		uint8_t* Getter = nullptr;
+		if (pat)
+		{
+			void** VTable = (void**)ProcessPatch::ResolveDestination(pat + 0x16, 3, 7, 4);
+			Getter = VTable ? (uint8_t*)VTable[7] : nullptr;
+		}
+		if (!Getter || Getter[0] != 0x8B || Getter[1] != 0x05 || Getter[6] != 0xC3)
+		{
+			printfError("Floyd Fight: the retry limit wasn't found");
+			return false;
+		}
+		FloydFight::SetRetryLimit((uint32_t*)ProcessPatch::ResolveDestination((uint64_t)Getter, 2, 6, 4));
+		printfSuccess("Floyd Fight On");
+		return true;
 	}
 
 	bool AnnouncerHooks()
