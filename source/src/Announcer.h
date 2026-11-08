@@ -4,9 +4,9 @@
 
 namespace MK12 { class FString; }
 
-// The announcer voice, picked in MODS: GAME (the player's own setting), AUTO (the announcer of the first human
-// player's fighter, when there is one) or a fixed announcer. Applied as fights start and as the main menu loads,
-// so menus use it too. Never touched online. Game thread only
+// The announcer voice, picked in MODS: GAME (the player's own setting), AUTO (in fights, the announcer of the first human
+// player's fighter, or the player's own setting for a fighter without one) or a fixed announcer, menus included.
+// Never touched online. Game thread only
 namespace Announcer {
 	struct Option {
 		const wchar_t*	Label;
