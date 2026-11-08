@@ -5,64 +5,53 @@
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/D1D219Y0XH)
 
 ### Formerly ASIMK12
-MK12 TTH is a DLL hook mod for Mortal Kombat 1. It patches game functions at runtime using pattern scanning, allowing you to apply mods without modifying the game executable or using Cheat Engine.
+MK12TTH is a hook mod for Mortal Kombat 1. It patches game functions at runtime using pattern scanning, so mods load without modifying the game executable or using Cheat Engine. Everything is set from inside the game.
 
 ### Features
-- **Anti-Cheat Bypass**: Patches Pak, Chunk, and TOC signature checks to allow loading modded `.pak`, `.utoc`, and `.ucas` files.
-- **FName/FString Hooking**: Hooks Unreal Engine's internal FName-to-string conversion for asset swapping.
-- **Announcer Swap**: Swap in-game announcer voices via INI configuration.
-- **String Swap**: Swap arbitrary asset paths using a `string_swaps.txt` file.
-- **Server Proxy**: Redirect game server endpoints to a custom/MITM server.
-- **Floyd Tracking**: Extract and display secret fight (Floyd) challenge data including challenge IDs and conditions.
-- **Profile Info**: Capture player profile identifiers (Platform, PlatformId, SaveKey, HydraId, WBId).
-- **MK1Hook Plugin**: Integrates as an EHP plugin for [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook) with ImGui tab support.
+- **In-game settings**: **MODS** in the main menu, **MK12TTH** in Settings, and **MOD SETTINGS** in the pause menu during fights. Nothing to edit by hand.
+- **Pak mods**: put mods in `Content\Mods`, one folder per mod. Turn each mod, pak or folder on and off, see which mods override which, and give mods their own engine settings. See the [Modding Guide](ModdingGuide.md).
+- **Announcer**: the game's own, your fighter's announcer in fights (AUTO), or any announcer.
+- **Floyd**: your 10 challenges, encounters and wins, the Floyd Tower schedule and an alert when it shows up.
+- **Floyd fight**: set his difficulty level and your retries, spawn the Floyd Tower now, or summon Floyd.
+- **Profile**: your platform, platform ID, save key, MK1 and WB IDs, platform ticket and access token, with COPY.
+- **Quality of life**: keep running in the background, fast boot, attract mode delay.
+- **String swap**: swap game names using `string_swaps.txt`.
+- **Private server**: send the game's server traffic to your own server (see the `[Server]` section of the ini).
+- **MK1Hook plugin**: loads as a plugin for [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook), with its own overlay tab showing the same pages as MODS.
 
 ### How to Use
 1. Download the latest release from the [Releases Page](https://github.com/thethiny/MK12TTH/releases).
-2. Extract the zip into your game folder: `MK1Folder/MK12/Binaries/Win64/` (next to `SDL2.dll`).
-3. Edit `MK12TTH.ini` to configure which features to enable and set the appropriate byte patterns.
-4. When a game updates, you may need to update the patterns in the `[Patterns]` section.
+2. Extract the zip into `MK1Folder/MK12/Binaries/Win64/` (next to `MK12.exe`).
+3. Start the game. Open **MODS** from the main menu, or **Settings → MK12TTH**, to set everything up.
+4. Put pak mods in `MK1Folder/MK12/Content/Mods/` (see the [Modding Guide](ModdingGuide.md)).
 
 The zip contains:
-- `MK12TTH.ehp` - Main hook DLL - Compatible with MK1Hook
-- `MK12TTH.asi` - ASI loader (loads the EHP automatically when MK1Hook is missing)
-- `MK12TTH.ini` - Configuration file
-- `dsound.dll` - Proxy loader from MK1Hook
+- `MK12TTH.ehp`: the mod, loaded by MK1Hook or by the ASI loader
+- `MK12TTH.asi`: loads the `.ehp` when MK1Hook isn't installed
+- `MK12TTH.ini`: startup switches and byte patterns
+- `dsound.dll`: the ASI loader
 
-### Loading Modded Files
-Create the following folder structure inside `MK1Folder/MK12/Content/Paks/`:
+Your in-game choices are saved in `MK12TTH_State.ini` next to the mod. When the game updates and a feature stops working, its patterns in `MK12TTH.ini` may need updating; the menus show which features aren't running and why.
 
-```
-Paks/
-├── global.ucas
-├── global.utoc
-├── pakchunk91-ucas/    ← Non-audio mods (textures, models, .ucas/.utoc files)
-├── pakchunk92-og/      ← Original game files (required for some mods to reference)
-└── pakchunk93-pak/     ← Audio mods (.pak files)
-```
-
-- Place non-audio mods (textures, models) in `pakchunk91-ucas/`.
-- Place original game files in `pakchunk92-og/`.
-- Place audio mods (.pak files) in `pakchunk93-pak/`.
-- Keep `global.ucas` and `global.utoc` directly in `Paks/`, not inside any subfolder.
-
-This is the most stable way to get mods working consistently.
+**Turn mods off before playing online.**
 
 ### MK1Hook Compatibility
-This mod is compatible with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook). When MK1Hook is detected, MK12TTH loads as a plugin with an ImGui tab. If using both together, use MK1Hook's `dsound.dll` instead of the one provided.
+MK12TTH works with [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook). When MK1Hook is installed, MK12TTH loads as its plugin and adds an MK12TTH tab to its overlay. If you use both, keep MK1Hook's `dsound.dll` instead of the one in this zip.
 
 ### INI Configuration
+The [sample ini](source/sample.ini) lists every startup switch and pattern. A missing key takes the value shown there. Most players never need to open it: the same switches are in **Settings → MK12TTH**.
 
-You can find the [sample ini file](source/sample.ini) in this repo.
-
-### Developer Guide
-See the [Memory Patch Utility Guide](MemoryPatchUtilityGuide.md) for detailed usage examples of the hooking and patching API.
+### Guides
+- [Modding Guide](ModdingGuide.md): where mods go, load order, turning them on and off, `description.txt`, engine settings (`Engine.ini`) and string swaps.
+- [Developer Guide](DeveloperGuide.md): adding a feature, from its pattern and hook to its switch in the ini, its rows in Settings, MODS and the pause menu, and the overlay.
+- [Memory Patch Utility Guide](MemoryPatchUtilityGuide.md): the hooking and patching API, with assembly examples.
 
 ### Building
-Requires Visual Studio 2019 (v142 toolset) or VS2022 with v142 installed:
+Requires Visual Studio 2022 with the v142 toolset installed (or Visual Studio 2019):
 ```
 msbuild ASIMK12.sln /p:Configuration=Release /p:Platform=x64
 ```
+The build outputs `MK12TTH.ehp` and `MK12TTH.asi` in `out/Release/Binaries/`.
 
 ### Download
 [Download Latest](https://github.com/thethiny/MK12TTH/releases/latest)
