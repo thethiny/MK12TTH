@@ -3,6 +3,10 @@
 #include "ModSettings.h"
 #include "GameToast.h"
 #include "PakMods.h"
+#include "GameMessageBox.h"
+#include "StateFile.h"
+#include "Changelog.h"
+#include "../IniReader.h"
 #include <algorithm>
 #include "mk12.h"
 #include <cstring>
@@ -72,7 +76,10 @@ namespace ModMenu {
 		Out.Count = Count;
 	}
 
-	// Once per session, the first time the main menu is built: which version runs and how many mods loaded
+	constexpr const char* LAST_VERSION_KEY = "szLastVersion"; // [FirstRun] in the state file
+
+	// Once per session, the first time the main menu is built: which version runs and how many mods loaded. A new
+	// version (or a first run) offers what's new on ACCEPT
 	static void AnnounceLoaded()
 	{
 		static bool bAnnounced = false;
@@ -82,7 +89,27 @@ namespace ModMenu {
 
 		const auto& Mods = PakMods::List();
 		size_t Loaded = std::count_if(Mods.begin(), Mods.end(), [](const PakMods::Mod& mod) { return mod.bEnabled; });
-		GameToast::Show(L"MK12TTH " + ModSettings::ModVersion(), L"Loaded mods " + std::to_wstring(Loaded) + L"/" + std::to_wstring(Mods.size()));
+		std::wstring Title = L"MK12TTH " + ModSettings::ModVersion();
+		std::wstring ModsText = L"Loaded mods " + std::to_wstring(Loaded) + L"/" + std::to_wstring(Mods.size());
+
+		CIniReader State((char*)StateFile::FILE_NAME);
+		char* Last = State.ReadString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, "");
+		std::string Version;
+		for (wchar_t c : ModSettings::ModVersion())
+			Version += (char)c; // Digits and dots
+		bool bNew = Version != Last;
+		bool bFirst = !*Last;
+		delete[] Last;
+		if (bNew)
+		{
+			State.WriteString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, (char*)Version.c_str());
+			Title += bFirst ? L" installed" : L" updated";
+		}
+		// Every start: ACCEPT is there whenever someone wants it, ignoring it costs nothing
+		GameToast::Show(Title, ModsText + L". ACCEPT shows what's new.", []
+		{
+			GameMessageBox::Confirm(Changelog::Current, nullptr, L"MK12TTH " + ModSettings::ModVersion());
+		});
 	}
 
 	static int FindSettings(MK12::FSettingsTab* Tabs, int32_t Count)

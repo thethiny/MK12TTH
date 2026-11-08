@@ -12,6 +12,7 @@
 #include "src/StateFile.h"
 #include "mk12sdk/sdk.h"
 #include <tlhelp32.h>
+#include <string>
 #include <VersionHelpers.h>
 
 constexpr const char * CURRENT_HOOK_VERSION = "1.0.0";
@@ -260,6 +261,14 @@ char* GetVersionedHookName()
 	return tabText;
 }
 
+// Text from mods and the game for the overlay: a lone % could be read as a format code, so it's doubled
+static std::string OverlaySafe(std::string Text)
+{
+	for (size_t At = Text.find('%'); At != std::string::npos; At = Text.find('%', At + 2))
+		Text.insert(At, 1, '%');
+	return Text;
+}
+
 void MK12HookPlugin::TabFunction()
 {
 	if (!MK12HOOKSDK::IsOK())
@@ -305,13 +314,73 @@ void MK12HookPlugin::TabFunction()
 
 	if (MK12HOOKSDK::ImGui_CollapsingHeader("Features"))
 	{
+		// How each feature started, the switches are in LIVE FEATURES below and in Settings, MK12TTH
 		for (int i = 0; i < (int)Features::Id::Count; i++)
 		{
 			Features::Id Which = (Features::Id)i;
-			char Label[128];
-			snprintf(Label, sizeof(Label), "%ls", Features::Get(Which).Title);
-			bool bActive = Features::IsActive(Which); // Read-only copy
-			MK12HOOKSDK::ImGui_Checkbox(Label, &bActive);
+			const char* State = "not set up";
+			switch (Features::GetState(Which))
+			{
+			case Features::State::Installed:	State = Features::IsActive(Which) ? "on" : "switched off"; break;
+			case Features::State::Disabled:		State = "off in Settings, MK12TTH"; break;
+			case Features::State::Failed:		State = "couldn't be set up"; break;
+			case Features::State::Blocked:		State = "needs another feature"; break;
+			default: break;
+			}
+			char Line[192];
+			snprintf(Line, sizeof(Line), "%ls: %s", Features::Get(Which).Title, State);
+			MK12HOOKSDK::ImGui_Text(Line);
+		}
+	}
+
+	// The same pages and rows as MODS in the main menu, changes apply the same way
+	if (ModSettings::IsAvailable())
+	{
+		for (const ModSettings::OverlayPage& Page : ModSettings::OverlayPages())
+		{
+			if (!MK12HOOKSDK::ImGui_CollapsingHeader(Page.Title.c_str()))
+				continue;
+			for (const ModSettings::OverlayRow& Row : Page.Rows)
+			{
+				char Label[256];
+				snprintf(Label, sizeof(Label), "%s##%p", Row.Title.c_str(), Row.Id);
+				if (Row.bCategory)
+				{
+					MK12HOOKSDK::ImGui_Separator();
+					MK12HOOKSDK::ImGui_Text(OverlaySafe(Row.Title).c_str());
+				}
+				else if (Row.bAction)
+				{
+					if (MK12HOOKSDK::ImGui_Button(Label))
+						ModSettings::OverlayPress(Row.Id);
+				}
+				else if (!Row.Choices.empty())
+				{
+					const char* Shown = Row.Picked >= 0 && Row.Picked < (int)Row.Choices.size() ? Row.Choices[Row.Picked].c_str() : "";
+					if (MK12HOOKSDK::ImGui_BeginCombo(Label, Shown))
+					{
+						for (int i = 0; i < (int)Row.Choices.size(); i++)
+						{
+							char Item[160];
+							snprintf(Item, sizeof(Item), "%s##%d", Row.Choices[i].c_str(), i);
+							if (MK12HOOKSDK::ImGui_Selectable(Item, i == Row.Picked) && i != Row.Picked)
+								ModSettings::OverlayPick(Row.Id, i);
+							if (i == Row.Picked)
+								MK12HOOKSDK::ImGui_SetItemDefaultFocus();
+						}
+						MK12HOOKSDK::ImGui_EndCombo();
+					}
+				}
+				else
+				{
+					std::string Line = Row.Title + ": " + Row.Value;
+					MK12HOOKSDK::ImGui_Text(OverlaySafe(Line).c_str());
+					// Read-only values: what's under the row's own description (lists, times, warnings)
+					size_t Rest = Row.Value.empty() ? std::string::npos : Row.Text.find("\n\n");
+					if (Rest != std::string::npos)
+						MK12HOOKSDK::ImGui_Text(OverlaySafe("    " + Row.Text.substr(Rest + 2)).c_str());
+				}
+			}
 		}
 	}
 
@@ -377,88 +446,6 @@ void MK12HookPlugin::TabFunction()
 		MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
 	}
 
-	if (Features::IsInstalled(Features::Id::FloydTracking))
-	{
-		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Challenges"))
-		{
-			char buffer[512];
-
-			snprintf(buffer, sizeof(buffer), "Profile Hash: %08X", HookMetadata::CurrentFloydInfo.UserProfileHash);
-			MK12HOOKSDK::ImGui_Text(buffer);
-
-			snprintf(buffer, sizeof(buffer), "Floyd Encounters: %d", (int32_t)HookMetadata::CurrentFloydInfo.FloydEncounters);
-			MK12HOOKSDK::ImGui_Text(buffer);
-
-			if (!HookMetadata::CurrentFloydInfo.Clues.empty())
-			{
-				std::vector<uint8_t> sortedClues = HookMetadata::CurrentFloydInfo.Clues;
-				std::sort(sortedClues.begin(), sortedClues.end());
-
-				buffer[0] = '\0'; // Clear buffer
-
-				strncat(buffer, "Challenges: ", sizeof(buffer) - strlen(buffer) - 1);
-
-				for (size_t i = 0; i < sortedClues.size(); ++i)
-				{
-					char temp[16]; // only need tiny buffer now
-					snprintf(temp, sizeof(temp), "%u ", sortedClues[i]);
-					strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
-				}
-
-				MK12HOOKSDK::ImGui_Text(buffer);
-			}
-			else
-			{
-				MK12HOOKSDK::ImGui_Text("No Floyd clues generated yet.");
-			}
-		}
-
-		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Tower"))
-		{
-			time_t Now = time(nullptr);
-			FloydTower::Window window;
-			FloydTower::Status status = FloydTower::Find(Now, HookMetadata::CurrentTacoInfo.UserProfileHash, SettingsMgr->bFloydTowerFromGame, window);
-			bool HasWindow = status == FloydTower::Status::Ready;
-
-			// Source picked by szFloydTowerMode
-			MK12HOOKSDK::ImGui_Text(SettingsMgr->bFloydTowerFromGame ? "Source: Game" : "Source: Calculated");
-			if (status == FloydTower::Status::NoSchedule)
-				MK12HOOKSDK::ImGui_Text(SettingsMgr->bFloydTowerFromGame ? "No schedule yet. Open Living Towers." : "No schedule yet. Beat Floyd once, then open Living Towers.");
-			else if (status == FloydTower::Status::NotUnlocked)
-				MK12HOOKSDK::ImGui_Text("Not in the game's schedule. Beat Floyd once to unlock it.");
-
-			if (HasWindow)
-			{
-				char buffer[128], When[32], Duration[32];
-
-				if (window.Start <= Now)
-				{
-					FloydTower::FormatLocalTime(window.End, When, sizeof(When));
-					FloydTower::FormatDuration(window.End - Now, Duration, sizeof(Duration));
-					snprintf(buffer, sizeof(buffer), "Up now! Ends in %s", Duration);
-					MK12HOOKSDK::ImGui_Text(buffer);
-					snprintf(buffer, sizeof(buffer), "Until %s", When);
-				}
-				else
-				{
-					FloydTower::FormatLocalTime(window.Start, When, sizeof(When));
-					FloydTower::FormatDuration(window.Start - Now, Duration, sizeof(Duration));
-					snprintf(buffer, sizeof(buffer), "Next in %s", Duration);
-					MK12HOOKSDK::ImGui_Text(buffer);
-					snprintf(buffer, sizeof(buffer), "At %s", When);
-				}
-				MK12HOOKSDK::ImGui_Text(buffer);
-
-				snprintf(buffer, sizeof(buffer), "Slot: %s", FloydTower::SlotName(window.Slot));
-				MK12HOOKSDK::ImGui_Text(buffer);
-			}
-		}
-	}
-	else
-	{
-		MK12HOOKSDK::ImGui_Text("Floyd Tracking is not enabled");
-	}
-
 	if (Features::IsInstalled(Features::Id::ProfileGetter))
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("Profile Information"))
@@ -481,11 +468,10 @@ void MK12HookPlugin::TabFunction()
 			{
 				DisplayWCharField("HydraId", HookMetadata::UserProfileInfo.HydraId);
 				DisplayWCharField("WBId", HookMetadata::UserProfileInfo.WBId);
-				DisplayWCharField("OfflineProfileId", HookMetadata::UserProfileInfo.OfflineProfileId);
 			}
 			else
 			{
-				MK12HOOKSDK::ImGui_Text("HydraId, WBId and OfflineProfileId need Profile Getter or Floyd Tracking");
+				MK12HOOKSDK::ImGui_Text("HydraId and WBId need Profile Getter or Floyd Tracking");
 			}
 		}
 	}

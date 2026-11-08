@@ -91,8 +91,6 @@ namespace OnlineIds {
 		auto& Info = HookMetadata::UserProfileInfo;
 		std::vector<std::wstring> Parts = Split(Text, L'/');
 		std::vector<std::wstring> Platform = Split(Parts[0], L'|');
-		if (Platform.size() >= 2)
-			Keep(Info.OfflineProfileId, Platform[1], "OfflineProfileId");
 		// The platform's own account is there even when the game couldn't sign in online
 		size_t Colon = Platform[0].find(L':');
 		if (Colon != std::wstring::npos)
@@ -100,6 +98,9 @@ namespace OnlineIds {
 			Keep(Info.Platform, Platform[0].substr(0, Colon), "Platform");
 			Keep(Info.PlatformId, Platform[0].substr(Colon + 1), "PlatformId");
 		}
+		// The offline profile id after "|" is the same account, used when the platform part has no id
+		if (Platform.size() >= 2)
+			Keep(Info.PlatformId, Platform[1], "PlatformId");
 		if (Parts.size() >= 2)
 			Keep(Info.HydraId, Parts[1], "HydraId");
 		if (Parts.size() >= 3)
@@ -170,6 +171,14 @@ namespace OnlineIds {
 				return true;
 		}
 		return false;
+	}
+
+	void* LocalProfile()
+	{
+		if (!GetLocalProfiles)
+			return nullptr;
+		MK12::TArray<void*>* Profiles = GetLocalProfiles();
+		return Profiles && Profiles->ElementsCount > 0 ? Profiles->Data[0] : nullptr;
 	}
 
 	bool IsOnline()
