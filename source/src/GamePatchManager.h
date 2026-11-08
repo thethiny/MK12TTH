@@ -64,8 +64,8 @@ public:
 
 	/** Searches for a pattern with caching, validation, and error logging.
 	 *  Checks cache first, scans on miss, saves result, logs errors on failure.
-	 *  @param pattern  Pattern string with ? wildcards
-	 *  @param name     Hook name (used as cache key and in log messages)
+	 *  @param pattern  Pattern string with ? wildcards (also the cache key)
+	 *  @param name     Hook name, for log messages
 	 *  @param cache    true = use cache, false = always scan (for dynamic code)
 	 *  @return The pattern address, or 0 on failure */
 	uint64_t ResolvePattern(const std::string& pattern, const char* name, bool cache = true)
@@ -80,7 +80,7 @@ public:
 
 		if (cache)
 		{
-			uint64_t cached = CachedPatternsMgr->Get(name);
+			uint64_t cached = CachedPatternsMgr->Get(pattern);
 			if (cached)
 				result = (uint64_t*)cached;
 		}
@@ -89,7 +89,7 @@ public:
 		{
 			result = SearchPattern(pattern);
 			if (result && cache)
-				CachedPatternsMgr->Set(name, (uint64_t)result);
+				CachedPatternsMgr->Set(pattern, (uint64_t)result);
 		}
 
 		if (!result)

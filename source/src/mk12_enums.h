@@ -629,6 +629,14 @@ namespace MK12 {
 
 
 	namespace EnumMaps {
+		// Lookup that never inserts: these maps are read from game threads at the same time
+		template <typename Map, typename Key>
+		const char* Find(const Map& Names, const Key& Value)
+		{
+			auto It = Names.find(Value);
+			return It != Names.end() ? It->second.c_str() : "Unknown";
+		}
+
 		extern std::unordered_map<Enums::FGStatID, std::string> FGStatIDMap;
 		extern std::unordered_map<int, std::string> FloydChallengeMap;
         extern std::unordered_map<Enums::EManualMoveTraceEvent, std::string> EManualMoveTraceEventMap;
