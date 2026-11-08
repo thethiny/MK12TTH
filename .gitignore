@@ -8,3 +8,5 @@ desktop.ini
 out
 MK12TTH_v*
 x64
+internal/
+.vscode/settings.json

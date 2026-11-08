@@ -63,6 +63,51 @@
     <ClCompile Include="source\src\FloydTower.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
+    <ClCompile Include="source\src\GameMessageBox.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\GameState.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\ModSettings.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\ModMenu.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\PakMods.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\EngineConfig.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\Announcer.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\AttractMode.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\FloydTowerAlert.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\Features.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\StateFile.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\PakContents.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\OnlineIds.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\FeatureList.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\GameToast.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
     <ClCompile Include="source\mk12sdk\sdk.cpp">
       <Filter>MK12SDK</Filter>
     </ClCompile>
@@ -114,6 +159,48 @@
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\FloydTower.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\GameMessageBox.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\GameState.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\ModSettings.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\ModMenu.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\PakMods.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\EngineConfig.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\Announcer.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\AttractMode.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\FloydTowerAlert.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\Features.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\StateFile.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\PakContents.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\OnlineIds.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\GameToast.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\mk12sdk\sdk.h">
