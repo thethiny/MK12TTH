@@ -4,7 +4,7 @@
 #include <vector>
 
 // Floyd (Taco) Tower schedule. Game mode reads the game's own windows, Calculated mode
-// redoes the game's math (PC sub_142134440, FloydBackend src/utils/taco.py) from the profile hash
+// redoes the game's math from the profile hash
 namespace FloydTower {
 	struct Window {
 		time_t	Start	= 0;	// Unix seconds (UTC)
@@ -25,6 +25,19 @@ namespace FloydTower {
 	bool		HasGameWindows();
 	bool		GetGameWindow(time_t Now, Window& Out);
 	void		LogGameSchedule();
+
+	// The window to show right now, from the game's schedule or worked out from the profile hash
+	enum class Status {
+		Ready,			// Out is the current window if it's up, else the next one
+		NoSchedule,		// Nothing read yet: Living Towers wasn't opened, or Floyd wasn't beaten (Calculated)
+		NotUnlocked,	// The game's schedule has no Floyd Tower: Floyd wasn't beaten yet
+	};
+	Status		Find(time_t Now, uint32_t ProfileHash, bool bFromGame, Window& Out);
+
+	// Floyd's challenges, the same generator shuffles all of them. Seed: the profile hash high, Floyd encounters low
+	constexpr int CHALLENGE_COUNT = 37;
+	constexpr int PLAYER_CHALLENGES = 10;
+	std::vector<uint8_t> FloydChallenges(uint64_t Seed); // The player's, numbered from 1 like the Floyd tracker
 
 	// Shared
 	bool		PickWindow(const std::vector<Window>& Windows, time_t Now, Window& Out);

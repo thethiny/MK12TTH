@@ -10,12 +10,12 @@ namespace FloydTower {
 	constexpr int64_t	UNIX_EPOCH_TICKS	= 621355968000000000;	// FDateTime ticks at 1970-01-01
 	constexpr time_t	SECONDS_PER_DAY		= 86400;
 
-	// Baked in MK12.exe @ 0x1478250E0, 1 tower per day so only the first shuffled hour is used
+	// Constants baked in the game, 1 tower per day so only the first shuffled hour is used
 	constexpr int		MIN_SLOT			= 4;
 	constexpr int		SLOT_COUNT			= 6;
 	constexpr time_t	DURATION			= 3600;
 
-	// unk_147BD9C50, spline number per slot
+	// Spline number per slot
 	static const int SlotSplines[SLOT_COUNT] = { 1, 2, 4, 5, 7, 8 };
 	static const char* SlotNames[SLOT_COUNT] = {
 		"C_1", "C_2", "C_4", "C_5",
@@ -26,7 +26,7 @@ namespace FloydTower {
 	static std::vector<Window> GameWindows;
 	static bool bGameWindowsReceived = false;
 
-	// ShuffleUsingSeed (0x141FD5C80)
+	// The game's ShuffleUsingSeed (PCG32)
 	struct Pcg32 {
 		uint64_t State;
 
@@ -50,6 +50,21 @@ namespace FloydTower {
 			}
 		}
 	};
+
+	std::vector<uint8_t> FloydChallenges(uint64_t Seed)
+	{
+		Pcg32 Rng(~Seed);
+		uint8_t Order[CHALLENGE_COUNT];
+		for (int i = 0; i < CHALLENGE_COUNT; i++)
+			Order[i] = (uint8_t)i;
+		for (int i = 0; i < CHALLENGE_COUNT; i++)
+			std::swap(Order[i], Order[i + Rng.Bounded(CHALLENGE_COUNT - i)]);
+
+		std::vector<uint8_t> Challenges;
+		for (int i = 0; i < PLAYER_CHALLENGES; i++)
+			Challenges.push_back(Order[i] + 1);
+		return Challenges;
+	}
 
 	static Window DayWindow(uint32_t ProfileHash, time_t DayStart)
 	{
@@ -125,6 +140,20 @@ namespace FloydTower {
 	bool GetGameWindow(time_t Now, Window& Out)
 	{
 		return PickWindow(GameWindows, Now, Out);
+	}
+
+	Status Find(time_t Now, uint32_t ProfileHash, bool bFromGame, Window& Out)
+	{
+		if (!bFromGame)
+		{
+			if (!ProfileHash)
+				return Status::NoSchedule; // The game only hashes once Floyd was beaten
+			Out = GetWindow(ProfileHash, Now);
+			return Status::Ready;
+		}
+		if (!HasGameWindows())
+			return Status::NoSchedule;
+		return GetGameWindow(Now, Out) ? Status::Ready : Status::NotUnlocked;
 	}
 
 	void LogGameSchedule()
