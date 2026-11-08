@@ -58,40 +58,22 @@ public:
 
 
 	// Toggles
-	std::string szModLoaderMode;
-	bool bLegacyModLoader; // szModLoaderMode is Legacy, otherwise Unsigned
-	bool bDisableSignatureCheck;
-	bool bDisableSignatureWarn;
-	bool bDisableTOCSigCheck;
-	bool bDisableChunkSigCheck;
-	bool bDisablePakTOCCheck;
-	bool bPatchCurl;
-	bool bFNameToStrHook;
-	bool bUNameGetter;
-	bool bGetFightMetadata;
-	bool bSerializeSecretFights;
-	bool bEnableStringSwap;
-	bool bEnableFloydTracking;
 	std::string szFloydTowerMode;
 	bool bFloydTowerFromGame; // szFloydTowerMode is Game, otherwise Calculated
-	bool bEnableProfileGetter;
-	bool bEnableVersionInfo;
+	std::string szAttractModeDelay; // Game, Never or seconds
 
 	// Addresses
 
 	// Patterns
-	std::string pSigCheck;
-	std::string pSigWarn;
-	std::string pTocCheck;
 	std::string pPakTocCheck;
-	std::string pChunkSigCheck;
-	std::string pChunkSigCheckFunc;
 	std::string pUNameObjGetPat;
 	std::string pFPathLoadPat;
 	std::string pFPath2LoadPat;
 	std::string pFPathCLoadPat;
 	std::string pEndpointLoader;
 	std::string pProfileGetter;
+	std::string pOnlineSubsystem;
+	std::string pOnlineCheck;
 	// Curl
 	std::string pCurlSetOpt;
 	std::string pCurlMultiAddHandle;
@@ -108,6 +90,68 @@ public:
 	std::string pGetFloydHashInputString2;
 	std::string pGetTacoHashInputString;
 	std::string pGetTacoSchedule;
+	// Message Box
+	std::string pTextFromString;
+	std::string pFindText;
+	std::string pMessageBoxConstruct;
+	std::string pMessageBoxSetTitle;
+	std::string pMessageBoxAddButton;
+	std::string pMessageBoxShow;
+	std::string pMessageBoxClose;
+	std::string pMessageBoxDestruct;
+	std::string pPlayerInputPressed;
+	std::string pPlayerInputUpdate;
+	std::string pToastDriverCall;
+	std::string pToastEnqueue;
+	std::string pLocalPlayerInfo;
+	std::string pMessageBoxCallback;
+	// Game State
+	std::string pMainLoop;
+	std::string pFrameTick;
+	std::string pOnlineModeCheck;
+	std::string pModeManagerGetter;
+	// Settings Screen
+	std::string pSettingsBuildTabs;
+	std::string pSettingsCopyTabs;
+	std::string pMenuEntryConstruct;
+	std::string pSettingsTabConstruct;
+	std::string pSettingsTabDestruct;
+	std::string pGrowArray;
+	std::string pStringReserve;
+	std::string pFindTextPlatform;
+	std::string pMemoryFree;
+	std::string pMainMenuCopyTabs;
+	std::string pSettingsVersionText;
+	std::string pSettingsRun;
+	// Paks
+	std::string pPakMount;
+	std::string pConfigInit;
+	std::string pConfigGlobals;
+	std::string pConfigSetString;
+	std::string pConfigGetString;
+	std::string pConfigFindFile;
+	std::string pLoadFileToString;
+	std::string pAttractModeIdle;
+	std::string pAttractModeLimit;
+	std::string pKeepRunning;
+	std::string pFocusLost;
+	std::string pFocusLostPause;
+	std::string pBootWaitFirst;
+	std::string pBootWaitSecond;
+	std::string pBootWaitThird;
+	std::string pGetStatsContainer;
+	std::string pGetProfileStat;
+	std::string pGetProfileStatBits;
+	std::string pFloydSeed;
+	std::string pAnnouncerReroll;
+	std::string pAnnouncerMenuApply;
+	std::string pApplyAnnouncer;
+	std::string pEngineNameConstruct;
+	std::string pGetCurrentMission;
+	std::string pGetTeam;
+	std::string pGetTeamDefinitions;
+	std::string pTowersSetup;
+	std::string pGetFloydVictories;
 
 
 	// Menu Section
@@ -129,20 +173,6 @@ public:
 
 	//Private Server
 	std::string szServerUrl;
-	bool bEnableServerProxy;
-
-	// Announcer Mod
-	struct {
-		bool bEnable;
-		std::string szDefault;
-		std::string szLiuKang;
-		std::string szGeras;
-		std::string szJohnnyCage;
-		std::string szShangTsung;
-		std::string szSindel;
-		std::string szSubZero;
-		std::string szOmniMan;
-	} AnnouncerSwap;
 
 };
 
@@ -174,9 +204,12 @@ public:
 	void Init(uint64_t Hash, const char* version, const char* name = "PatternsCache");
 	void Flush();
 
-	void Set(const std::string& key, uint64_t value);
-	uint64_t Get(const std::string& key);
-	bool Has(const std::string& key);
+	// Keyed by the pattern itself (uppercase, single spaces, every wildcard as "?"): editing a pattern scans again,
+	// a cosmetic edit doesn't. Patterns found before this was keyed by hook name are scanned once more
+	static std::string Key(const std::string& pattern);
+	void Set(const std::string& pattern, uint64_t value);
+	uint64_t Get(const std::string& pattern);
+	bool Has(const std::string& pattern);
 
 	void EnableAutoFlush() { bAutoFlush = true; }
 	void DisableAutoFlush() { bAutoFlush = false; }

@@ -2,6 +2,18 @@
 #include "AGBinary.h"
 #include "GamePatchManager.h"
 #include "FloydTower.h"
+#include "GameState.h"
+#include "GameMessageBox.h"
+#include "GameToast.h"
+#include "ModSettings.h"
+#include "ModMenu.h"
+#include "PakMods.h"
+#include "Features.h"
+#include "Announcer.h"
+#include "EngineConfig.h"
+#include "FloydTowerAlert.h"
+#include "OnlineIds.h"
+#include "AttractMode.h"
 
 
 HookMetadata::ServerProxyMode		HookMetadata::eServerProxyMode = HookMetadata::PROXY_NONE;
@@ -17,7 +29,7 @@ HookMetadata::FloydCluesInfo		HookMetadata::CurrentFloydInfo;
 HookMetadata::TacoTowerInfo			HookMetadata::CurrentTacoInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
-bool HookMetadata::HasResponseCapture() { return ActiveModsMap["bCurlResponseCapture"]; }
+bool HookMetadata::HasResponseCapture() { auto It = ActiveModsMap.find("bCurlResponseCapture"); return It != ActiveModsMap.end() && It->second; }
 bool HookMetadata::CurlCaptureComplete()
 {
 	if (sUserKeys.PlatformTicket.empty()) return false;
@@ -33,70 +45,12 @@ namespace CurlOpt {
 
 namespace MK12Hook::Proxies {
 
-	void __fastcall ReadFNameToWStrId(MK12::FName& Name, char* dest)
-	{
-		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
-		{
-			printf("Proxy FNameToWStrId::Captured::");
-			Name.Print();
-		}
-
-		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
-
-		RegisterHacks::MoveToRBX(current_fname->GetSize());
-	}
-	void __fastcall ReadFNameToWStrNoId(MK12::FName& Name, char* dest)
-	{
-		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
-		{
-			printf("Proxy FNameToWStrNoId::Captured::");
-			Name.Print();
-		}
-
-		MK12::FName *current_fname = ReadFNameToWStr(Name, dest);
-
-		RegisterHacks::MoveToRBX((uint64_t)&current_fname->NameSize);
-	}
-
-	void __fastcall ReadFNameToWStrCommon(MK12::FName& Name, char* dest)
-	{
-		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bFName))
-		{
-			printf("Proxy FNameToWStrCommon::Captured::");
-			Name.Print();
-		}
-
-		MK12::FName* current_fname = ReadFNameToWStr(Name, dest);
-
-		RegisterHacks::MoveToRBX((uint64_t)&current_fname->NameSize); // Needs testing
-	}
-
-	MK12::FName* __fastcall ReadFNameToWStr(MK12::FName &Name, char* dest)
-	{
-		const char* name = Name.ToStr();
-		MK12::FName* swap = HookMetadata::FSwapTable.get(name);
-		if (swap == nullptr)
-		{
-			MK12::FNameToWStr(Name, dest);
-			return &Name;
-		}
-
-		if (SettingsMgr->ShouldLog(Log::Verbose))
-		{
-			printf("Swap To::");
-			swap->Print();
-		}
-		MK12::FNameToWStr(*swap, dest);
-
-		return swap;
-	}
-
 	wchar_t** __fastcall OverrideGameEndpoint(MK12::JSONEndpointValue obj, wchar_t** EndpointAddress)
 	{
 		static wchar_t* cachedServerUrl = nullptr;
 		static int cachedServerLen = 0;
 
-		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"] && !SettingsMgr->szServerUrl.empty())
+		if (Features::IsInstalled(Features::Id::PrivateServer) && !SettingsMgr->szServerUrl.empty())
 		{
 			if (!cachedServerUrl)
 			{
@@ -130,6 +84,8 @@ namespace MK12Hook::Proxies {
 
 	MK12::TArray<uint32_t>* __fastcall GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2)
 	{ // Use hash to create 10 challenges
+		if (!Features::IsActive(Features::Id::FloydTracking))
+			return MK12::GenerateFloydCluesFromHash(ArrayLocation, ShuffleSeed, unk, unk2);
 
 		if (SettingsMgr->ShouldLogFloyd())
 			printf("Floyd Shuffle Seed: %llX\n", (uint64_t)ShuffleSeed);
@@ -170,69 +126,14 @@ namespace MK12Hook::Proxies {
 
 	uint32_t __fastcall CustomCityHashProxy(wchar_t** StringToHash)
 	{ // Hash the floyd string
+		if (!Features::IsActive(Features::Id::FloydTracking))
+			return MK12::CustomCityHash(StringToHash);
+
 		if (StringToHash && *StringToHash) {
 			if (SettingsMgr->ShouldLogFloyd())
 				printf("StringToHash: %ls\n", *StringToHash); // %ls for wchar_t*
 
-			CPPython::string str(*StringToHash);
-			std::vector<CPPython::string> parts = str.split("/");
-
-			if (!parts.empty() && !HookMetadata::UserProfileInfo.OfflineProfileId)
-			{
-				std::vector<CPPython::string> pipeParts = parts[0].split("|");
-
-				if (pipeParts.size() >= 2)
-				{
-					delete[] HookMetadata::UserProfileInfo.OfflineProfileId;
-
-					size_t len = pipeParts[1].size() + 1;
-					HookMetadata::UserProfileInfo.OfflineProfileId = new wchar_t[len];
-					mbstowcs(HookMetadata::UserProfileInfo.OfflineProfileId, pipeParts[1].c_str(), len);
-
-					if (SettingsMgr->ShouldLogFloyd())
-						printf("OfflineProfileId extracted: %ls\n", HookMetadata::UserProfileInfo.OfflineProfileId);
-				}
-				else
-				{
-					if (SettingsMgr->ShouldLogFloyd())
-						printf("OfflineProfileId not found. Single User Profile only.\n");
-				}
-			}
-			if (parts.size() == 2 && !HookMetadata::UserProfileInfo.HydraId)
-			{
-				delete[] HookMetadata::UserProfileInfo.HydraId;
-
-				size_t len = parts[1].size() + 1;
-				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len];
-				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len);
-				if (SettingsMgr->ShouldLogFloyd())
-					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
-			}
-			else if (parts.size() >= 3 && !HookMetadata::UserProfileInfo.WBId)
-			{
-				delete[] HookMetadata::UserProfileInfo.HydraId;
-				delete[] HookMetadata::UserProfileInfo.WBId;
-
-				size_t len1 = parts[1].size() + 1;
-				size_t len2 = parts[2].size() + 1;
-
-				HookMetadata::UserProfileInfo.HydraId = new wchar_t[len1];
-				HookMetadata::UserProfileInfo.WBId = new wchar_t[len2];
-
-				mbstowcs(HookMetadata::UserProfileInfo.HydraId, parts[1].c_str(), len1);
-				mbstowcs(HookMetadata::UserProfileInfo.WBId, parts[2].c_str(), len2);
-
-				if (SettingsMgr->ShouldLogFloyd())
-				{
-					printf("HydraId extracted: %ls\n", HookMetadata::UserProfileInfo.HydraId);
-					printf("WBId extracted: %ls\n", HookMetadata::UserProfileInfo.WBId);
-				}
-
-			}
-			else {
-				if (SettingsMgr->ShouldLogFloyd())
-					printf("Offline Mode Floyd String Hash Detected!\n");
-			}
+			OnlineIds::Store(*StringToHash); // The same text the game hashes
 		}
 		else
 		{
@@ -249,6 +150,8 @@ namespace MK12Hook::Proxies {
 	uint32_t __fastcall TacoCityHashProxy(wchar_t** StringToHash)
 	{ // Hash the taco tower schedule string. Runs for today and yesterday on every schedule rebuild, so only print on change
 		uint32_t HashResult = MK12::CustomCityHash(StringToHash);
+		if (!Features::IsActive(Features::Id::FloydTracking))
+			return HashResult;
 
 		if (HashResult != HookMetadata::CurrentTacoInfo.UserProfileHash)
 		{
@@ -274,7 +177,7 @@ namespace MK12Hook::Proxies {
 	__int64 __fastcall TacoScheduleProxy(MK12::UTacoTowerSchedule* Schedule, int64_t NowTicks)
 	{ // Game's own Floyd Tower windows, read right after it rebuilds them. Runs often, so only log on change
 		__int64 Result = MK12::UpdateTacoSchedule(Schedule, NowTicks);
-		if (!Schedule)
+		if (!Schedule || !Features::IsActive(Features::Id::FloydTracking))
 			return Result;
 
 		std::vector<FloydTower::Window> Windows;
@@ -305,6 +208,125 @@ namespace MK12Hook::Proxies {
 		return Result;
 	}
 
+	bool __fastcall PlayerInputPressedProxy(void* Player, int32_t Input, MK12::FString* Id, uint32_t Flags)
+	{ // The game pauses the screen behind its own message boxes, ours don't, so the screen would take their presses
+		if (!GameMessageBox::IsTakingInput())
+			return MK12::PlayerInputPressed(Player, Input, Id, Flags);
+		if (!GameMessageBox::IsOwnButton(Id))
+			return false;
+		MK12::PlayerInputPressed(Player, Input, Id, Flags); // Keeps the button prompt, the press itself was already taken
+		return GameMessageBox::TakePress(Input);
+	}
+
+	void __fastcall PlayerInputUpdateProxy(MK12::FPlayerInput* Input, void* Sample)
+	{ // Right after the game samples a player's buttons, before any screen or box reads them
+		MK12::PlayerInputUpdate(Input, Sample);
+		if (!GameMessageBox::IsTakingInput())
+			ModSettings::OnInputUpdate(Input);
+		GameMessageBox::OnInputUpdate(Input);
+	}
+
+	__int64 __fastcall FrameTickProxy()
+	{ // Once per frame on the game thread, in menus, fights and loading
+		__int64 Result = MK12::FrameTick();
+		GameState::Tick();
+		GameMessageBox::Tick();
+		GameToast::Tick();
+		FloydTowerAlert::Tick();
+		OnlineIds::Tick();
+		ModSettings::Tick();
+		return Result;
+	}
+
+	__int64 __fastcall SettingsBuildTabsProxy(MK12::USettingsScreen* Screen, bool bOnline)
+	{ // The main menu settings just added their pages, ours goes last so its tab lines up
+		ModSettings::OnPagesBuilt(Screen);
+		return MK12::SettingsBuildTabs(Screen, bOnline);
+	}
+
+	void __fastcall SettingsCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB)
+	{ // Only the settings tab bar comes through here
+		ModSettings::CopyTabs(Out, Tabs, Count, ExtraA, ExtraB);
+	}
+
+	bool __fastcall AttractModeIdleProxy(void* ModeManager, void* ModeClass)
+	{ // Asked every frame by the main menu's idle timer, false restarts it
+		if (AttractMode::ShouldRestartTimer())
+			return false;
+		return MK12::IsModeOnTop(ModeManager, ModeClass);
+	}
+
+	bool __fastcall BootScreenWaitProxy(int32_t FirstBootFrames, int32_t Frames, int32_t Counter)
+	{ // The logo and legal screens ask it whether they waited long enough
+		return true;
+	}
+
+	void __fastcall ConfigInitProxy()
+	{ // The engine just loaded its ini files, nothing read them yet
+		MK12::InitializeConfigSystem();
+		EngineConfig::Inject();
+	}
+
+	__int64 __fastcall AnnouncerRerollProxy(void* AudioSettings)
+	{ // Ladder fights re-roll a random announcer as they're set up
+		if (Announcer::OnLadderReroll())
+			return 0;
+		return MK12::AnnouncerReroll(AudioSettings);
+	}
+
+	__int64 __fastcall AnnouncerMenuApplyProxy(void* AudioSettings, MK12::FString* ItemId)
+	{ // The main menu applies the player's own announcer setting as it loads
+		__int64 Result = MK12::AnnouncerSetter(AudioSettings, ItemId);
+		Announcer::OnMenuApplied(AudioSettings);
+		return Result;
+	}
+
+	char __fastcall TowersSetupProxy(void* TacoSchedule)
+	{ // Living Towers loaded, the towers and their schedule are set up by the game
+		char Result = MK12::TowersSetup(TacoSchedule);
+		FloydTowerAlert::OnTowersEntered(TacoSchedule);
+		return Result;
+	}
+
+	void __fastcall SettingsRunProxy(void* Screen, void* Player, int64_t Mode)
+	{ // Every settings screen, from opening until the player backs out
+		ModSettings::OnScreenOpened();
+		MK12::SettingsRun(Screen, Player, Mode);
+		ModSettings::OnScreenClosed();
+	}
+
+	MK12::FString* __fastcall SettingsVersionTextProxy()
+	{ // The settings screen's bottom left version, ours in our menu
+		return ModSettings::VersionText(MK12::SettingsVersionText());
+	}
+
+	void __fastcall MainMenuCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB)
+	{ // Only the main menu's entry list comes through here
+		ModMenu::CopyMainMenuTabs(Out, Tabs, Count, ExtraA, ExtraB);
+	}
+
+	__int64 __fastcall PakMountProxy(void* PakPlatformFile, const wchar_t* PakFilename, uint32_t PakOrder, const wchar_t* MountPath, bool bLoadIndex)
+	{ // Every pak and IoStore container the game mounts, except global. A mod turned off isn't mounted
+		PakMods::MountOurs(PakPlatformFile, MK12::PakMount);
+		if (PakMods::IsDisabled(PakFilename))
+			return false;
+		return MK12::PakMount(PakPlatformFile, PakFilename, PakOrder, MountPath, bLoadIndex);
+	}
+
+	MK12::FText* __fastcall FindTextProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key)
+	{ // Text of our settings rows, everything else is the game's
+		if (ModSettings::FindText(Out, Table, Key))
+			return Out;
+		return MK12::FindText(Out, Table, Key);
+	}
+
+	MK12::FText* __fastcall FindTextPlatformProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key)
+	{ // Descriptions and the page description come through here
+		if (ModSettings::FindText(Out, Table, Key))
+			return Out;
+		return MK12::FindTextPlatform(Out, Table, Key);
+	}
+
 	// Stand in for FCoreDelegates::GetPakSigningKeysDelegate(). Every caller checks the delegate's
 	// allocation and size before using it, so all zeros reads as unbound: no .sig loading, no signed
 	// pak readers, no chunk CRC checks and no IoStore TOC signatures, same as a build without keys
@@ -325,6 +347,9 @@ namespace MK12Hook::Proxies {
 		wchar_t* arg2 = va_arg(args, wchar_t*);
 
 		va_end(args);
+
+		if (!Features::IsActive(Features::Id::ProfileGetter))
+			return MK12::MKWScanf(ResultString, Format, arg0, arg1, arg2);
 
 		auto SafeStringCopy = [](const wchar_t* src) -> wchar_t* {
 			if (!src) return nullptr;
@@ -373,8 +398,8 @@ namespace MK12Hook::Proxies {
 
 		MK12::FKlassicLadderSecretFightData* mSecretFightDataRet = MK12::SetupSecretFightConditions(mSecretFightData);
 
-		if (!SettingsMgr->bSerializeSecretFights || !HookMetadata::ActiveModsMap["UNameTableGetter"])
-			return mSecretFightData;
+		if (!Features::IsActive(Features::Id::FightMetadataLog))
+			return mSecretFightDataRet;
 
 		if (mKlassicTowerSecretFightInstance)
 		{
@@ -397,8 +422,12 @@ namespace MK12Hook::Proxies {
 		for (int i = 0; i < mSecretFightData->mConditions.ElementsCount; i++)
 		{
 			MK12::FKlassicLadderSecretFightCondition* CurrentCondition = MK12::TArrayHelpers::index<MK12::FKlassicLadderSecretFightCondition>(mSecretFightData->mConditions, i);
+			if (!CurrentCondition || !CurrentCondition->StructPtrType || !CurrentCondition->StructPtrInstance)
+				continue;
 			MK12::FName* ScriptType = MK12::NameTableIndexToFName(&CurrentCondition->StructPtrType->ScriptClass);
-			printf("Floyd Challenge %d - %s\n\tType %s\n", CurrentCondition->Index, MK12::EnumMaps::FloydChallengeMap[CurrentCondition->Index].c_str(), FNAME_STR(ScriptType));
+			if (!ScriptType)
+				continue;
+			printf("Floyd Challenge %d - %s\n\tType %s\n", CurrentCondition->Index, MK12::EnumMaps::Find(MK12::EnumMaps::FloydChallengeMap, CurrentCondition->Index), FNAME_STR(ScriptType));
 			if (!CurrentCondition->enable)
 			{
 				printf("Disabled!");
@@ -451,35 +480,15 @@ namespace MK12Hook::Proxies {
 
 	__int64 __fastcall CurlSetOptProxy(__int64 handle, __int64 option, __int64 value)
 	{
+		if (!Features::IsActive(Features::Id::Curl))
+			return MK12::CurlSetOpt(handle, option, value);
+
 		if (option == CurlOpt::URL && value)
 		{
 			CurlHandleUrls[handle] = (const char*)value;
 			if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
 				printf("[CURL] URL: %s\n", (const char*)value);
 
-			// Curl-based server proxy: rewrite URL only in Curl mode
-			if (HookMetadata::eServerProxyMode == HookMetadata::PROXY_CURL)
-			{
-				static std::string rewrittenUrl;
-				std::string originalUrl = (const char*)value;
-				std::string serverUrl = SettingsMgr->szServerUrl;
-
-				// Strip trailing slash
-				while (!serverUrl.empty() && serverUrl.back() == '/')
-					serverUrl.pop_back();
-
-				// Extract path from original URL (after the host)
-				size_t pathStart = originalUrl.find('/', 8); // skip https://
-				if (pathStart != std::string::npos)
-					rewrittenUrl = serverUrl + originalUrl.substr(pathStart);
-				else
-					rewrittenUrl = serverUrl;
-
-				if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
-					printf("[CURL] Rewriting URL to: %s\n", rewrittenUrl.c_str());
-
-				return MK12::CurlSetOpt(handle, option, (__int64)rewrittenUrl.c_str());
-			}
 		}
 		else
 		{
@@ -550,6 +559,9 @@ namespace MK12Hook::Proxies {
 
 	__int64 __fastcall CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle)
 	{
+		if (!Features::IsActive(Features::Id::Curl))
+			return MK12::CurlMultiAddHandle(multiHandle, easyHandle);
+
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
 			printf("[CURL] multi_add_handle multi=%p easy=%p\n", (void*)multiHandle, (void*)easyHandle);
 
@@ -567,7 +579,7 @@ namespace MK12Hook::Proxies {
 	{
 		__int64 result = MK12::CurlMultiInfoRead(multiHandle, msgsInQueue);
 
-		if (result)
+		if (result && Features::IsActive(Features::Id::Curl))
 		{
 			if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
 				printf("[CURL] multi_info_read result=%p msgs_in_queue=%lld\n", (void*)result, msgsInQueue ? *msgsInQueue : -1);
@@ -599,80 +611,6 @@ namespace MK12Hook::Proxies {
 // Hooks
 namespace MK12Hook::Hooks {
 
-	bool DisableSignatureCheck()
-	{
-		printf("\n==DisableSignatureCheck==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pSigCheck, "SigCheck");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->PatchReturnAt(patAddr - 0x14, 5);
-		printfSuccess("SigCheck Patched");
-
-		return true;
-	}
-
-	bool DisableSignatureWarn()
-	{
-		printf("\n==DisableSignatureWarn==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pSigWarn, "SigWarn");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->PatchConditionalToUnconditional(patAddr + 0xA);
-		printfSuccess("SigWarn Patched");
-
-		return true;
-	}
-
-	bool DisableChunkSigCheck()
-	{
-		printf("\n==DisablePakChunkSigCheck==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pChunkSigCheck, "ChunkSigCheck");
-		if (!patAddr)
-			return false;
-
-		uint64_t funcAddr = GamePatcher->ResolvePattern(SettingsMgr->pChunkSigCheckFunc, "ChunkSigCheckFunc");
-		if (!funcAddr)
-			return false;
-
-		GamePatcher->RedirectCallTo(patAddr + 0xE, funcAddr);
-		printfSuccess("PakChunkSigCheck Patched");
-
-		return true;
-	}
-
-	bool DisableTOCSigCheck()
-	{
-		printf("\n==DisableTOCSigCheck==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pTocCheck, "TocSigCheck");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->PatchConditionalToUnconditional(patAddr + 0x12);
-		printfSuccess("TocSigCheck Patched");
-
-		return true;
-	}
-
-	bool DisablePakTOCCheck()
-	{
-		printf("\n==DisablePakTOCCheck==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pPakTocCheck, "PakTocCheck");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->PatchConditionalToUnconditional(patAddr + 0x12);
-		printfSuccess("PakTocCheck Patched");
-
-		return true;
-	}
-
 	bool DisablePakSigning()
 	{
 		printf("\n==DisablePakSigning==\n");
@@ -699,82 +637,21 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool FNameToStrWithIdLoader()
+	// Start of a name-to-text function, from a pattern on a call inside it
+	static uint64_t FindNameFunction(const std::string& Pattern, const char* Name, uint64_t CallOffset, uint64_t BackToStart)
 	{
-		printf("\n==ProxyFPathIdLoader==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPathLoadPat, "FPathLoad");
+		uint64_t patAddr = GamePatcher->ResolvePattern(Pattern, Name);
 		if (!patAddr)
-			return false;
-
-		GamePatcher->ProxyCallAt(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrId, &MK12::FNameToWStr, PATCH_CALL);
-		printfSuccess("FPathLoad Proxied");
-
-		uint64_t func_start = patAddr - 0x6F;
-		if (*(uint8_t*)func_start != 0x48)
+			return 0;
+		if (!MK12::FNameToWStr)
+			MK12::FNameToWStr = (MK12::FNameToWStrType*)ProcessPatch::ResolveDestination(patAddr + CallOffset);
+		uint64_t Start = patAddr - BackToStart;
+		if (*(uint8_t*)Start != 0x48)
 		{
-			printfError("FPathLoad Start not found!");
+			printfError("%s start not found!", Name);
+			return 0;
 		}
-		else
-		{
-			MK12::ReadFNameToWStrWithIdStart = (uint64_t*)func_start;
-			if (SettingsMgr->ShouldLog(Log::Verbose))
-				printf("FPathLoad Func Start is at: %p\n", MK12::ReadFNameToWStrWithIdStart);
-		}
-
-		return true;
-	}
-
-	bool FNameToStrNoIdLoader()
-	{
-		printf("\n==ProxyFPathNoIdLoader==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPath2LoadPat, "FPath2Load");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->ProxyCallAt(patAddr + 0xB, MK12Hook::Proxies::ReadFNameToWStrNoId, &MK12::FNameToWStr, PATCH_CALL);
-		printfSuccess("FPath2Load Proxied");
-
-		uint64_t func_start = patAddr - 0x55;
-		if (*(uint8_t*)func_start != 0x48)
-		{
-			printfError("FPath2Load Start not found!");
-		}
-		else
-		{
-			MK12::ReadFNameToWStrNoIdStart = (uint64_t*)func_start;
-			if (SettingsMgr->ShouldLog(Log::Verbose))
-				printf("FPath2Load Func Start is at: %p\n", MK12::ReadFNameToWStrNoIdStart);
-		}
-
-		return true;
-	}
-
-	bool FNameToStrCommonLoader()
-	{
-		printf("\n==ProxyFPathCommonLoader==\n");
-
-		uint64_t patAddr = GamePatcher->ResolvePattern(SettingsMgr->pFPathCLoadPat, "FPathCLoad");
-		if (!patAddr)
-			return false;
-
-		GamePatcher->ProxyCallAt(patAddr + 0x00, MK12Hook::Proxies::ReadFNameToWStrCommon, &MK12::FNameToWStr, PATCH_CALL);
-		printfSuccess("FPathCLoad Proxied");
-
-		uint64_t func_start = patAddr - 0x10;
-		if (*(uint8_t*)func_start != 0x48)
-		{
-			printfError("FPathCLoad Start not found!");
-		}
-		else
-		{
-			MK12::ReadFNameToWStrCommonStart = (uint64_t*)func_start;
-			if (SettingsMgr->ShouldLog(Log::Verbose))
-				printf("FPathCLoad Func Start is at: %p\n", MK12::ReadFNameToWStrCommonStart);
-		}
-
-		return true;
+		return Start;
 	}
 
 	bool UNameTableGetter()
@@ -821,95 +698,23 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
-	bool OverrideFNameToWStrFuncs()
-	{
-
-		if (!SettingsMgr->bUNameGetter)
+	bool NameTableHooks()
+	{ // Our copy of how the game turns names into text, it also does string swaps
+		printf("\n==NameTableHooks==\n");
+		MK12::ReadFNameToWStrWithIdStart = (uint64_t*)FindNameFunction(SettingsMgr->pFPathLoadPat, "FPathLoad", 0xB, 0x6F);
+		MK12::ReadFNameToWStrNoIdStart = (uint64_t*)FindNameFunction(SettingsMgr->pFPath2LoadPat, "FPath2Load", 0xB, 0x55);
+		MK12::ReadFNameToWStrCommonStart = (uint64_t*)FindNameFunction(SettingsMgr->pFPathCLoadPat, "FPathCLoad", 0x0, 0x10);
+		if (!MK12::ReadFNameToWStrWithIdStart || !MK12::ReadFNameToWStrNoIdStart || !MK12::ReadFNameToWStrCommonStart
+			|| !MK12::FNameToWStr || !UNameTableGetter())
 		{
-			printfWarning("Overriding FNameToWStr disabled: bUNameGetter is not enabled in ini!\n");
+			printfError("Name Table not working!");
 			return false;
 		}
-		if (!HookMetadata::ActiveModsMap["UNameTableGetter"])
-		{
-			printfError("Overriding FNameToWStr disabled: UNameTableGetter pattern failed!");
-			return false;
-		}
 
-		if (MK12::ReadFNameToWStrWithIdStart == nullptr)
-		{
-			if (SettingsMgr->bFNameToStrHook)
-			{
-				if (HookMetadata::ActiveModsMap["bFPathIdLoader"])
-				{
-					printfYellow("Failed to override FNameToWStrId, but Proxy Loader is working.\n");
-				}
-				else
-				{
-					printfError("Failed to override FNameToWStrId and Proxy Loader is NOT working!");
-				}
-			}
-		}
-		else
-		{
-			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrWithIdStart, MK12::Remake::FNameInfoToWStringWithId);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
-				printfYellow("FNameToWStrId replacing Proxy Loader\n");
-			else
-				printfSuccess("Overrode FNameToWStrId skipping Proxy Loader");
-		}
-
-		if (MK12::ReadFNameToWStrNoIdStart == nullptr)
-		{
-			if (SettingsMgr->bFNameToStrHook)
-			{
-				if (HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
-				{
-					printfYellow("Failed to override FNameToWStrNoId, but Proxy Loader is working.\n");
-				}
-				else
-				{
-					printfError("Failed to override FNameToWStrNoId and Proxy Loader is NOT working!");
-				}
-			}
-		}
-		else
-		{
-			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrNoIdStart, MK12::Remake::FNameInfoToWStringNoId);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathNoIdLoader"])
-				printfYellow("FNameToWStrNoId replacing Proxy Loader\n");
-			else
-				printfSuccess("Overrode FNameToWStrNoId skipping Proxy Loader");
-		}
-
-		if (MK12::ReadFNameToWStrCommonStart == nullptr)
-		{
-			if (SettingsMgr->bFNameToStrHook)
-			{
-				if (HookMetadata::ActiveModsMap["bFPathCommonLoader"])
-				{
-					printfYellow("Failed to override FNameToWStrCommon, but Proxy Loader is working.\n");
-				}
-				else
-				{
-					printfError("Failed to override FNameToWStrCommon and Proxy Loader is NOT working!");
-				}
-			}
-		}
-		else
-		{
-			GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrCommonStart, MK12::Remake::FNameInfoToWString);
-			if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathCommonLoader"])
-				printfYellow("FNameToWStrCommon replacing Proxy Loader\n");
-			else
-				printfSuccess("Overrode FNameToWStrCommon skipping Proxy Loader");
-		}
-
-		bool anyOverride = MK12::ReadFNameToWStrWithIdStart || MK12::ReadFNameToWStrNoIdStart || MK12::ReadFNameToWStrCommonStart;
-		if (anyOverride)
-			printfSuccess("FNameToWStr Override Active");
-		else
-			printfWarning("FNameToWStr Override: No function starts found, falling back to Proxy Loaders");
-
+		GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrWithIdStart, MK12::Remake::FNameInfoToWStringWithId);
+		GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrNoIdStart, MK12::Remake::FNameInfoToWStringNoId);
+		GamePatcher->ReplaceFunctionWith((uint64_t)MK12::ReadFNameToWStrCommonStart, MK12::Remake::FNameInfoToWString);
+		printfSuccess("Name Table On");
 		return true;
 	}
 
@@ -927,9 +732,28 @@ namespace MK12Hook::Hooks {
 			MK12Hook::Proxies::OverrideGameEndpoint, &MK12::GetEndpointKeyValue, PATCH_CALL);
 	}
 
+	bool PrivateServerHooks()
+	{ // Restart only by design: changing servers mid session would break the game's sessions
+		if (!OverrideGameEndpointsData())
+			return false;
+		HookMetadata::eServerProxyMode = HookMetadata::PROXY_CONFIG;
+		printfInfo("Private Server: %s", SettingsMgr->szServerUrl.c_str());
+		return true;
+	}
+
 	bool ProfileGetterHooks()
 	{
 		printf("\n==ProfileGetterHooks==\n");
+		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pOnlineSubsystem, "OnlineSubsystem");
+		if (pat)
+			OnlineIds::SetSubsystemGetter((void*)ProcessPatch::ResolveDestination(pat));
+		else
+			printfWarning("Profile Getter: online ids only show once Floyd's challenges are read");
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pOnlineCheck, "OnlineCheck");
+		if (pat)
+			OnlineIds::SetOnlineCheck((void*)ProcessPatch::ResolveDestination(pat + 3), (void*)ProcessPatch::ResolveDestination(pat + 27));
+		else
+			printfWarning("Profile Getter: can't tell offline from online, online ids are read for a minute from the main menu");
 
 		return GamePatcher->ProxyByPattern(SettingsMgr->pProfileGetter, "ProfileGetter", 30,
 			MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);
@@ -987,7 +811,185 @@ namespace MK12Hook::Hooks {
 		return resolved > 0;
 	}
 
-	int FloydTrackingHooks()
+	bool GameStateHooks()
+	{ // Loading and online checks, plus the per frame tick other features run from
+		printf("\n==GameStateHooks==\n");
+		uint64_t pat;
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pOnlineModeCheck, "OnlineModeCheck");
+		if (pat)
+		{
+			MK12::GetModeManager = (MK12::GetModeManagerType*)ProcessPatch::ResolveDestination(pat + 8);
+			MK12::GameModeOnlineClass = (MK12::GameModeOnlineClassType*)ProcessPatch::ResolveDestination(pat + 16);
+			MK12::IsModeOnStack = (MK12::IsModeOnStackType*)ProcessPatch::ResolveDestination(pat + 27);
+		}
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pMainLoop, "MainLoop");
+		if (pat) MK12::lpEngineExitRequested = (uint8_t*)ProcessPatch::ResolveDestination(pat + 12, 2, 7, 4);
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pModeManagerGetter, "ModeManagerGetter");
+		if (pat) MK12::lpGamePhaseOwner = (uint64_t*)ProcessPatch::ResolveDestination(pat + 7, 3, 7, 4);
+
+		if (!GameState::IsReady())
+		{
+			printfError("Game State not working!");
+			return false;
+		}
+
+		// A call inside the engine's frame function, it runs however the frame is reached. Its start can't be
+		// hooked, MK1Hook finds and hooks it by its first bytes
+		if (!GamePatcher->ProxyByPattern(SettingsMgr->pFrameTick, "FrameTick", 6,
+			MK12Hook::Proxies::FrameTickProxy, &MK12::FrameTick, PATCH_CALL))
+		{
+			printfError("Game State not working!");
+			return false;
+		}
+
+		printfSuccess("Game State On");
+		return true;
+	}
+
+	bool GameMessageBoxHooks()
+	{
+		printf("\n==GameMessageBoxHooks==\n");
+		uint64_t pat;
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pTextFromString, "TextFromString");
+		if (pat) MK12::TextFromString = (MK12::TextFromStringType*)ProcessPatch::ResolveDestination(pat + 4);
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxSetTitle, "MessageBoxSetTitle");
+		if (pat) MK12::MessageBoxSetTitle = (MK12::MessageBoxSetTitleType*)ProcessPatch::ResolveDestination(pat + 15);
+
+		MK12::FindText = (MK12::FindTextType*)GamePatcher->ResolvePattern(SettingsMgr->pFindText, "FindText");
+		MK12::MessageBoxConstruct = (MK12::MessageBoxConstructType*)GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxConstruct, "MessageBoxConstruct");
+		MK12::MessageBoxAddButton = (MK12::MessageBoxAddButtonType*)GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxAddButton, "MessageBoxAddButton");
+		MK12::MessageBoxShow = (MK12::MessageBoxShowType*)GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxShow, "MessageBoxShow");
+		MK12::MessageBoxClose = (MK12::MessageBoxCloseType*)GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxClose, "MessageBoxClose");
+		MK12::MessageBoxDestruct = (MK12::MessageBoxDestructType*)GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxDestruct, "MessageBoxDestruct");
+
+		if (!GameMessageBox::IsReady())
+		{
+			printfError("Game Message Box not working!");
+			return false;
+		}
+
+		MK12::GetLocalPlayerInfo = (MK12::GetLocalPlayerInfoType*)GamePatcher->ResolvePattern(SettingsMgr->pLocalPlayerInfo, "LocalPlayerInfo");
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pMessageBoxCallback, "MessageBoxCallback");
+		if (pat)
+		{
+			MK12::MessageBoxCallback.Function = (void*)ProcessPatch::ResolveDestination(pat, 3, 7, 4);
+			MK12::MessageBoxCallback.VTable = (void*)ProcessPatch::ResolveDestination(pat + 11, 3, 7, 4);
+			MK12::MessageBoxCallback.Invoker = (void*)ProcessPatch::ResolveDestination(pat + 22, 3, 7, 4);
+		}
+		if (!MK12::GetLocalPlayerInfo || !MK12::MessageBoxCallback.IsReady())
+			printfWarning("Game Message Box: Keyboard, controller and sounds may not work on its buttons");
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pPlayerInputPressed, "PlayerInputPressed");
+		uint64_t InputStart = pat ? ProcessPatch::ResolveDestination(pat + 3) : 0;
+		if (!InputStart || !GamePatcher->ProxyFunctionAt(InputStart, MK12Hook::Proxies::PlayerInputPressedProxy, &MK12::PlayerInputPressed, "PlayerInputPressed"))
+			printfWarning("Game Message Box: The screen behind a message box may take its button presses");
+		uint64_t UpdateStart = GamePatcher->ResolvePattern(SettingsMgr->pPlayerInputUpdate, "PlayerInputUpdate");
+		if (!UpdateStart || !GamePatcher->ProxyFunctionAt(UpdateStart, MK12Hook::Proxies::PlayerInputUpdateProxy, &MK12::PlayerInputUpdate, "PlayerInputUpdate"))
+			printfWarning("Game Message Box: Keyboard and controller may not reach its buttons");
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pToastDriverCall, "ToastDriverCall");
+		if (pat) MK12::ToastDriver = (MK12::ToastDriverType*)ProcessPatch::ResolveDestination(pat);
+		MK12::ToastEnqueue = (MK12::ToastEnqueueType*)GamePatcher->ResolvePattern(SettingsMgr->pToastEnqueue, "ToastEnqueue");
+		if (!GameToast::IsReady())
+			printfWarning("Game Toast not found, notifications won't show");
+		if (!MK12::MessageBoxSetTitle)
+			printfWarning("Game Message Box titles not found, popups show without them");
+
+		printfSuccess("Game Message Box On");
+		return true;
+	}
+
+	bool ModSettingsHooks()
+	{
+		printf("\n==ModSettingsHooks==\n");
+		uint64_t pat;
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pMenuEntryConstruct, "MenuEntryConstruct");
+		if (pat) MK12::MenuEntryConstruct = (MK12::MenuEntryConstructType*)ProcessPatch::ResolveDestination(pat);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pSettingsTabConstruct, "SettingsTabConstruct");
+		if (pat) MK12::SettingsTabConstruct = (MK12::SettingsTabConstructType*)ProcessPatch::ResolveDestination(pat + 7);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pSettingsTabDestruct, "SettingsTabDestruct");
+		if (pat) MK12::SettingsTabDestruct = (MK12::SettingsTabDestructType*)ProcessPatch::ResolveDestination(pat + 4);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGrowArray, "GrowArray");
+		if (pat) MK12::GrowArray = (MK12::GrowArrayType*)ProcessPatch::ResolveDestination(pat + 3);
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pStringReserve, "StringReserve");
+		if (pat) MK12::StringReserve = (MK12::StringReserveType*)ProcessPatch::ResolveDestination(pat + 12);
+		uint64_t FindTextPlatformStart = GamePatcher->ResolvePattern(SettingsMgr->pFindTextPlatform, "FindTextPlatform");
+		uint64_t FindTextStart = (uint64_t)MK12::FindText; // Found by the message box hooks
+
+		if (!MK12::MenuEntryConstruct || !MK12::SettingsTabConstruct || !MK12::SettingsTabDestruct || !MK12::GrowArray
+			|| !MK12::StringReserve || !FindTextPlatformStart || !FindTextStart)
+		{
+			printfError("Mod Settings not working!");
+			return false;
+		}
+
+		// The tab bar copy must be hooked before the page, a page without its tab would shift every tab after it
+		if (!GamePatcher->ProxyByPattern(SettingsMgr->pSettingsCopyTabs, "SettingsCopyTabs", 8,
+			MK12Hook::Proxies::SettingsCopyTabsProxy, &MK12::SettingsCopyTabs, PATCH_CALL)
+			|| !GamePatcher->ProxyByPattern(SettingsMgr->pSettingsBuildTabs, "SettingsBuildTabs", 0,
+			MK12Hook::Proxies::SettingsBuildTabsProxy, &MK12::SettingsBuildTabs, PATCH_CALL)
+			|| !GamePatcher->ProxyFunctionAt(FindTextStart, MK12Hook::Proxies::FindTextProxy, &MK12::FindText, "FindText")
+			|| !GamePatcher->ProxyFunctionAt(FindTextPlatformStart, MK12Hook::Proxies::FindTextPlatformProxy, &MK12::FindTextPlatform, "FindTextPlatform"))
+		{
+			printfError("Mod Settings not working!");
+			return false;
+		}
+
+		MK12::MemoryFree = (MK12::MemoryFreeType*)GamePatcher->ResolvePattern(SettingsMgr->pMemoryFree, "MemoryFree");
+		if (!MK12::MemoryFree || !GamePatcher->ProxyByPattern(SettingsMgr->pMainMenuCopyTabs, "MainMenuCopyTabs", 9,
+			MK12Hook::Proxies::MainMenuCopyTabsProxy, &MK12::MainMenuCopyTabs, PATCH_CALL))
+			printfWarning("Mod Settings: No MK12TTH entry in the main menu, the tab in Settings still works");
+
+		if (!GamePatcher->ProxyByPattern(SettingsMgr->pSettingsVersionText, "SettingsVersionText", 9,
+			MK12Hook::Proxies::SettingsVersionTextProxy, &MK12::SettingsVersionText, PATCH_CALL))
+			printfWarning("Mod Settings: Our menu shows the game's version");
+
+		uint64_t RunStart = GamePatcher->ResolvePattern(SettingsMgr->pSettingsRun, "SettingsRun");
+		if (!RunStart || !GamePatcher->ProxyFunctionAt(RunStart, MK12Hook::Proxies::SettingsRunProxy, &MK12::SettingsRun, "SettingsRun"))
+			printfWarning("Mod Settings: The restart question shows while you're still in the menu");
+
+		printfSuccess("Mod Settings On");
+		return true;
+	}
+
+	bool PakModsHooks()
+	{ // Lists the pak mods and keeps the ones turned off from mounting. Must go in before the game mounts paks
+		printf("\n==PakModsHooks==\n");
+		PakMods::Init();
+
+		uint64_t MountStart = GamePatcher->ResolvePattern(SettingsMgr->pPakMount, "PakMount");
+		if (!MountStart || !GamePatcher->ProxyFunctionAt(MountStart, MK12Hook::Proxies::PakMountProxy, &MK12::PakMount, "PakMount"))
+		{
+			printfError("Pak Mods not working!");
+			return false;
+		}
+		printfSuccess("Pak Mods On");
+		return true;
+	}
+
+	bool AttractModeHooks()
+	{ // The main menu's idle timer: its frame limit sets the delay, restarting it stops attract mode
+		printf("\n==AttractModeHooks==\n");
+		uint64_t LimitAt = GamePatcher->ResolvePattern(SettingsMgr->pAttractModeLimit, "AttractModeLimit");
+		bool bHooked = LimitAt && AttractMode::Init(LimitAt + 14)
+			&& GamePatcher->ProxyByPattern(SettingsMgr->pAttractModeIdle, "AttractModeIdle", 6,
+			MK12Hook::Proxies::AttractModeIdleProxy, &MK12::IsModeOnTop, PATCH_CALL);
+		if (bHooked)
+			AttractMode::SetDelay(AttractMode::FromIni(SettingsMgr->szAttractModeDelay.c_str()));
+		if (bHooked)
+			printfSuccess("Attract Mode Switch On");
+		else
+			printfError("Attract Mode Switch not working!");
+		return bHooked;
+	}
+
+	bool FloydTrackingHooks()
 	{
 		printf("\n==FloydTrackingHooks==\n");
 
@@ -1023,7 +1025,176 @@ namespace MK12Hook::Hooks {
 		else
 			printfError("Floyd Tracking not working!");
 
-		return HooksCtr;
+		return HooksCtr == ExpectedHooksCtr;
+	}
+
+	bool FloydTowerAlertHooks()
+	{ // Living Towers opening: Floyd Tower alert and Floyd stats
+		printf("\n==FloydTowerAlertHooks==\n");
+		MK12::GetFloydVictories = (MK12::GetFloydVictoriesType*)GamePatcher->ResolvePattern(SettingsMgr->pGetFloydVictories, "GetFloydVictories");
+		MK12::GetStatsContainer = (MK12::GetStatsContainerType*)GamePatcher->ResolvePattern(SettingsMgr->pGetStatsContainer, "GetStatsContainer");
+		MK12::GetProfileStat = (MK12::GetProfileStatType*)GamePatcher->ResolvePattern(SettingsMgr->pGetProfileStat, "GetProfileStat");
+		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pGetProfileStatBits, "GetProfileStatBits");
+		if (pat) MK12::GetProfileStatBits = (MK12::GetProfileStatBitsType*)ProcessPatch::ResolveDestination(pat + 11);
+		// The seed function: the profile hash, then the save holder and its class, read but never called
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pFloydSeed, "FloydSeed");
+		if (pat && *(uint8_t*)(pat + 0x34) == 0xE8 && *(uint8_t*)(pat + 0x45) == 0xE8 && *(uint8_t*)(pat + 0x5F) == 0xE8)
+		{
+			MK12::FloydProfileHash = (MK12::FloydProfileHashType*)ProcessPatch::ResolveDestination(pat + 0x34);
+			MK12::GetProfileSave = (MK12::GetProfileSaveType*)ProcessPatch::ResolveDestination(pat + 0x45);
+			MK12::GetStatsSaveClass = (MK12::GetClassType*)ProcessPatch::ResolveDestination(pat + 0x5F);
+		}
+		if (!MK12::FloydProfileHash)
+			printfWarning("Floyd Tower Alert: Floyd's challenges show once a tower starts");
+		if (!MK12::GetFloydVictories || !GamePatcher->ProxyByPattern(SettingsMgr->pTowersSetup, "TowersSetup", 16,
+			MK12Hook::Proxies::TowersSetupProxy, &MK12::TowersSetup, PATCH_CALL))
+		{
+			printfError("Floyd Tower Alert not working!");
+			return false;
+		}
+		if (!MK12::GetStatsContainer || !MK12::GetProfileStat)
+			printfWarning("Floyd Tower Alert: no Floyd stats in PROFILE");
+		printfSuccess("Floyd Tower Alert On");
+		return true;
+	}
+
+	static int32_t* KeepRunningFlag = nullptr; // The game's own "don't pause without focus" setting, its config can reset it
+	static int32_t KeepRunningGameValue = 0;
+	static uint8_t* FocusLostFlag = nullptr; // The game's "paused because it lost focus"
+
+	bool KeepRunningHooks()
+	{ // The game's focus lost handler: it pauses quietly unless its setting says no, or pauses with a message
+		printf("\n==KeepRunningHooks==\n");
+		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pKeepRunning, "KeepRunning");
+		if (!pat)
+			return false;
+		KeepRunningFlag = (int32_t*)ProcessPatch::ResolveDestination(pat, 2, 7, 4);
+		KeepRunningGameValue = *KeepRunningFlag;
+
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pFocusLost, "FocusLost");
+		if (pat)
+			FocusLostFlag = (uint8_t*)ProcessPatch::ResolveDestination(pat + 6, 2, 7, 4);
+		bool bStep = GamePatcher->ProxyByPattern(SettingsMgr->pFocusLost, "FocusLost", 13,
+			MK12Hook::Proxies::FocusLostStepProxy, &MK12::FocusLostStep, PATCH_CALL);
+		bool bPause = FocusLostFlag && GamePatcher->ProxyByPattern(SettingsMgr->pFocusLostPause, "FocusLostPause", 8,
+			MK12Hook::Proxies::FocusLostPauseProxy, &MK12::FocusLostPause, PATCH_JUMP);
+		if (!bStep || !bPause)
+			printfWarning("Keep Running: some screens may still pause without focus");
+		printfSuccess("Keep Running On");
+		return true;
+	}
+
+	void SetKeepRunning(bool bOn)
+	{ // Read each time the window loses focus
+		if (KeepRunningFlag)
+			*KeepRunningFlag = bOn ? 1 : KeepRunningGameValue;
+	}
+}
+
+namespace MK12Hook::Proxies {
+	void __fastcall FocusLostStepProxy()
+	{ // The window just lost focus, the game checks its setting right after
+		MK12::FocusLostStep();
+		if (Features::IsActive(Features::Id::KeepRunning))
+			MK12Hook::Hooks::SetKeepRunning(true);
+	}
+
+	void __fastcall FocusLostPauseProxy(void* Mode)
+	{ // Screens that pause with a message whatever the setting says
+		if (!Features::IsActive(Features::Id::KeepRunning))
+		{
+			MK12::FocusLostPause(Mode);
+			return;
+		}
+		if (MK12Hook::Hooks::FocusLostFlag)
+			*MK12Hook::Hooks::FocusLostFlag = 0; // Same as the quiet path when the setting says no
+	}
+}
+
+namespace MK12Hook::Hooks {
+
+	bool FastBootHooks()
+	{ // The three waits of the logo and legal screens
+		printf("\n==FastBootHooks==\n");
+		int Hooked = 0;
+		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootWaitFirst, "BootWaitFirst", 3,
+			MK12Hook::Proxies::BootScreenWaitProxy, &MK12::BootScreenWait, PATCH_CALL);
+		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootWaitSecond, "BootWaitSecond", 5,
+			MK12Hook::Proxies::BootScreenWaitProxy, &MK12::BootScreenWait, PATCH_CALL);
+		Hooked += GamePatcher->ProxyByPattern(SettingsMgr->pBootWaitThird, "BootWaitThird", 5,
+			MK12Hook::Proxies::BootScreenWaitProxy, &MK12::BootScreenWait, PATCH_CALL);
+		if (Hooked)
+			printfSuccess("Fast Boot On (%d/3)", Hooked);
+		else
+			printfError("Fast Boot not working!");
+		return Hooked > 0;
+	}
+
+	bool AnnouncerHooks()
+	{ // Applied with the game's own function, at fight start, ladder setup and main menu load
+		printf("\n==AnnouncerHooks==\n");
+		uint64_t pat;
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pApplyAnnouncer, "ApplyAnnouncer");
+		if (pat) MK12::ApplyAnnouncer = (MK12::ApplyAnnouncerType*)ProcessPatch::ResolveDestination(pat + 9);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pEngineNameConstruct, "EngineNameConstruct");
+		if (pat) MK12::EngineNameConstruct = (MK12::EngineNameConstructType*)ProcessPatch::ResolveDestination(pat + 12);
+		if (!MK12::ApplyAnnouncer || !MK12::EngineNameConstruct
+			|| !GamePatcher->ProxyByPattern(SettingsMgr->pAnnouncerMenuApply, "AnnouncerMenuApply", 26,
+			MK12Hook::Proxies::AnnouncerMenuApplyProxy, &MK12::AnnouncerSetter, PATCH_JUMP))
+		{
+			printfError("Announcer Override not working!");
+			return false;
+		}
+		if (!GamePatcher->ProxyByPattern(SettingsMgr->pAnnouncerReroll, "AnnouncerReroll", 9,
+			MK12Hook::Proxies::AnnouncerRerollProxy, &MK12::AnnouncerReroll, PATCH_CALL))
+			printfWarning("Announcer Override: ladder fights may re-roll a random announcer");
+
+		// AUTO: the first human player's fighter
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetCurrentMission, "GetCurrentMission");
+		if (pat) MK12::GetCurrentMission = (MK12::GetCurrentMissionType*)ProcessPatch::ResolveDestination(pat);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeam, "GetTeam");
+		if (pat) MK12::GetTeam = (MK12::GetTeamType*)ProcessPatch::ResolveDestination(pat);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeamDefinitions, "GetTeamDefinitions");
+		if (pat) MK12::GetTeamDefinitions = (MK12::GetTeamDefinitionsType*)ProcessPatch::ResolveDestination(pat);
+		if (!MK12::GetCurrentMission || !MK12::GetTeam || !MK12::GetTeamDefinitions)
+			printfWarning("Announcer Override: AUTO uses your own setting");
+		printfSuccess("Announcer Override On");
+		return true;
+	}
+
+	bool EngineConfigHooks()
+	{ // Engine.ini values of pak mods, put in the engine's config right after it loads
+		printf("\n==EngineConfigHooks==\n");
+		EngineConfig::Scan();
+		uint64_t Globals = GamePatcher->ResolvePattern(SettingsMgr->pConfigGlobals, "ConfigGlobals");
+		EngineConfig::GameFunctions Functions = {};
+		if (Globals)
+		{
+			Functions.Config = (void**)ProcessPatch::ResolveDestination(Globals, 3, 7, 4);
+			Functions.EngineIniName = (void*)ProcessPatch::ResolveDestination(Globals + 0x24, 3, 7, 4);
+		}
+		Functions.SetString = (void*)GamePatcher->ResolvePattern(SettingsMgr->pConfigSetString, "ConfigSetString");
+		Functions.GetString = (void*)GamePatcher->ResolvePattern(SettingsMgr->pConfigGetString, "ConfigGetString");
+		Functions.FindFile = (void*)GamePatcher->ResolvePattern(SettingsMgr->pConfigFindFile, "ConfigFindFile");
+		MK12::LoadFileToString = (MK12::LoadFileToStringType*)GamePatcher->ResolvePattern(SettingsMgr->pLoadFileToString, "LoadFileToString");
+		if (!Functions.Config || !Functions.EngineIniName || !Functions.SetString || !Functions.GetString
+			|| !GamePatcher->ProxyByPattern(SettingsMgr->pConfigInit, "ConfigInit", 9,
+			MK12Hook::Proxies::ConfigInitProxy, &MK12::InitializeConfigSystem, PATCH_CALL))
+		{
+			printfError("Engine Config not working!");
+			return false;
+		}
+		EngineConfig::SetGameFunctions(Functions);
+		if (!MK12::LoadFileToString)
+			printfWarning("Engine Config: only loose Engine.ini files, none from inside paks");
+		printfSuccess("Engine Config On");
+		return true;
+	}
+
+	bool StringSwapHooks()
+	{ // Nothing to hook: the name table does the swaps, this loads them
+		MK12Hook::Mods::StringSwaps();
+		return true;
 	}
 
 	bool ExtractFightMetadataFromSecretFightSetupStage()
@@ -1094,138 +1265,17 @@ namespace MK12Hook::Hooks {
 };
 
 namespace MK12Hook::Mods {
-	static const char* AnnouncerSwapString = "/Game/WwiseAudio/Switches/SWITCHES_All/SWGP_Announcer/SWGP_Announcer-SWTC_ANNO_%s.SWGP_Announcer-SWTC_ANNO_%s";
-	static const std::string* AllAnnouncerStrings[] = {
-		&SettingsMgr->AnnouncerSwap.szDefault,
-		&SettingsMgr->AnnouncerSwap.szGeras,
-		&SettingsMgr->AnnouncerSwap.szJohnnyCage,
-		&SettingsMgr->AnnouncerSwap.szLiuKang,
-		&SettingsMgr->AnnouncerSwap.szOmniMan,
-		&SettingsMgr->AnnouncerSwap.szShangTsung,
-		&SettingsMgr->AnnouncerSwap.szSindel,
-		&SettingsMgr->AnnouncerSwap.szSubZero
-	};
-	static const char* AllAnnouncerNames[] = {
-		"Default",
-		"Geras",
-		"JohnnyCage",
-		"LiuKang",
-		"OmniMan",
-		"ShangTsung",
-		"Sindel",
-		"SubZero"
-	};
-	int AnnouncerSwap()
-	{
-		printf("\n==Swapping Announcers==\n");
-		if (!SettingsMgr->bFNameToStrHook)
-		{
-			printfError("No FPath Swapper has been loaded. Make sure bFPathLoader is enabled.");
-			return false;
-		}
-		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
-		{
-			printfError("No FPath Swapper has been loaded. FNameToStrWithIdLoader Patching was unsuccessful.");
-			return false;
-		}
-	
-		char CurAnnoString[256];
-		char SwapAnnoString[256];
-		int count = 0;
-		for (int i = 0; i < 8; i++)
-		{
-			if (AllAnnouncerStrings[i]->empty())
-				continue;
-
-			if (strcmp(AllAnnouncerStrings[i]->c_str(), AllAnnouncerNames[i]) == 0) // No Swap
-				continue;
-			
-			snprintf(CurAnnoString, sizeof(CurAnnoString), AnnouncerSwapString, AllAnnouncerNames[i], AllAnnouncerNames[i]);
-			snprintf(SwapAnnoString, sizeof(SwapAnnoString), AnnouncerSwapString, AllAnnouncerStrings[i]->c_str(), AllAnnouncerStrings[i]->c_str());
-			HookMetadata::FSwapTable.insert(CurAnnoString, SwapAnnoString);
-			count++;
-		}
-
-		printfYellow("%d Announcers swapped.\n", count);
-		int iDebugSwap = 0;
-
-		//HookMetadata::FSwapTable.insert(Proxies::OriginalModifierName, Proxies::NewModifierName);
-		//{
-		//	const char* a1 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char.BP_SubZero_Skin007_A_Char_C";
-		//	const char* a2 = "/Game/Disk/Char/SubZero/Skin/002/Blueprint/BP_SubZero_Skin002_A_Char.BP_SubZero_Skin002_A_Char_C";
-		//	//const char* a2 = "/Game/DLC/REL_T1000/Char/SubZero/Skin/009/Blueprint/BP_SubZero_Skin009_A_Char.BP_SubZero_Skin009_A_Char_C";
-		//	HookMetadata::FSwapTable.insert(a1, a2);
-		//	iDebugSwap++;
-		//}
-		//{
-		//	const char* a1 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char";
-		//	const char* a2 = "/Game/Disk/Char/SubZero/Skin/002/Blueprint/BP_SubZero_Skin002_A_Char";
-		//	HookMetadata::FSwapTable.insert(a1, a2);
-		//	iDebugSwap++;
-		//}
-		/*{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Palette/SetA/Blueprint/BP_T1000_Skin001_Pal001.BP_T1000_Skin001_Pal001_C";
-			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Palette/SetA/Blueprint/BP_SubZero_Skin007_Pal002.BP_SubZero_Skin007_Pal002_C";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}
-		{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Palette/SetA/Blueprint/BP_T1000_Skin001_Pal001";
-			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Palette/SetA/Blueprint/BP_SubZero_Skin007_Pal002";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}
-		{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Blueprint/BP_T1000_Skin001_A_Char";
-			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}
-		{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Skin/001/Blueprint/BP_T1000_Skin001_A_Char.BP_T1000_Skin001_A_Char_C";
-			const char* a2 = "/Game/DLC/REL_GOTY/Char/SubZero/Skin/007/Blueprint/BP_SubZero_Skin007_A_Char.BP_SubZero_Skin007_A_Char_C";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}
-		{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Template/Blueprint/BP_T1000_CharSelect_Anim.BP_T1000_CharSelect_Anim_C";
-			const char* a2 = "/Game/Disk/Char/SubZero/Template/Blueprint/BP_SubZero_CharSelect_Anim.BP_SubZero_CharSelect_Anim_C";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}
-		{
-			const char* a1 = "/Game/DLC/REL_T1000/Char/T1000/Template/Blueprint/BP_T1000_CharSelect_Anim";
-			const char* a2 = "/Game/Disk/Char/SubZero/Template/Blueprint/BP_SubZero_CharSelect_Anim";
-			HookMetadata::FSwapTable.insert(a1, a2);
-			iDebugSwap++;
-		}*/
-		//printfYellow("DEBUG swapped %d.\n", iDebugSwap);
-
-
-		
-		return count;
-	}
 	int StringSwaps()
 	{
 		printf("\n==Swapping Strings==\n");
-		if (!SettingsMgr->bFNameToStrHook)
-		{
-			printfError("No FPath Swapper has been loaded. Make sure bFPathLoader is enabled.");
-			return -1;
-		}
-		if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
-		{
-			printfError("No FPath Swapper has been loaded. FNameToStrWithIdLoader Patching was unsuccessful.");
-			return -1;
-		}
 		std::ifstream file("string_swaps.txt");
 
 		CPPython::string line;
 		int iSwapsAmount = 0;
 
 		if (!file.is_open()) {
-			printfError("Failed to open string_swaps.txt\n");
-			return -1;
+			printfInfo("No string_swaps.txt, nothing to swap");
+			return 0;
 		}
 
 		while (std::getline(file, line)) {

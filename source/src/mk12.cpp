@@ -1,6 +1,8 @@
 #include "mkutils.h"
 #include "mk12.h"
 #include "mk12hook.h"
+#include "Features.h"
+#include <mutex>
 
 
 uint64_t*							MK12::lpGameVersionFull			= nullptr;
@@ -33,6 +35,100 @@ MK12::GetChangelistType*				MK12::GetChangelist					= nullptr;
 MK12::CurlSetOptType*					MK12::CurlSetOpt					= nullptr;
 MK12::CurlMultiAddHandleType*			MK12::CurlMultiAddHandle			= nullptr;
 MK12::CurlMultiInfoReadType*			MK12::CurlMultiInfoRead				= nullptr;
+// Text
+MK12::TextFromStringType*				MK12::TextFromString				= nullptr;
+MK12::FindTextType*						MK12::FindText						= nullptr;
+// Message Box
+MK12::MessageBoxConstructType*			MK12::MessageBoxConstruct			= nullptr;
+MK12::MessageBoxSetTitleType*			MK12::MessageBoxSetTitle			= nullptr;
+MK12::MessageBoxAddButtonType*			MK12::MessageBoxAddButton			= nullptr;
+MK12::MessageBoxShowType*				MK12::MessageBoxShow				= nullptr;
+MK12::MessageBoxCloseType*				MK12::MessageBoxClose				= nullptr;
+MK12::MessageBoxDestructType*			MK12::MessageBoxDestruct			= nullptr;
+MK12::PlayerInputPressedType*			MK12::PlayerInputPressed			= nullptr;
+MK12::PlayerInputUpdateType*			MK12::PlayerInputUpdate				= nullptr;
+MK12::ToastDriverType*					MK12::ToastDriver					= nullptr;
+MK12::ToastEnqueueType*					MK12::ToastEnqueue					= nullptr;
+MK12::GetLocalPlayerInfoType*			MK12::GetLocalPlayerInfo			= nullptr;
+MK12::FMessageBoxCallbackParts			MK12::MessageBoxCallback;
+// Game State
+MK12::FrameTickType*					MK12::FrameTick						= nullptr;
+MK12::GetModeManagerType*				MK12::GetModeManager				= nullptr;
+MK12::IsModeOnStackType*				MK12::IsModeOnStack					= nullptr;
+MK12::GameModeOnlineClassType*			MK12::GameModeOnlineClass			= nullptr;
+uint64_t*								MK12::lpGamePhaseOwner				= nullptr;
+uint8_t*								MK12::lpEngineExitRequested			= nullptr;
+// Settings Screen
+MK12::SettingsBuildTabsType*			MK12::SettingsBuildTabs				= nullptr;
+MK12::SettingsCopyTabsType*				MK12::SettingsCopyTabs				= nullptr;
+MK12::MenuEntryConstructType*			MK12::MenuEntryConstruct			= nullptr;
+MK12::SettingsTabConstructType*			MK12::SettingsTabConstruct			= nullptr;
+MK12::SettingsTabDestructType*			MK12::SettingsTabDestruct			= nullptr;
+MK12::GrowArrayType*					MK12::GrowArray						= nullptr;
+MK12::StringReserveType*				MK12::StringReserve					= nullptr;
+MK12::MemoryFreeType*					MK12::MemoryFree					= nullptr;
+MK12::SettingsVersionTextType*			MK12::SettingsVersionText			= nullptr;
+MK12::SettingsRunType*					MK12::SettingsRun					= nullptr;
+MK12::SettingsCopyTabsType*				MK12::MainMenuCopyTabs				= nullptr;
+MK12::PakMountType*						MK12::PakMount						= nullptr;
+MK12::IsModeOnTopType*					MK12::IsModeOnTop					= nullptr;
+MK12::TowersSetupType*					MK12::TowersSetup					= nullptr;
+MK12::GetFloydVictoriesType*			MK12::GetFloydVictories				= nullptr;
+MK12::GetStatsContainerType*			MK12::GetStatsContainer				= nullptr;
+MK12::GetProfileStatType*				MK12::GetProfileStat				= nullptr;
+MK12::GetProfileStatBitsType*			MK12::GetProfileStatBits			= nullptr;
+MK12::FloydProfileHashType*				MK12::FloydProfileHash				= nullptr;
+MK12::GetProfileSaveType*				MK12::GetProfileSave				= nullptr;
+MK12::GetClassType*						MK12::GetStatsSaveClass				= nullptr;
+MK12::FocusLostStepType*				MK12::FocusLostStep					= nullptr;
+MK12::FocusLostPauseType*				MK12::FocusLostPause				= nullptr;
+MK12::BootScreenWaitType*				MK12::BootScreenWait				= nullptr;
+MK12::InitializeConfigSystemType*		MK12::InitializeConfigSystem		= nullptr;
+MK12::LoadFileToStringType*				MK12::LoadFileToString				= nullptr;
+MK12::AnnouncerRerollType*				MK12::AnnouncerReroll				= nullptr;
+MK12::AnnouncerSetterType*				MK12::AnnouncerSetter				= nullptr;
+MK12::ApplyAnnouncerType*				MK12::ApplyAnnouncer				= nullptr;
+MK12::EngineNameConstructType*			MK12::EngineNameConstruct			= nullptr;
+MK12::GetCurrentMissionType*			MK12::GetCurrentMission				= nullptr;
+MK12::GetTeamType*						MK12::GetTeam						= nullptr;
+MK12::GetTeamDefinitionsType*			MK12::GetTeamDefinitions			= nullptr;
+
+void* MK12::MapModeGetProfile(void* MapMode)
+{
+	if (!MapMode)
+		return nullptr;
+	auto GetProfile = (MapModeGetProfileType*)(*(void***)MapMode)[MapModeGetProfileSlot];
+	return GetProfile(MapMode, 0, true);
+}
+
+// The engine's IsA: a class lists its whole parent chain, a class is a parent when it sits at its own depth there
+static bool IsA(void* Object, void* Class)
+{
+	char* ObjectClass = *(char**)((char*)Object + 0x10);
+	char* ClassChain = (char*)Class + 0x30;
+	int32_t Depth = *(int32_t*)(ClassChain + 8);
+	return ObjectClass && Depth <= *(int32_t*)(ObjectClass + 0x38) && (*(char***)(ObjectClass + 0x30))[Depth] == ClassChain;
+}
+
+uint64_t MK12::FloydStoredSeed(void* Profile)
+{
+	if (!Profile || !GetProfileSave || !GetStatsSaveClass)
+		return 0;
+	__try
+	{
+		char* Holder = *(char**)((char*)GetProfileSave(Profile) + 0x98);
+		char* Save = Holder ? *(char**)(Holder + 0x10) : nullptr;
+		void* Class = GetStatsSaveClass();
+		if (!Save || !Class || !IsA(Save, Class))
+			return 0;
+		return *(uint64_t*)(Save + 0x90);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return 0;
+	}
+}
+MK12::FindTextType*						MK12::FindTextPlatform				= nullptr;
 
 
 uint8_t									MK12::KlassicTowerSecretFightDataOffset   = 0;
@@ -40,6 +136,52 @@ uint8_t									MK12::KlassicTowerSecretFightDataOffset   = 0;
 const wchar_t* MK12::FString::c_str() const { return Data ? Data : L""; }
 int32_t MK12::FString::Len() const { return Count > 0 ? Count - 1 : 0; }
 bool MK12::FString::IsEmpty() const { return Count <= 1; }
+
+static_assert(sizeof(MK12::FText) == 0x18, "FText size");
+static_assert(sizeof(MK12::FMessageBoxDelegate) == 0x40, "FMessageBoxDelegate size");
+static_assert(sizeof(MK12::UIMessageBox) == 0x4D0, "UIMessageBox size");
+static_assert(offsetof(MK12::UIMessageBox, bActive) == 0x8A, "UIMessageBox::bActive");
+static_assert(offsetof(MK12::UIMessageBox, InputDelay) == 0x84, "UIMessageBox::InputDelay");
+static_assert(offsetof(MK12::FPlayerInput, Previous) == 0x44, "FPlayerInput::Previous");
+static_assert(sizeof(MK12::FPlayerInput) == 0xD8, "FPlayerInput size");
+static_assert(offsetof(MK12::UIMessageBox, State) == 0x94, "UIMessageBox::State");
+static_assert(offsetof(MK12::UIMessageBox, bPausesGame) == 0x8D, "UIMessageBox::bPausesGame");
+static_assert(offsetof(MK12::UIMessageBox, PickedInput) == 0x218, "UIMessageBox::PickedInput");
+static_assert(offsetof(MK12::UIMessageBox, PickedIndex) == 0x260, "UIMessageBox::PickedIndex");
+static_assert(sizeof(MK12::FSettingsOption) == MK12::FSettingsOption::Size, "FSettingsOption size");
+static_assert(offsetof(MK12::FSettingsOption, Id) == 0x20, "FSettingsOption::Id");
+static_assert(offsetof(MK12::FSettingsOption, bLocalizedTitle) == 0xC0, "FSettingsOption::bLocalizedTitle");
+static_assert(sizeof(MK12::FSettingsListOption) == MK12::FSettingsListOption::Size, "FSettingsListOption size");
+static_assert(offsetof(MK12::FSettingsListOption, Values) == 0xC8, "FSettingsListOption::Values");
+static_assert(offsetof(MK12::FSettingsListOption, Get) == 0xE0, "FSettingsListOption::Get");
+static_assert(offsetof(MK12::FSettingsListOption, Default) == 0x100, "FSettingsListOption::Default");
+static_assert(sizeof(MK12::FSettingsListValue) == 0x20, "FSettingsListValue size");
+static_assert(sizeof(MK12::FSettingsPage) == 0x10, "FSettingsPage size");
+static_assert(offsetof(MK12::USettingsScreen, Pages) == 0x6F8, "USettingsScreen::Pages");
+static_assert(offsetof(MK12::USettingsScreen, CurrentPage) == 0x6AC, "USettingsScreen::CurrentPage");
+static_assert(offsetof(MK12::USettingsScreen, PageDescriptions) == 0x708, "USettingsScreen::PageDescriptions");
+static_assert(sizeof(MK12::FMenuEntry) == 0xE0, "FMenuEntry size");
+static_assert(offsetof(MK12::FMenuEntry, bLocalized) == 0xD4, "FMenuEntry::bLocalized");
+static_assert(offsetof(MK12::FMenuEntry, OnPick) == 0x30, "FMenuEntry::OnPick");
+static_assert(offsetof(MK12::FMenuEntry, Description) == 0x10, "FMenuEntry::Description");
+static_assert(offsetof(MK12::FMenuEntry, FlagsA) == 0x58, "FMenuEntry::FlagsA");
+static_assert(sizeof(MK12::FSettingsTab) == 0x20, "FSettingsTab size");
+
+void MK12::FText::Release()
+{ // Same release the game does: drop the shared ref, destroy on the last one, then the counter on its last weak ref
+	FSharedRefController* Ref = Controller;
+	TextData = nullptr;
+	Controller = nullptr;
+	if (!Ref)
+		return;
+
+	if (_InterlockedExchangeAdd(&Ref->SharedRefs, -1) == 1)
+	{
+		((void(__fastcall*)(FSharedRefController*))Ref->VTable[0])(Ref);
+		if (_InterlockedExchangeAdd(&Ref->WeakRefs, -1) == 1)
+			((void(__fastcall*)(FSharedRefController*, int64_t))Ref->VTable[1])(Ref, 1);
+	}
+}
 
 bool MK12::CURL::HTTPRequestWrapper::GetRequestBody(char** out, int32_t* size)
 {
@@ -100,8 +242,13 @@ uint64_t __fastcall	MK12::Remake::FNameInfoToWString(MK12::FNameInfoStruct* FNam
 {
 	if (!MK12::UMainNameTable->IsInitialized)
 	{
-		MK12::UNameTable = (MK12::UNameTableStruct*)MK12::InitializeNameTable(*MK12::UNameTable);
-		MK12::UMainNameTable->IsInitialized = 1;
+		static std::mutex InitLock; // Many threads turn names into text, the table is set up once
+		std::lock_guard<std::mutex> Guard(InitLock);
+		if (!MK12::UMainNameTable->IsInitialized)
+		{
+			MK12::UNameTable = (MK12::UNameTableStruct*)MK12::InitializeNameTable(*MK12::UNameTable);
+			MK12::UMainNameTable->IsInitialized = 1;
+		}
 	}
 
 	MK12::FName* Name = MK12::NameTableIndexToFName(FNameInfo);
@@ -118,8 +265,8 @@ uint64_t __fastcall MK12::Remake::FNameObjectToWString(MK12::FName* Name, char* 
 
 uint64_t __fastcall MK12::Remake::FNameObjectToWStringCommon(MK12::FName* Name, char* Destination)
 {
-	const char* nameStr = Name->ToStr();
-	MK12::FName* swap = HookMetadata::FSwapTable.get(nameStr);
+	// Off, it does exactly what the game's own functions do. The swaps are loaded before it turns on
+	MK12::FName* swap = Features::IsActive(Features::Id::StringSwap) ? HookMetadata::FSwapTable.get(Name->ToStr()) : nullptr;
 	MK12::FName* target = swap ? swap : Name;
 
 	uint64_t NameSize = target->GetSize();
@@ -279,7 +426,7 @@ void MK12::FName::Print()
 
 char* MK12::FName::ToStr()
 {
-	static char name[4096];
+	thread_local char name[4096]; // Called from many threads at once
 	uint16_t s = GetSize();
 	if (s >= sizeof(name))
 		s = sizeof(name) - 1;
@@ -455,7 +602,7 @@ namespace MK12::Remake::SecretFight {
 		for (int i = 0; i < elements; i++)
 		{
 			MK12::FSecretFightMoveTraceCondition* CurrentElement = MK12::TArrayHelpers::index<MK12::FSecretFightMoveTraceCondition>(RetypedCondition->mConditions, i);
-			printf("Perform %s as a ", EnumMaps::EManualMoveTraceEventMap[CurrentElement->mTraceID].c_str());
+			printf("Perform %s as a ", EnumMaps::Find(EnumMaps::EManualMoveTraceEventMap, CurrentElement->mTraceID));
 
 			switch (CurrentElement->mTraceFlags)
 			{
@@ -508,7 +655,7 @@ namespace MK12::Remake::SecretFight {
 
 	void PrintTypedConditions(FLadderSecretFightCondition_ProfileStatCondition* RetypedCondition)
 	{
-		printf("Achieve Career Progression %s", EnumMaps::MKProfileStatIDMap[RetypedCondition->mStatID].c_str());
+		printf("Achieve Career Progression %s", EnumMaps::Find(EnumMaps::MKProfileStatIDMap, RetypedCondition->mStatID));
 		PrintComparisonType(RetypedCondition->mComparisonType);
 		printf("%d Times ", RetypedCondition->mRequiredValue);
 		if (RetypedCondition->mRequiredPasses > 1)
@@ -522,7 +669,7 @@ namespace MK12::Remake::SecretFight {
 
 	void PrintFGStatID(Enums::FGStatID& enumkey)
 	{
-		printf("%s", EnumMaps::FGStatIDMap[enumkey].c_str());
+		printf("%s", EnumMaps::Find(EnumMaps::FGStatIDMap, enumkey));
 	}
 
 }

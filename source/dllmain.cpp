@@ -4,11 +4,17 @@
 #include "src/mk12hook.h"
 #include "src/GamePatchManager.h"
 #include "src/FloydTower.h"
+#include "src/GameMessageBox.h"
+#include "src/GameToast.h"
+#include "src/ModSettings.h"
+#include "src/Features.h"
+#include "src/Announcer.h"
+#include "src/StateFile.h"
 #include "mk12sdk/sdk.h"
 #include <tlhelp32.h>
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "0.6.0";
+constexpr const char * CURRENT_HOOK_VERSION = "1.0.0";
 
 
 void CreateConsole();
@@ -71,166 +77,13 @@ void PreGameHooks()
 		printf("Generated Trampolines\n");
 	 IATable = ProcessPatch::ParseImportTable();
 
-	// First check to print version info
-	if (SettingsMgr->bEnableVersionInfo)
-	{
-		HookMetadata::ActiveModsMap["bVersionInfo"]			= MK12Hook::Hooks::ResolveVersionFunctions();
-	}
-
-	// Unsigned removes signing at its source, Legacy patches each check on its own
-	if (!SettingsMgr->bLegacyModLoader)
-	{
-		if (_stricmp(SettingsMgr->szModLoaderMode.c_str(), "Unsigned"))
-			printfWarning("Unknown szModLoaderMode \"%s\", using Unsigned", SettingsMgr->szModLoaderMode.c_str());
-		HookMetadata::ActiveModsMap["bAntiPakSigning"]		= MK12Hook::Hooks::DisablePakSigning();
-	}
-	else
-	{
-		printfInfo("Mod Loader Mode: Legacy");
-		if (SettingsMgr->bDisableSignatureCheck)
-		{
-			HookMetadata::ActiveModsMap["bAntiSigCheck"]		= MK12Hook::Hooks::DisableSignatureCheck();
-		}
-		if (SettingsMgr->bDisableSignatureWarn)
-		{
-			HookMetadata::ActiveModsMap["bAntiSigWarn"]			= MK12Hook::Hooks::DisableSignatureWarn();
-		}
-		if (SettingsMgr->bDisableChunkSigCheck)
-		{
-			HookMetadata::ActiveModsMap["bAntiChunkSigCheck"]	= MK12Hook::Hooks::DisableChunkSigCheck();
-		}
-		if (SettingsMgr->bDisableTOCSigCheck)
-		{
-			HookMetadata::ActiveModsMap["bAntiTocSigCheck"]		= MK12Hook::Hooks::DisableTOCSigCheck();
-		}
-		if (SettingsMgr->bDisablePakTOCCheck)
-		{
-			HookMetadata::ActiveModsMap["bAntiPakTocCheck"]		= MK12Hook::Hooks::DisablePakTOCCheck();
-		}
-	}
-
-	if (SettingsMgr->bFNameToStrHook)
-	{
-		RegisterHacks::EnableRegisterHacks();
-		HookMetadata::ActiveModsMap["bFPathIdLoader"]		= MK12Hook::Hooks::FNameToStrWithIdLoader();
-		HookMetadata::ActiveModsMap["bFPathNoIdLoader"]		= MK12Hook::Hooks::FNameToStrNoIdLoader();
-		HookMetadata::ActiveModsMap["bFPathCommonLoader"]	= MK12Hook::Hooks::FNameToStrCommonLoader();
-	}
-	if (SettingsMgr->bUNameGetter)
-	{
-		if (!SettingsMgr->bFNameToStrHook)
-		{
-			printfWarning("bUNameGetter requires bFPathLoader to be enabled! Skipping.");
-		}
-		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
-		{
-			printfError("bUNameGetter requires FPathIdLoader to succeed! Skipping.");
-		}
-		else
-		{
-			HookMetadata::ActiveModsMap["UNameTableGetter"]		= MK12Hook::Hooks::UNameTableGetter();
-			if (HookMetadata::ActiveModsMap["UNameTableGetter"])
-				MK12Hook::Hooks::OverrideFNameToWStrFuncs();
-		}
-	}
-
-	if (SettingsMgr->bFNameToStrHook && HookMetadata::ActiveModsMap["bFPathIdLoader"])
-	{
-		if (HookMetadata::ActiveModsMap["UNameTableGetter"])
-			printfInfo("FName Mode: Remake (bUNameGetter enabled)");
-		else if (SettingsMgr->bUNameGetter)
-			printfInfo("FName Mode: Injection (bUNameGetter failed, falling back)");
-		else
-			printfInfo("FName Mode: Injection (bUNameGetter disabled)");
-	}
-
-	if (SettingsMgr->AnnouncerSwap.bEnable)
-	{
-		if (!SettingsMgr->bFNameToStrHook)
-		{
-			printfError("AnnouncerSwap requires bFPathLoader to be enabled! Skipping.");
-		}
-		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
-		{
-			printfError("AnnouncerSwap: bFPathLoader is enabled but FPathIdLoader failed! Skipping.");
-		}
-		else
-		{
-			int swaps = MK12Hook::Mods::AnnouncerSwap();
-		}
-	}
-	if (SettingsMgr->bEnableStringSwap)
-	{
-		if (!SettingsMgr->bFNameToStrHook)
-		{
-			printfError("StringSwap requires bFPathLoader to be enabled! Skipping.");
-		}
-		else if (!HookMetadata::ActiveModsMap["bFPathIdLoader"])
-		{
-			printfError("StringSwap: bFPathLoader is enabled but FPathIdLoader failed! Skipping.");
-		}
-		else
-		{
-			int swaps = MK12Hook::Mods::StringSwaps();
-		}
-	}
-	if (SettingsMgr->bPatchCurl)
-	{
-		HookMetadata::ActiveModsMap["bPatchCurl"] = MK12Hook::Hooks::PatchCurl();
-	}
-	if (SettingsMgr->bEnableServerProxy)
-	{
-		if (SettingsMgr->szServerUrl.empty())
-		{
-			printfWarning("bEnableServerProxy is enabled but szServerUrl is empty! Skipping.");
-		}
-		else
-		{
-			HookMetadata::ActiveModsMap["bGameEndpointSwap"] = MK12Hook::Hooks::OverrideGameEndpointsData();
-			if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
-			{
-				HookMetadata::eServerProxyMode = HookMetadata::PROXY_CONFIG;
-				printfInfo("Server Proxy Mode: Config");
-			}
-			else if (HookMetadata::ActiveModsMap["bPatchCurl"])
-			{
-				HookMetadata::eServerProxyMode = HookMetadata::PROXY_CURL;
-				printfInfo("Server Proxy Mode: Curl");
-			}
-			else
-			{
-				printfError("Server Proxy: EndpointLoader pattern failed and Curl is not enabled. Cannot proxy.");
-			}
-		}
-	}
-	if (SettingsMgr->bGetFightMetadata)
-	{
-		HookMetadata::ActiveModsMap["bFightMetadata"]		= MK12Hook::Hooks::ExtractFightMetadataFromSecretFightSetupStage();
-	}
-	if (SettingsMgr->bSerializeSecretFights)
-	{
-		if (!SettingsMgr->bGetFightMetadata)
-		{
-			printfWarning("bSerializeSecretFights requires bGetFightMetadata to be enabled! Skipping.");
-		}
-		else if (!HookMetadata::ActiveModsMap["UNameTableGetter"])
-		{
-			printfWarning("bSerializeSecretFights requires bUNameGetter to be enabled and working! Skipping.");
-		}
-	}
-	// Debug logs come from these hooks, so they bring them in when they're off
-	if (SettingsMgr->bEnableFloydTracking || SettingsMgr->bFloydDebug)
-	{
-		if (!SettingsMgr->bEnableFloydTracking)
-			printfInfo("bFloydDebug requires Floyd Tracking, enabling it.");
-		HookMetadata::ActiveModsMap["bFloydTracking"]		= MK12Hook::Hooks::FloydTrackingHooks();
-	}
-	if (SettingsMgr->bEnableProfileGetter || SettingsMgr->bProfileDebug)
-	{
-		if (!SettingsMgr->bEnableProfileGetter)
-			printfInfo("bProfileDebug requires Profile Getter, enabling it.");
-		HookMetadata::ActiveModsMap["bProfileGetter"]		= MK12Hook::Hooks::ProfileGetterHooks();
-	}
+	// Every feature, in dependency order. Each one ends up installed, off in the ini, failed or blocked
+	ModSettings::SetModVersion(CURRENT_HOOK_VERSION);
+	Features::DefineAll();
+	Features::InstallAll();
+	if (Features::IsInstalled(Features::Id::ModSettings))
+		ModSettings::Init(Features::IsInstalled(Features::Id::PakMods));
+	Features::PrintSummary();
 
 	CachedPatternsMgr->Flush();
 }
@@ -292,6 +145,7 @@ inline bool VerifyProcessName(std::string expected_process) {
 
 bool OnInitializeHook()
 {
+	StateFile::Migrate();
 	FirstRunMgr->Init();
 	SettingsMgr->Init();
 
@@ -387,7 +241,8 @@ void MK12HookPlugin::OnFrameTick()
 
 void MK12HookPlugin::OnFightStartup()
 {
-	// not implemented yet
+	if (Features::IsInstalled(Features::Id::Announcer))
+		Announcer::OnFightStartup();
 }
 
 char* GetVersionedHookName()
@@ -413,7 +268,7 @@ void MK12HookPlugin::TabFunction()
 	static int counter = 0;
 	MK12HOOKSDK::ImGui_Text(GetVersionedHookName());
 
-	if (HookMetadata::ActiveModsMap["bVersionInfo"])
+	if (Features::IsInstalled(Features::Id::VersionInfo))
 	{
 		static char versionLabel[256] = {};
 		static bool versionResolved = false;
@@ -448,41 +303,19 @@ void MK12HookPlugin::TabFunction()
 			MK12HOOKSDK::ImGui_Text(versionLabel);
 	}
 
-	if (MK12HOOKSDK::ImGui_CollapsingHeader("Patches"))
+	if (MK12HOOKSDK::ImGui_CollapsingHeader("Features"))
 	{
-		std::vector<std::pair<std::string, bool>> toggles = {
-			{ "Pak Signing (Unsigned)",		HookMetadata::ActiveModsMap["bAntiPakSigning"] },
-			{ "Pak Signature",				HookMetadata::ActiveModsMap["bAntiSigCheck"] },
-			{ "Chunk Signature",			HookMetadata::ActiveModsMap["bAntiChunkSigCheck"] },
-			{ "TOC Signature",				HookMetadata::ActiveModsMap["bAntiTocSigCheck"] },
-			{ "Pak TOC Signature",			HookMetadata::ActiveModsMap["bAntiPakTocCheck"] },
-			{ "Signature Warning",			HookMetadata::ActiveModsMap["bAntiSigWarn"] },
-
-			{ "FString - ID Loader",		HookMetadata::ActiveModsMap["bFPathIdLoader"] },
-			{ "FString - No ID Loader",		HookMetadata::ActiveModsMap["bFPathNoIdLoader"] },
-			{ "FString - Common Loader",	HookMetadata::ActiveModsMap["bFPathCommonLoader"] },
-
-			{ "UName Table Getter",			HookMetadata::ActiveModsMap["UNameTableGetter"] },
-
-			{ "Fight Metadata Extraction",	HookMetadata::ActiveModsMap["bFightMetadata"] },
-
-			{ "Floyd Tracking",				HookMetadata::ActiveModsMap["bFloydTracking"] },
-			{ "Profile Getter" ,			HookMetadata::ActiveModsMap["bProfileGetter"]},
-			{ "Version Info",				HookMetadata::ActiveModsMap["bVersionInfo"] },
-
-			{ "Game Endpoint Swap",			HookMetadata::ActiveModsMap["bGameEndpointSwap"] }
-		};
-
-
-		for (std::vector<std::pair<std::string, bool>>::iterator it = toggles.begin(); it != toggles.end(); ++it)
+		for (int i = 0; i < (int)Features::Id::Count; i++)
 		{
-			const std::string& label = it->first;
-			bool tempValue = it->second; // read-only copy
-			MK12HOOKSDK::ImGui_Checkbox(label.c_str(), &tempValue);
+			Features::Id Which = (Features::Id)i;
+			char Label[128];
+			snprintf(Label, sizeof(Label), "%ls", Features::Get(Which).Title);
+			bool bActive = Features::IsActive(Which); // Read-only copy
+			MK12HOOKSDK::ImGui_Checkbox(Label, &bActive);
 		}
 	}
 
-	if (HookMetadata::ActiveModsMap["UNameTableGetter"])
+	if (Features::IsInstalled(Features::Id::NameTable))
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("UE4"))
 		{
@@ -505,16 +338,10 @@ void MK12HookPlugin::TabFunction()
 
 	if (MK12HOOKSDK::ImGui_CollapsingHeader("Network"))
 	{
-		if (HookMetadata::ActiveModsMap["bGameEndpointSwap"])
+		if (Features::IsInstalled(Features::Id::PrivateServer))
 		{
 			char buffer[512];
 			snprintf(buffer, sizeof(buffer), "Server Proxy: %s (Config)", SettingsMgr->szServerUrl.c_str());
-			MK12HOOKSDK::ImGui_Text(buffer);
-		}
-		else if (HookMetadata::eServerProxyMode == HookMetadata::PROXY_CURL)
-		{
-			char buffer[512];
-			snprintf(buffer, sizeof(buffer), "Server Proxy: %s (Curl)", SettingsMgr->szServerUrl.c_str());
 			MK12HOOKSDK::ImGui_Text(buffer);
 		}
 		else
@@ -522,7 +349,7 @@ void MK12HookPlugin::TabFunction()
 			MK12HOOKSDK::ImGui_Text("Server Proxy: Disabled");
 		}
 
-		if (HookMetadata::ActiveModsMap["bPatchCurl"])
+		if (Features::IsInstalled(Features::Id::Curl))
 		{
 			MK12HOOKSDK::ImGui_Separator();
 
@@ -550,7 +377,7 @@ void MK12HookPlugin::TabFunction()
 		MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
 	}
 
-	if (HookMetadata::ActiveModsMap["bFloydTracking"])
+	if (Features::IsInstalled(Features::Id::FloydTracking))
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Challenges"))
 		{
@@ -588,30 +415,17 @@ void MK12HookPlugin::TabFunction()
 
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("Floyd Tower"))
 		{
-			uint32_t TacoHash = HookMetadata::CurrentTacoInfo.UserProfileHash;
 			time_t Now = time(nullptr);
 			FloydTower::Window window;
-			bool HasWindow = false;
+			FloydTower::Status status = FloydTower::Find(Now, HookMetadata::CurrentTacoInfo.UserProfileHash, SettingsMgr->bFloydTowerFromGame, window);
+			bool HasWindow = status == FloydTower::Status::Ready;
 
 			// Source picked by szFloydTowerMode
-			if (SettingsMgr->bFloydTowerFromGame)
-			{
-				MK12HOOKSDK::ImGui_Text("Source: Game");
-				HasWindow = FloydTower::GetGameWindow(Now, window);
-				if (!FloydTower::HasGameWindows())
-					MK12HOOKSDK::ImGui_Text("No schedule yet. Open Living Towers.");
-				else if (!HasWindow)
-					MK12HOOKSDK::ImGui_Text("Not in the game's schedule. Beat Floyd once to unlock it.");
-			}
-			else
-			{
-				MK12HOOKSDK::ImGui_Text("Source: Calculated");
-				HasWindow = TacoHash != 0;
-				if (HasWindow)
-					window = FloydTower::GetWindow(TacoHash, Now);
-				else
-					MK12HOOKSDK::ImGui_Text("No schedule yet. Beat Floyd once, then open Living Towers."); // The game only hashes once Floyd was beaten
-			}
+			MK12HOOKSDK::ImGui_Text(SettingsMgr->bFloydTowerFromGame ? "Source: Game" : "Source: Calculated");
+			if (status == FloydTower::Status::NoSchedule)
+				MK12HOOKSDK::ImGui_Text(SettingsMgr->bFloydTowerFromGame ? "No schedule yet. Open Living Towers." : "No schedule yet. Beat Floyd once, then open Living Towers.");
+			else if (status == FloydTower::Status::NotUnlocked)
+				MK12HOOKSDK::ImGui_Text("Not in the game's schedule. Beat Floyd once to unlock it.");
 
 			if (HasWindow)
 			{
@@ -645,7 +459,7 @@ void MK12HookPlugin::TabFunction()
 		MK12HOOKSDK::ImGui_Text("Floyd Tracking is not enabled");
 	}
 
-	if (HookMetadata::ActiveModsMap["bProfileGetter"])
+	if (Features::IsInstalled(Features::Id::ProfileGetter))
 	{
 		if (MK12HOOKSDK::ImGui_CollapsingHeader("Profile Information"))
 		{
@@ -662,8 +476,8 @@ void MK12HookPlugin::TabFunction()
 			DisplayWCharField("PlatformId", HookMetadata::UserProfileInfo.PlatformId);
 			DisplayWCharField("SaveKey", HookMetadata::UserProfileInfo.SaveKey);
 
-			// These come from the floyd hash string, not the profile getter
-			if (HookMetadata::ActiveModsMap["bFloydTracking"])
+			// The game's online identity, read by the profile getter (or the Floyd hash)
+			if (Features::IsInstalled(Features::Id::ProfileGetter) || Features::IsInstalled(Features::Id::FloydTracking))
 			{
 				DisplayWCharField("HydraId", HookMetadata::UserProfileInfo.HydraId);
 				DisplayWCharField("WBId", HookMetadata::UserProfileInfo.WBId);
@@ -671,13 +485,44 @@ void MK12HookPlugin::TabFunction()
 			}
 			else
 			{
-				MK12HOOKSDK::ImGui_Text("HydraId, WBId and OfflineProfileId need Floyd Tracking");
+				MK12HOOKSDK::ImGui_Text("HydraId, WBId and OfflineProfileId need Profile Getter or Floyd Tracking");
 			}
 		}
 	}
 	else
 	{
 		MK12HOOKSDK::ImGui_Text("Profile Info Extraction is not enabled");
+	}
+
+	if (Features::IsInstalled(Features::Id::Popups))
+	{
+		if (MK12HOOKSDK::ImGui_CollapsingHeader("Game Message Box"))
+		{
+			static char Message[512] = "";
+			static bool bPausesGame = false;
+			static GameMessageBox::Handle LastNotice = GameMessageBox::NoHandle;
+			MK12HOOKSDK::ImGui_InputText("Message", Message, sizeof(Message));
+			MK12HOOKSDK::ImGui_Checkbox("Pauses Game", &bPausesGame);
+			if (MK12HOOKSDK::ImGui_Button("Show Message Box") && Message[0])
+				GameMessageBox::Confirm(GameMessageBox::Text::Plain(Message), nullptr, L"MK12TTH", bPausesGame);
+			if (MK12HOOKSDK::ImGui_Button("Show Notice") && Message[0])
+			{
+				GameMessageBox::Dismiss(LastNotice);
+				LastNotice = GameMessageBox::Notice(GameMessageBox::Text::Plain(Message), L"MK12TTH", bPausesGame);
+			}
+			if (MK12HOOKSDK::ImGui_Button("Show Toast") && Message[0])
+				GameToast::Show(L"MK12TTH", GameMessageBox::Text::Plain(Message));
+			if (MK12HOOKSDK::ImGui_Button("Dismiss Notice"))
+			{
+				GameMessageBox::Dismiss(LastNotice);
+				LastNotice = GameMessageBox::NoHandle;
+			}
+			MK12HOOKSDK::ImGui_Text("Waits for loading screens and online modes to end");
+		}
+	}
+	else
+	{
+		MK12HOOKSDK::ImGui_Text("Game Message Box is not enabled");
 	}
 
 	/*if (MK12HOOKSDK::ImGui_CollapsingHeader("Input"))

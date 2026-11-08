@@ -1,4 +1,5 @@
 #include "eSettingsManager.h"
+#include "StateFile.h"
 #include <Windows.h>
 
 eSettingsManager*		SettingsMgr			= new eSettingsManager();
@@ -48,15 +49,40 @@ void eCachedPatternsManager::Flush()
 	Cache.clear();
 }
 
-void eCachedPatternsManager::Set(const std::string& key, uint64_t value)
+std::string eCachedPatternsManager::Key(const std::string& pattern)
 {
+	std::string key;
+	size_t i = 0;
+	while (i < pattern.size())
+	{
+		while (i < pattern.size() && isspace((unsigned char)pattern[i]))
+			i++;
+		size_t start = i;
+		while (i < pattern.size() && !isspace((unsigned char)pattern[i]))
+			i++;
+		if (start == i)
+			break;
+		std::string token = pattern.substr(start, i - start);
+		if (token.find('?') != std::string::npos)
+			token = "?";
+		for (char& c : token)
+			c = (char)toupper((unsigned char)c);
+		key += (key.empty() ? "" : " ") + token;
+	}
+	return key;
+}
+
+void eCachedPatternsManager::Set(const std::string& pattern, uint64_t value)
+{
+	std::string key = Key(pattern);
 	Cache[key] = value;
 	if (bAutoFlush)
 		FlushEntry(key, value);
 }
 
-uint64_t eCachedPatternsManager::Get(const std::string& key)
+uint64_t eCachedPatternsManager::Get(const std::string& pattern)
 {
+	std::string key = Key(pattern);
 	auto it = Cache.find(key);
 	if (it != Cache.end())
 		return it->second;
@@ -75,9 +101,9 @@ uint64_t eCachedPatternsManager::Get(const std::string& key)
 	return 0;
 }
 
-bool eCachedPatternsManager::Has(const std::string& key)
+bool eCachedPatternsManager::Has(const std::string& pattern)
 {
-	return Cache.find(key) != Cache.end();
+	return Cache.find(Key(pattern)) != Cache.end();
 }
 
 static DWORD WINAPI PaidModWarningThread(LPVOID)
@@ -88,7 +114,7 @@ static DWORD WINAPI PaidModWarningThread(LPVOID)
 
 void eFirstRunManager::Init()
 {
-	ini = new CIniReader("tt_state.ini");
+	ini = new CIniReader((char*)StateFile::FILE_NAME);
 
 	bPaidModWarned				= ini->ReadBoolean	("FirstRun",			"bPaidModWarned",			false);
 
@@ -132,35 +158,11 @@ void eSettingsManager::Init()
 	szCurlPerform				= ini.ReadString	("Settings",			"szCurlPerform",			"libcurl.curl_easy_perform");
 	bEnableKeyboardHotkeys		= ini.ReadBoolean	("Settings",			"bEnableKeyboardHotkeys",	true);
 	// Patches
-	bPatchCurl					= ini.ReadBoolean	("Patches",				"bPatchCurl",				false);
-	bFNameToStrHook				= ini.ReadBoolean	("Patches",				"bFPathLoader",				false);
-	bUNameGetter				= ini.ReadBoolean	("Patches",				"bUNameGetter",				false);
-	bGetFightMetadata			= ini.ReadBoolean	("Patches",				"bGetFightMetadata",		false);
-	bSerializeSecretFights		= ini.ReadBoolean	("Patches",				"bSerializeSecretFights",	false);
-	bEnableStringSwap			= ini.ReadBoolean	("Patches",				"bEnableStringSwap",		false);
-	bEnableFloydTracking		= ini.ReadBoolean	("Patches",				"bEnableFloydTracking",		false);
 	szFloydTowerMode			= ini.ReadString	("Patches",				"szFloydTowerMode",			"Game");
 	bFloydTowerFromGame			= _stricmp(szFloydTowerMode.c_str(), "Calculated") != 0;
-	bEnableProfileGetter		= ini.ReadBoolean	("Patches",				"bEnableProfileGetter",		false);
-	bEnableVersionInfo			= ini.ReadBoolean	("Patches",				"bEnableVersionInfo",		false);
-
-	// Patches.AntiCheat
-	// Hidden from sample.ini. Unsigned unbinds the pak signing keys, Legacy uses the bDisable* patches below
-	szModLoaderMode				= ini.ReadString	("Patches.AntiCheat",	"szModLoaderMode",			"Unsigned");
-	bLegacyModLoader			= _stricmp(szModLoaderMode.c_str(), "Legacy") == 0;
-	bDisableSignatureCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureCheck",	true);
-	bDisableChunkSigCheck		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableChunkSigCheck",	true);
-	//bDisableSignatureWarn		= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableSignatureWarn",	false);
-	bDisableSignatureWarn		= false;
-	bDisableTOCSigCheck			= ini.ReadBoolean	("Patches.AntiCheat",	"bDisableTOCSigCheck",		true);
-	bDisablePakTOCCheck			= ini.ReadBoolean	("Patches.AntiCheat",	"bDisablePakTOCCheck",		true);
+	szAttractModeDelay			= ini.ReadString	("Patches",				"szAttractModeDelay",		"Game");
 
 	// Patterns
-	pSigCheck					= ini.ReadString	("Patterns",			"pSigCheck",				"");
-	pChunkSigCheck				= ini.ReadString	("Patterns",			"pChunkSigCheck",			"");
-	pChunkSigCheckFunc			= ini.ReadString	("Patterns",			"pChunkSigCheckFunc",		"");
-	pSigWarn					= ini.ReadString	("Patterns",			"pSigWarn",					"");
-	pTocCheck					= ini.ReadString	("Patterns",			"pTocCheck",				"");
 	pPakTocCheck				= ini.ReadString	("Patterns",			"pPakTocCheck",				"");
 	pUNameObjGetPat				= ini.ReadString	("Patterns",			"pUNameObjGetPat",			"");
 	pFPathLoadPat				= ini.ReadString	("Patterns",			"pFPathLoadPat",			"");
@@ -168,6 +170,8 @@ void eSettingsManager::Init()
 	pFPathCLoadPat				= ini.ReadString	("Patterns",			"pFPathCLoadPat",			"");
 	pEndpointLoader				= ini.ReadString	("Patterns",			"pEndpointLoader",			"");
 	pProfileGetter				= ini.ReadString	("Patterns",			"pProfileGetter",			"");
+	pOnlineSubsystem			= ini.ReadString	("Patterns",			"pOnlineSubsystem",			"");
+	pOnlineCheck				= ini.ReadString	("Patterns",			"pOnlineCheck",				"");
 	// Curl
 	pCurlSetOpt					= ini.ReadString	("Patterns.Curl",		"pCurlSetOpt",				"");
 	pCurlMultiAddHandle			= ini.ReadString	("Patterns.Curl",		"pCurlMultiAddHandle",		"");
@@ -184,6 +188,68 @@ void eSettingsManager::Init()
 	pGetFloydHashInputString2	= ini.ReadString	("Patterns.Floyd",		"pGetFloydHashInputString2","");
 	pGetTacoHashInputString		= ini.ReadString	("Patterns.Floyd",		"pGetTacoHashInputString",	"");
 	pGetTacoSchedule			= ini.ReadString	("Patterns.Floyd",		"pGetTacoSchedule",			"");
+	pTowersSetup				= ini.ReadString	("Patterns.Floyd",		"pTowersSetup",				"");
+	pGetFloydVictories			= ini.ReadString	("Patterns.Floyd",		"pGetFloydVictories",		"");
+	pAttractModeIdle			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeIdle",			"");
+	pAttractModeLimit			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeLimit",			"");
+	pKeepRunning				= ini.ReadString	("Patterns.MainMenu",	"pKeepRunning",				"");
+	pFocusLost					= ini.ReadString	("Patterns.MainMenu",	"pFocusLost",				"");
+	pFocusLostPause				= ini.ReadString	("Patterns.MainMenu",	"pFocusLostPause",			"");
+	pBootWaitFirst				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitFirst",			"");
+	pBootWaitSecond				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitSecond",			"");
+	pBootWaitThird				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitThird",			"");
+	pGetStatsContainer			= ini.ReadString	("Patterns.Floyd",		"pGetStatsContainer",		"");
+	pGetProfileStat				= ini.ReadString	("Patterns.Floyd",		"pGetProfileStat",			"");
+	pGetProfileStatBits			= ini.ReadString	("Patterns.Floyd",		"pGetProfileStatBits",		"");
+	pFloydSeed					= ini.ReadString	("Patterns.Floyd",		"pFloydSeed",				"");
+	pAnnouncerReroll			= ini.ReadString	("Patterns.Announcer",	"pAnnouncerReroll",			"");
+	pAnnouncerMenuApply			= ini.ReadString	("Patterns.Announcer",	"pAnnouncerMenuApply",		"");
+	pApplyAnnouncer				= ini.ReadString	("Patterns.Announcer",	"pApplyAnnouncer",			"");
+	pEngineNameConstruct		= ini.ReadString	("Patterns.Announcer",	"pEngineNameConstruct",		"");
+	pGetCurrentMission			= ini.ReadString	("Patterns.Announcer",	"pGetCurrentMission",		"");
+	pGetTeam					= ini.ReadString	("Patterns.Announcer",	"pGetTeam",					"");
+	pGetTeamDefinitions			= ini.ReadString	("Patterns.Announcer",	"pGetTeamDefinitions",		"");
+	// Message Box
+	pTextFromString				= ini.ReadString	("Patterns.MessageBox",	"pTextFromString",			"");
+	pFindText					= ini.ReadString	("Patterns.MessageBox",	"pFindText",				"");
+	pMessageBoxConstruct		= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxConstruct",		"");
+	pMessageBoxSetTitle			= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxSetTitle",		"");
+	pMessageBoxAddButton		= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxAddButton",		"");
+	pMessageBoxShow				= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxShow",			"");
+	pMessageBoxClose			= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxClose",			"");
+	pMessageBoxDestruct			= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxDestruct",		"");
+	pPlayerInputPressed			= ini.ReadString	("Patterns.MessageBox",	"pPlayerInputPressed",		"");
+	pPlayerInputUpdate			= ini.ReadString	("Patterns.MessageBox",	"pPlayerInputUpdate",		"");
+	pToastDriverCall			= ini.ReadString	("Patterns.MessageBox",	"pToastDriverCall",			"");
+	pToastEnqueue				= ini.ReadString	("Patterns.MessageBox",	"pToastEnqueue",			"");
+	pLocalPlayerInfo			= ini.ReadString	("Patterns.MessageBox",	"pLocalPlayerInfo",			"");
+	pMessageBoxCallback			= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxCallback",		"");
+	// Game State
+	pMainLoop					= ini.ReadString	("Patterns.GameState",	"pMainLoop",				"");
+	pFrameTick					= ini.ReadString	("Patterns.GameState",	"pFrameTick",				"");
+	pOnlineModeCheck			= ini.ReadString	("Patterns.GameState",	"pOnlineModeCheck",			"");
+	pModeManagerGetter			= ini.ReadString	("Patterns.GameState",	"pModeManagerGetter",		"");
+	// Settings Screen
+	pSettingsBuildTabs			= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsBuildTabs",		"");
+	pSettingsCopyTabs			= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsCopyTabs",		"");
+	pMenuEntryConstruct			= ini.ReadString	("Patterns.SettingsScreen",	"pMenuEntryConstruct",		"");
+	pSettingsTabConstruct		= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsTabConstruct",	"");
+	pSettingsTabDestruct		= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsTabDestruct",		"");
+	pGrowArray					= ini.ReadString	("Patterns.SettingsScreen",	"pGrowArray",				"");
+	pStringReserve				= ini.ReadString	("Patterns.SettingsScreen",	"pStringReserve",			"");
+	pFindTextPlatform			= ini.ReadString	("Patterns.SettingsScreen",	"pFindTextPlatform",		"");
+	pMemoryFree					= ini.ReadString	("Patterns.SettingsScreen",	"pMemoryFree",				"");
+	pMainMenuCopyTabs			= ini.ReadString	("Patterns.SettingsScreen",	"pMainMenuCopyTabs",		"");
+	pSettingsVersionText		= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsVersionText",	"");
+	pSettingsRun				= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsRun",				"");
+	// Paks
+	pPakMount					= ini.ReadString	("Patterns.Paks",		"pPakMount",				"");
+	pConfigInit					= ini.ReadString	("Patterns.Paks",		"pConfigInit",				"");
+	pConfigGlobals				= ini.ReadString	("Patterns.Paks",		"pConfigGlobals",			"");
+	pConfigSetString			= ini.ReadString	("Patterns.Paks",		"pConfigSetString",			"");
+	pConfigGetString			= ini.ReadString	("Patterns.Paks",		"pConfigGetString",			"");
+	pConfigFindFile				= ini.ReadString	("Patterns.Paks",		"pConfigFindFile",			"");
+	pLoadFileToString			= ini.ReadString	("Patterns.Paks",		"pLoadFileToString",		"");
 
 
 	// Keybinds
@@ -193,17 +259,5 @@ void eSettingsManager::Init()
 
 	// Private Server
 	szServerUrl					= ini.ReadString	("Server",				"szServerUrl",				"");
-	bEnableServerProxy			= ini.ReadBoolean	("Server",				"bEnableServerProxy",		false);
 
-
-	// Announcer Swap
-	AnnouncerSwap.bEnable		= ini.ReadBoolean	("AnnouncerSwap",		"bEnable",					false);
-	AnnouncerSwap.szDefault		= ini.ReadString	("AnnouncerSwap",		"Default",					"");
-	AnnouncerSwap.szLiuKang		= ini.ReadString	("AnnouncerSwap",		"LiuKang",					"");
-	AnnouncerSwap.szGeras		= ini.ReadString	("AnnouncerSwap",		"Geras",					"");
-	AnnouncerSwap.szJohnnyCage	= ini.ReadString	("AnnouncerSwap",		"JohnnyCage",				"");
-	AnnouncerSwap.szShangTsung	= ini.ReadString	("AnnouncerSwap",		"ShangTsung",				"");
-	AnnouncerSwap.szSindel		= ini.ReadString	("AnnouncerSwap",		"Sindel",					"");
-	AnnouncerSwap.szSubZero		= ini.ReadString	("AnnouncerSwap",		"SubZero",					"");
-	AnnouncerSwap.szOmniMan		= ini.ReadString	("AnnouncerSwap",		"OmniMan",					"");
 }
