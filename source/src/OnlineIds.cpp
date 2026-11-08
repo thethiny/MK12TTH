@@ -7,6 +7,7 @@
 #include "eSettingsManager.h"
 #include <Windows.h>
 #include <string>
+#include <cstring>
 #include <vector>
 
 namespace OnlineIds {
@@ -16,6 +17,14 @@ namespace OnlineIds {
 	constexpr size_t	PLAYER_ID_SLOT		= 0xF0 / 8; // Identity: the unique id of a local player
 	constexpr size_t	TO_STRING_SLOT		= 0x30 / 8; // Unique id: as text
 	constexpr int32_t	LOCAL_PLAYER		= 0;
+	constexpr ULONGLONG	AUTH_RETRY			= 3000; // Between reads while the access token isn't there yet
+	constexpr ULONGLONG	AUTH_REFRESH		= 30000; // Between reads once it is: signing in again gives a new one
+	constexpr size_t	AUTH_TEXT			= 4096; // Room for a ticket or token, they are far shorter
+	// The signed in player's object, as the game lays it out
+	constexpr size_t	PLAYER_TICKET		= 0x138; // The platform ticket, as engine text
+	constexpr size_t	PLAYER_CLIENT		= 0x2B0; // The connection to MK1's servers, there once signed in
+	constexpr size_t	PLAYER_CREDENTIAL	= 0x378; // What the game signs in with, holds the ticket again
+	constexpr size_t	CREDENTIAL_TICKET	= 0x18; // As a standard string
 
 	// The engine's shared pointer: the object and its reference counter
 	struct SharedRef {
@@ -29,11 +38,18 @@ namespace OnlineIds {
 	typedef MK12::FString*	(__fastcall ToStringType)(void* Id, MK12::FString* Out);
 	typedef MK12::TArray<void*>* (__fastcall GetLocalProfilesType)(); // Every local player's profile
 	typedef bool			(__fastcall IsProfileOnlineType)(void* Profile); // Signed in to MK1's servers (Hydra)
+	typedef MK12::FString*	(__fastcall AuthTokenType)(void* Unused, MK12::FString* Out, int32_t LocalPlayer); // The access token
+	typedef void*			(__fastcall AuthRegistryType)(); // The signed in players, by local player
+	typedef SharedRef*		(__fastcall AuthPlayerType)(void* Registry, SharedRef* Out, int32_t LocalPlayer);
 
 	static SubsystemGetterType* GetSubsystem = nullptr;
 	static GetLocalProfilesType* GetLocalProfiles = nullptr;
 	static IsProfileOnlineType* IsProfileOnline = nullptr;
+	static AuthTokenType* GetAuthToken = nullptr;
+	static AuthRegistryType* GetAuthRegistry = nullptr;
+	static AuthPlayerType* GetAuthPlayer = nullptr;
 	static ULONGLONG LastTry = 0;
+	static ULONGLONG LastAuthTry = 0;
 	static ULONGLONG WindowStart = 0; // Reading since the game went online, 0 when not reading
 	static uint32_t SeenMainMenus = 0;
 	static bool bWasOnline = false;
@@ -147,6 +163,126 @@ namespace OnlineIds {
 		Release(Identity);
 	}
 
+	void SetAuthReaders(void* TokenGetter, void* RegistryGetter, void* PlayerLookup)
+	{
+		GetAuthToken = (AuthTokenType*)TokenGetter;
+		GetAuthRegistry = (AuthRegistryType*)RegistryGetter;
+		GetAuthPlayer = (AuthPlayerType*)PlayerLookup;
+	}
+
+	// Engine text to UTF-8, false when it's empty or doesn't fit
+	static bool Narrow(const wchar_t* Text, char* Out, size_t OutSize)
+	{
+		if (!Text || !*Text)
+			return false;
+		return WideCharToMultiByte(CP_UTF8, 0, Text, -1, Out, (int)OutSize, nullptr, nullptr) > 1;
+	}
+
+	// Reads the keys with the game's own calls. Plain data only, so a bad read ends here and not in the game:
+	// bit 0 is the token, bit 1 the ticket
+	static unsigned ReadAuthRaw(char* Token, size_t TokenSize, char* Ticket, size_t TicketSize)
+	{
+		unsigned Got = 0;
+		__try
+		{
+			if (GetAuthToken)
+			{
+				MK12::FString Out = { nullptr, 0, 0 };
+				GetAuthToken(nullptr, &Out, LOCAL_PLAYER);
+				if (Narrow(Out.Data, Token, TokenSize))
+					Got |= 1;
+				if (Out.Data && MK12::MemoryFree)
+					MK12::MemoryFree(Out.Data);
+			}
+			if (GetAuthRegistry && GetAuthPlayer)
+			{
+				SharedRef Ref;
+				GetAuthPlayer(GetAuthRegistry(), &Ref, LOCAL_PLAYER);
+				char* Player = (char*)Ref.Object;
+				// Signed in only when the connection is there, before that the player holds nothing of ours
+				if (Player && *(void**)(Player + PLAYER_CLIENT))
+				{
+					if (Narrow(((MK12::FString*)(Player + PLAYER_TICKET))->Data, Ticket, TicketSize))
+						Got |= 2;
+					else if (char* Credential = *(char**)(Player + PLAYER_CREDENTIAL))
+					{
+						// A standard string: the text in place when it's short, else where the pointer says
+						char* String = Credential + CREDENTIAL_TICKET;
+						size_t Size = *(size_t*)(String + 0x10);
+						size_t Capacity = *(size_t*)(String + 0x18);
+						const char* Text = Capacity >= 16 ? *(char**)String : String;
+						if (Text && Size > 0 && Size < TicketSize)
+						{
+							memcpy(Ticket, Text, Size);
+							Ticket[Size] = 0;
+							Got |= 2;
+						}
+					}
+				}
+				Release(Ref);
+			}
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			Got = 0;
+		}
+		return Got;
+	}
+
+	// The platform the game runs on. The Epic build ships and loads Epic's online library, the Steam build doesn't
+	static const char* PlatformName()
+	{
+		return GetModuleHandleW(L"EOSSDK-Win64-Shipping.dll") ? "epic" : "steam";
+	}
+
+	// Fills the keys other features show and use. Game thread. Signing in again gives a new token, so it's read again
+	static void ReadAuth()
+	{
+		if (!GetAuthToken && !(GetAuthRegistry && GetAuthPlayer))
+			return;
+		static char Token[AUTH_TEXT];
+		static char Ticket[AUTH_TEXT];
+		Token[0] = Ticket[0] = 0;
+		unsigned Got = ReadAuthRaw(Token, sizeof(Token), Ticket, sizeof(Ticket));
+		auto& Keys = HookMetadata::sUserKeys;
+		if ((Got & 1) && strcmp(Keys.AccessToken.c_str(), Token) != 0)
+		{
+			Keys.AccessToken = Token;
+			if (SettingsMgr->ShouldLogProfile())
+				printf("Access token read (%zu chars)\n", strlen(Token));
+			if (SettingsMgr->ShouldLog(Log::Verbose))
+				printf("Access Token: %s\n", Token);
+		}
+		if ((Got & 2) && strcmp(Keys.PlatformTicket.c_str(), Ticket) != 0)
+		{
+			Keys.PlatformTicket = Ticket;
+			if (SettingsMgr->ShouldLogProfile())
+				printf("Platform ticket read (%zu chars)\n", strlen(Ticket));
+			if (SettingsMgr->ShouldLog(Log::Verbose))
+				printf("Platform Ticket: %s\n", Ticket);
+		}
+		if (Got && Keys.Platform.empty())
+		{
+			Keys.Platform = PlatformName();
+			if (SettingsMgr->ShouldLogProfile())
+				printf("Platform: %s\n", Keys.Platform.c_str());
+		}
+	}
+
+	static bool AskOnline();
+
+	// While signed in: until the token is there, then now and then
+	static void TickAuth(ULONGLONG Now)
+	{
+		ULONGLONG Wait = HookMetadata::sUserKeys.AccessToken.empty() ? AUTH_RETRY : AUTH_REFRESH;
+		if (Now - LastAuthTry < Wait)
+			return;
+		if (HasOnlineCheck() && !AskOnline())
+			return;
+		LastAuthTry = Now;
+		ReadAuth();
+	}
+
 	bool GaveUp()
 	{
 		return bGaveUp;
@@ -195,9 +331,12 @@ namespace OnlineIds {
 	// the game's check, from the main menu on), for a minute at most
 	void Tick()
 	{
-		if (!GetSubsystem || !Features::IsActive(Features::Id::ProfileGetter) || !GameState::CanShowUI())
+		if (!Features::IsActive(Features::Id::ProfileGetter) || !GameState::CanShowUI())
 			return;
 		ULONGLONG Now = GetTickCount64();
+		TickAuth(Now);
+		if (!GetSubsystem)
+			return;
 		bool bHaveIds = HookMetadata::UserProfileInfo.HydraId != nullptr;
 		uint32_t MainMenus = GameState::MainMenuEntries();
 		if (MainMenus != SeenMainMenus)

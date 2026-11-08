@@ -32,12 +32,6 @@ HookMetadata::TacoTowerInfo			HookMetadata::CurrentTacoInfo;
 HookMetadata::ProfileInfo			HookMetadata::UserProfileInfo;
 
 bool HookMetadata::HasResponseCapture() { auto It = ActiveModsMap.find("bCurlResponseCapture"); return It != ActiveModsMap.end() && It->second; }
-bool HookMetadata::CurlCaptureComplete()
-{
-	if (sUserKeys.PlatformTicket.empty()) return false;
-	if (HasResponseCapture() && sUserKeys.AccessToken.empty()) return false;
-	return true;
-}
 
 namespace CurlOpt {
 	constexpr __int64 URL = 10002;
@@ -542,9 +536,13 @@ namespace MK12Hook::Proxies {
 	static std::unordered_map<__int64, std::string> CurlHandleUrls;
 	static std::unordered_map<__int64, MK12::CURL::HTTPRequestWrapper*> CurlHandleStructs;
 
+	// What the capture has seen on the wire, only for the log: the keys the mod shows come from the game itself (OnlineIds)
+	static bool bCurlSawRequest = false;
+	static bool bCurlSawResponse = false;
+
 	static void CurlCleanupIfDone()
 	{
-		if (HookMetadata::CurlCaptureComplete())
+		if (bCurlSawRequest && (!HookMetadata::HasResponseCapture() || bCurlSawResponse))
 		{
 			CurlHandleUrls.clear();
 			CurlHandleStructs.clear();
@@ -638,7 +636,7 @@ namespace MK12Hook::Proxies {
 		if (SettingsMgr->ShouldFlood(SettingsMgr->Floods.bCurl))
 			printf("[CURL] multi_add_handle multi=%p easy=%p\n", (void*)multiHandle, (void*)easyHandle);
 
-		if (HookMetadata::sUserKeys.PlatformTicket.empty())
+		if (!bCurlSawRequest)
 		{
 			auto structIt = CurlHandleStructs.find(easyHandle);
 			if (structIt != CurlHandleStructs.end())
@@ -661,7 +659,7 @@ namespace MK12Hook::Proxies {
 			{
 				__int64 easyHandle = *(__int64*)(result + 8);
 
-				if (HookMetadata::sUserKeys.AccessToken.empty())
+				if (!bCurlSawResponse)
 				{
 					auto urlIt = CurlHandleUrls.find(easyHandle);
 					if (urlIt != CurlHandleUrls.end() && urlIt->second.find("/access") != std::string::npos)
@@ -827,6 +825,11 @@ namespace MK12Hook::Hooks {
 			OnlineIds::SetOnlineCheck((void*)ProcessPatch::ResolveDestination(pat + 3), (void*)ProcessPatch::ResolveDestination(pat + 27));
 		else
 			printfWarning("Profile Getter: can't tell offline from online, online ids are read for a minute from the main menu");
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pAuthToken, "AuthToken");
+		if (pat)
+			OnlineIds::SetAuthReaders((void*)pat, (void*)ProcessPatch::ResolveDestination(pat + 21), (void*)ProcessPatch::ResolveDestination(pat + 37));
+		else
+			printfWarning("Profile Getter: the access token and the platform ticket can't be read in this version of the game");
 
 		return GamePatcher->ProxyByPattern(SettingsMgr->pProfileGetter, "ProfileGetter", 30,
 			MK12Hook::Proxies::MKWScanfProxyForCrypto, &MK12::MKWScanf, PATCH_CALL);

@@ -1137,19 +1137,26 @@ namespace ModSettings {
 		AddValueRow(AccountPage, L"WB ID", L"Your WB account ID, when it's linked.", Text(&Info.WBId), Id::ProfileGetter, false, IdRead);
 
 		AddValueRow(TokensPage, L"SAVE KEY", L"The key your save is encrypted with.", Text(&Info.SaveKey), Id::ProfileGetter, true);
-		AddInfoRow(TokensPage, L"ACCESS TOKEN", [](Row& row)
+		// Sign in keys the game reads once you're signed in to MK1's servers, too long to show in full
+		auto AddKeyRow = [](const wchar_t* Title, const wchar_t* About, std::function<std::wstring()> Read)
 		{
-			std::wstring Token = Widen(HookMetadata::sUserKeys.AccessToken.c_str());
-			std::wstring About = L"The key the game signs in to its server with this session.";
-			if (!Token.empty())
-				SetInfo(row, L"SELECT TO SEE", About + L"\n\n" MK_BOLD(L"Value: ") + Short(Token, 160) + L"\n\nThe full token is in the MK12TTH overlay menu.");
-			else if (!Features::IsInstalled(Id::Curl))
-				SetInfo(row, NOT_READ, About + L"\n\n" MK_RED(L"Not available: ") + Features::Explain(Id::Curl));
-			else if (!Features::IsActive(Id::Curl))
-				SetInfo(row, NOT_READ, About + L"\n\nTurn on WEB CAPTURE in LIVE FEATURES, it's read the next time the game signs in.");
-			else
-				SetInfo(row, NOT_READ, About + L"\n\nNot read yet, it's read when the game signs in.");
-		}).CopyValue = [] { return Widen(HookMetadata::sUserKeys.AccessToken.c_str()); };
+			AddInfoRow(TokensPage, Title, [About, Read](Row& row)
+			{
+				std::wstring Value = Read();
+				if (!Value.empty())
+					SetInfo(row, L"SELECT TO SEE", std::wstring(About) + L"\n\n" MK_BOLD(L"Value: ") + Short(Value, 160) + L"\n\nCOPY puts the full value on your clipboard.");
+				else if (!Features::IsInstalled(Id::ProfileGetter))
+					SetInfo(row, NOT_READ, std::wstring(About) + L"\n\n" MK_RED(L"Not available: ") + Features::Explain(Id::ProfileGetter));
+				else if (!Features::IsActive(Id::ProfileGetter))
+					SetInfo(row, NOT_READ, std::wstring(About) + L"\n\n" MK_RED(L"Needs PROFILE GETTER on."));
+				else
+					SetInfo(row, NOT_READ, std::wstring(About) + L"\n\nNot read yet, it's read once you're signed in to MK1's servers.");
+			}).CopyValue = Read;
+		};
+		AddKeyRow(L"ACCESS TOKEN", L"The key the game signs in to its server with this session.",
+			[] { return Widen(HookMetadata::sUserKeys.AccessToken.c_str()); });
+		AddKeyRow(L"PLATFORM TICKET", L"What your platform gave the game to sign you in to MK1's servers.",
+			[] { return Widen(HookMetadata::sUserKeys.PlatformTicket.c_str()); });
 
 		AddInfoRow(FloydPage, L"FLOYD TOWER", [](Row& row)
 		{

@@ -46,9 +46,9 @@ namespace Features {
 
 		// Online
 		Define({ Id::ProfileGetter, "bEnableProfileGetter", true, Kind::Live, {}, ProfileGetterHooks,
-			L"PROFILE GETTER", L"Reads your platform, platform ID and save key." });
-		Define({ Id::Curl, "bPatchCurl", true, Kind::Live, {}, PatchCurl,
-			L"WEB CAPTURE", L"Reads your sign in ticket and access token from the game's web requests.", false });
+			L"PROFILE GETTER", L"Reads your platform, platform ID, save key, and once you're signed in your platform ticket and access token." });
+		Define({ Id::Curl, "bPatchCurl", false, Kind::Live, {}, PatchCurl,
+			L"WEB CAPTURE", L"Logs the game's web requests in the console, for debugging. Nothing else needs it.", false });
 		Define({ Id::PrivateServer, "bEnableServerProxy", false, Kind::Startup, {}, PrivateServerHooks,
 			L"PRIVATE SERVER", L"Sends the game's server traffic to the server set in MK12TTH.ini (szServerUrl). WB Network traffic isn't affected.",
 			true, "Server" });

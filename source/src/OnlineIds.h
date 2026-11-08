@@ -19,5 +19,9 @@ namespace OnlineIds {
 	void SetOnlineCheck(void* LocalProfiles, void* ProfileOnline);
 	bool HasOnlineCheck();
 	void* LocalProfile(); // The first local player's profile, game thread. Null before the game made it
+	// The game's own calls for the sign in keys (the access token, and the registry of the signed in players that
+	// holds the platform ticket). Without them the keys stay empty
+	void SetAuthReaders(void* TokenGetter, void* RegistryGetter, void* PlayerLookup);
+
 	bool IsOnline(); // As of the last frame the game could show UI, any thread. False until then
 }
