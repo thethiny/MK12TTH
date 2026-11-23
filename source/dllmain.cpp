@@ -10,6 +10,7 @@
 #include "src/Features.h"
 #include "src/Announcer.h"
 #include "src/StateFile.h"
+#include "src/LogFile.h"
 #include "mk12sdk/sdk.h"
 #include <tlhelp32.h>
 #include <string>
@@ -566,6 +567,7 @@ bool APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpRes)
 	{
 	case DLL_PROCESS_ATTACH:
 		//MK12HookPlugin::OnInitialize(hModule);
+		LogFile::Start();
 		printfInfo("Initializing MK12TTH");
 		OnInitializeHook();
 		break;
