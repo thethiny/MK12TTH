@@ -71,6 +71,7 @@ namespace MK12Hook {
 		bool ModSettingsHooks();
 		bool PakModsHooks();
 		bool AttractModeHooks();
+		bool ResolveFightFunctions(); // The fight's fighters (Fight::), once found stays found
 	};
 
 	namespace Mods {

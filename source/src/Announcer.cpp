@@ -1,5 +1,6 @@
 #include "mkutils.h"
 #include "Announcer.h"
+#include "Fight.h"
 #include "GameState.h"
 #include "StateFile.h"
 #include "mk12.h"
@@ -33,13 +34,6 @@ namespace Announcer {
 	};
 	constexpr const char* DEFAULT_ITEM = "DefaultAnnouncer";
 
-	// The fight's fighters
-	constexpr uint32_t MISSION_GAME_INFO		= 0x60;	// Then +0x10
-	constexpr uint32_t TEAM_SINGLE_DEFINITION	= 0x90;
-	constexpr uint32_t TEAM_KAMEO_DEFINITION	= 0x410;
-	constexpr uint32_t DEFINITION_FIGHTER		= 0x08;	// Single and Kameo teams, tag teams keep a list there
-	constexpr uint32_t FIGHTER_NAME				= 0xE0;
-	constexpr uint32_t FIGHTER_AI				= 0x118;	// 0 is a human player
 	constexpr uint32_t AUDIO_SETTINGS_VOICE		= 0x68;	// The player's own setting
 
 	static std::vector<Option>	AllOptions;
@@ -130,38 +124,33 @@ namespace Announcer {
 		Apply(!bInFight);
 	}
 
-	static bool ReadFirstHumanName(MK12::FNameInfoStruct* Out)
+	struct HumanSearch {
+		MK12::FNameInfoStruct*	Out;
+		bool					bFound;
+	};
+
+	static bool TakeHumanName(int32_t Team, char* Fighter, void* Context)
 	{ // A bad read gives up instead of crashing
-		if (!MK12::GetCurrentMission || !MK12::GetTeam || !MK12::GetTeamDefinitions)
-			return false;
+		HumanSearch* Search = (HumanSearch*)Context;
 		__try
 		{
-			char* Mission = (char*)MK12::GetCurrentMission(nullptr);
-			if (!Mission || !*(char**)(Mission + MISSION_GAME_INFO))
-				return false;
-			void* GameInfo = *(void**)(*(char**)(Mission + MISSION_GAME_INFO) + 0x10);
-			for (int Team = 0; Team < 2; Team++)
-			{
-				char* TeamInfo = (char*)MK12::GetTeam(GameInfo, Team);
-				char* Definitions = TeamInfo ? (char*)MK12::GetTeamDefinitions(TeamInfo) : nullptr;
-				if (!Definitions)
-					continue;
-				char* Fighter = nullptr;
-				if (Definitions == TeamInfo + TEAM_SINGLE_DEFINITION || Definitions == TeamInfo + TEAM_KAMEO_DEFINITION)
-					Fighter = Definitions + DEFINITION_FIGHTER;
-				else if (*(int32_t*)(Definitions + DEFINITION_FIGHTER + 8) > 0)
-					Fighter = *(char**)(Definitions + DEFINITION_FIGHTER);
-				if (Fighter && *(uint8_t*)(Fighter + FIGHTER_AI) == 0)
-				{
-					*Out = *(MK12::FNameInfoStruct*)(Fighter + FIGHTER_NAME);
-					return true;
-				}
-			}
+			if (*(uint8_t*)(Fighter + Fight::FIGHTER_AI) != 0)
+				return true;
+			*Search->Out = *(MK12::FNameInfoStruct*)(Fighter + Fight::FIGHTER_NAME);
+			Search->bFound = true;
 		}
 		__except (EXCEPTION_EXECUTE_HANDLER)
 		{
 		}
 		return false;
+	}
+
+	// The first human player's fighter name, false without one
+	static bool ReadFirstHumanName(MK12::FNameInfoStruct* Out)
+	{
+		HumanSearch Search = { Out, false };
+		Fight::ForEachFighter(TakeHumanName, &Search);
+		return Search.bFound;
 	}
 
 	static const char* ItemFor(const char* Fighter)

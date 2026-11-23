@@ -90,6 +90,9 @@
     <ClCompile Include="source\src\Announcer.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
+    <ClCompile Include="source\src\Fight.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
     <ClCompile Include="source\src\AttractMode.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
@@ -195,6 +198,9 @@
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\Announcer.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\Fight.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\AttractMode.h">

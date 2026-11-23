@@ -1308,6 +1308,19 @@ namespace MK12Hook::Hooks {
 		return true;
 	}
 
+	bool ResolveFightFunctions()
+	{ // The fight's fighters (Fight::), for the features that read them. Once found, stays found
+		if (MK12::GetCurrentMission && MK12::GetTeam && MK12::GetTeamDefinitions)
+			return true;
+		uint64_t pat = GamePatcher->ResolvePattern(SettingsMgr->pGetCurrentMission, "GetCurrentMission");
+		if (pat) MK12::GetCurrentMission = (MK12::GetCurrentMissionType*)ProcessPatch::ResolveDestination(pat);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeam, "GetTeam");
+		if (pat) MK12::GetTeam = (MK12::GetTeamType*)ProcessPatch::ResolveDestination(pat);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeamDefinitions, "GetTeamDefinitions");
+		if (pat) MK12::GetTeamDefinitions = (MK12::GetTeamDefinitionsType*)ProcessPatch::ResolveDestination(pat);
+		return MK12::GetCurrentMission && MK12::GetTeam && MK12::GetTeamDefinitions;
+	}
+
 	bool AnnouncerHooks()
 	{ // Applied with the game's own function, at fight start, ladder setup and main menu load
 		printf("\n==AnnouncerHooks==\n");
@@ -1328,13 +1341,7 @@ namespace MK12Hook::Hooks {
 			printfWarning("Announcer Override: ladder fights may re-roll a random announcer");
 
 		// AUTO: the first human player's fighter
-		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetCurrentMission, "GetCurrentMission");
-		if (pat) MK12::GetCurrentMission = (MK12::GetCurrentMissionType*)ProcessPatch::ResolveDestination(pat);
-		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeam, "GetTeam");
-		if (pat) MK12::GetTeam = (MK12::GetTeamType*)ProcessPatch::ResolveDestination(pat);
-		pat = GamePatcher->ResolvePattern(SettingsMgr->pGetTeamDefinitions, "GetTeamDefinitions");
-		if (pat) MK12::GetTeamDefinitions = (MK12::GetTeamDefinitionsType*)ProcessPatch::ResolveDestination(pat);
-		if (!MK12::GetCurrentMission || !MK12::GetTeam || !MK12::GetTeamDefinitions)
+		if (!ResolveFightFunctions())
 			printfWarning("Announcer Override: AUTO uses your own setting");
 		printfSuccess("Announcer Override On");
 		return true;
