@@ -103,6 +103,7 @@ public:
 	std::string pPlayerInputUpdate;
 	std::string pToastDriverCall;
 	std::string pToastEnqueue;
+	std::string pRealloc;
 	std::string pLocalPlayerInfo;
 	std::string pMessageBoxCallback;
 	// Game State
@@ -123,6 +124,15 @@ public:
 	std::string pMainMenuCopyTabs;
 	std::string pSettingsVersionText;
 	std::string pSettingsRun;
+	std::string pSettingsPageSwitch;
+	std::string pFooterBuild;
+	std::string pPromptText;
+	std::string pPauseCollectEntries;
+	std::string pPausePanelPageSetup;
+	std::string pGrowPauseEntries;
+	std::string pPanelHolder;
+	std::string pPauseSelectedIndex;
+	std::string pPauseClose;
 	// Paks
 	std::string pPakMount;
 	std::string pConfigInit;
@@ -143,6 +153,9 @@ public:
 	std::string pGetProfileStat;
 	std::string pGetProfileStatBits;
 	std::string pFloydSeed;
+	std::string pFloydLevel;
+	std::string pFloydLevelSession;
+	std::string pFloydRetries;
 	std::string pAnnouncerReroll;
 	std::string pAnnouncerMenuApply;
 	std::string pApplyAnnouncer;
@@ -150,6 +163,8 @@ public:
 	std::string pGetCurrentMission;
 	std::string pGetTeam;
 	std::string pGetTeamDefinitions;
+	std::string pBootStudioLogos;
+	std::string pBootMovieSkip;
 	std::string pTowersSetup;
 	std::string pGetFloydVictories;
 

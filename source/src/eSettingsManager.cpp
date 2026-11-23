@@ -198,10 +198,15 @@ void eSettingsManager::Init()
 	pBootWaitFirst				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitFirst",			"");
 	pBootWaitSecond				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitSecond",			"");
 	pBootWaitThird				= ini.ReadString	("Patterns.MainMenu",	"pBootWaitThird",			"");
+	pBootStudioLogos			= ini.ReadString	("Patterns.MainMenu",	"pBootStudioLogos",			"");
+	pBootMovieSkip				= ini.ReadString	("Patterns.MainMenu",	"pBootMovieSkip",			"");
 	pGetStatsContainer			= ini.ReadString	("Patterns.Floyd",		"pGetStatsContainer",		"");
 	pGetProfileStat				= ini.ReadString	("Patterns.Floyd",		"pGetProfileStat",			"");
 	pGetProfileStatBits			= ini.ReadString	("Patterns.Floyd",		"pGetProfileStatBits",		"");
 	pFloydSeed					= ini.ReadString	("Patterns.Floyd",		"pFloydSeed",				"");
+	pFloydLevel					= ini.ReadString	("Patterns.Floyd",		"pFloydLevel",				"");
+	pFloydLevelSession			= ini.ReadString	("Patterns.Floyd",		"pFloydLevelSession",		"");
+	pFloydRetries				= ini.ReadString	("Patterns.Floyd",		"pFloydRetries",			"");
 	pAnnouncerReroll			= ini.ReadString	("Patterns.Announcer",	"pAnnouncerReroll",			"");
 	pAnnouncerMenuApply			= ini.ReadString	("Patterns.Announcer",	"pAnnouncerMenuApply",		"");
 	pApplyAnnouncer				= ini.ReadString	("Patterns.Announcer",	"pApplyAnnouncer",			"");
@@ -222,6 +227,7 @@ void eSettingsManager::Init()
 	pPlayerInputUpdate			= ini.ReadString	("Patterns.MessageBox",	"pPlayerInputUpdate",		"");
 	pToastDriverCall			= ini.ReadString	("Patterns.MessageBox",	"pToastDriverCall",			"");
 	pToastEnqueue				= ini.ReadString	("Patterns.MessageBox",	"pToastEnqueue",			"");
+	pRealloc					= ini.ReadString	("Patterns.MessageBox",	"pRealloc",					"");
 	pLocalPlayerInfo			= ini.ReadString	("Patterns.MessageBox",	"pLocalPlayerInfo",			"");
 	pMessageBoxCallback			= ini.ReadString	("Patterns.MessageBox",	"pMessageBoxCallback",		"");
 	// Game State
@@ -242,6 +248,15 @@ void eSettingsManager::Init()
 	pMainMenuCopyTabs			= ini.ReadString	("Patterns.SettingsScreen",	"pMainMenuCopyTabs",		"");
 	pSettingsVersionText		= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsVersionText",	"");
 	pSettingsRun				= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsRun",				"");
+	pSettingsPageSwitch			= ini.ReadString	("Patterns.SettingsScreen",	"pSettingsPageSwitch",			"");
+	pFooterBuild				= ini.ReadString	("Patterns.SettingsScreen",	"pFooterBuild",				"");
+	pPromptText					= ini.ReadString	("Patterns.SettingsScreen",	"pPromptText",				"");
+	pPauseCollectEntries		= ini.ReadString	("Patterns.SettingsScreen",	"pPauseCollectEntries",		"");
+	pPausePanelPageSetup		= ini.ReadString	("Patterns.SettingsScreen",	"pPausePanelPageSetup",		"");
+	pGrowPauseEntries			= ini.ReadString	("Patterns.SettingsScreen",	"pGrowPauseEntries",			"");
+	pPanelHolder				= ini.ReadString	("Patterns.SettingsScreen",	"pPanelHolder",				"");
+	pPauseSelectedIndex			= ini.ReadString	("Patterns.SettingsScreen",	"pPauseSelectedIndex",		"");
+	pPauseClose					= ini.ReadString	("Patterns.SettingsScreen",	"pPauseClose",				"");
 	// Paks
 	pPakMount					= ini.ReadString	("Patterns.Paks",		"pPakMount",				"");
 	pConfigInit					= ini.ReadString	("Patterns.Paks",		"pConfigInit",				"");

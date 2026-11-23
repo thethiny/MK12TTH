@@ -36,7 +36,9 @@ namespace Features {
 		Define({ Id::FloydTracking, "bEnableFloydTracking", true, Kind::Live, {}, FloydTrackingHooks,
 			L"FLOYD TRACKING", L"Reads your Floyd challenges, encounters and the Floyd Tower schedule." });
 		Define({ Id::FloydTowerAlert, "bFloydTowerAlert", true, Kind::Live, { Id::FloydTracking, Id::Popups }, FloydTowerAlertHooks,
-			L"FLOYD TOWER ALERT", L"Says when the Floyd Tower shows up as you open Living Towers, once you've beaten Floyd. Also reads your Floyd stats for PROFILE." });
+			L"FLOYD TOWER ALERT", L"Says when the Floyd Tower shows up as you open Living Towers, once you've beaten Floyd. Turning it off only stops the message, your Floyd stats are still read for PROFILE." });
+		Define({ Id::FloydFight, "bFloydFight", true, Kind::Startup, {}, FloydFightHooks,
+			L"FLOYD FIGHT", L"Lets you set Floyd's level and how many times you can retry against him, in MODS, LIVE FEATURES." });
 		Define({ Id::FightMetadata, "bGetFightMetadata", true, Kind::Startup, {}, ExtractFightMetadataFromSecretFightSetupStage,
 			L"FIGHT METADATA", L"Reads the conditions of secret fights, like Floyd's, as they're set up." });
 		Define({ Id::FightMetadataLog, "bSerializeSecretFights", true, Kind::Live, { Id::FightMetadata, Id::NameTable }, nullptr,
@@ -58,7 +60,13 @@ namespace Features {
 			L"KEEP RUNNING IN BACKGROUND", L"Keeps the game running when its window isn't in focus, instead of pausing.", false };
 		KeepRunning.OnSwitch = SetKeepRunning;
 		Define(KeepRunning);
-		Define({ Id::FastBoot, "bFastBoot", true, Kind::Startup, {}, FastBootHooks,
-			L"FAST BOOT", L"Skips the wait on the logo and legal screens at startup. The license agreement still shows." });
+		Definition FastBoot = { Id::FastBoot, "szFastBoot", true, Kind::Startup, {}, FastBootHooks,
+			L"FAST BOOT", L"Shortens startup. The license agreement still shows." };
+		FastBoot.Modes = { { L"OFF", "Off" }, { L"SPLASH", "Splash" }, { L"FULL", "Full" } };
+		FastBoot.Description = L"Shortens startup. The license agreement still shows.\n"
+			L"OFF: the game's own startup.\n"
+			L"SPLASH: the logo and legal screens go on without their wait.\n"
+			L"FULL: also skips the studio logos and the intro movie.";
+		Define(FastBoot);
 	}
 }

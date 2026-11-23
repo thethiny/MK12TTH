@@ -657,8 +657,6 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			uint32_t						(__fastcall GetProfileStatType)					(void* Stats, uint8_t ScopeMask, int32_t StatId); // Scope 2, ids from MKProfileStatID
 	typedef			uint64_t						(__fastcall GetProfileStatBitsType)				(void* Stats, uint8_t ScopeMask, int32_t StatId); // Scope 8, the stats that are bit sets
 	typedef			uint32_t						(__fastcall FloydProfileHashType)				(void** Profile); // Hash of the profile's online ids, Floyd's challenges are picked from it
-	typedef			void*							(__fastcall GetProfileSaveType)					(void* Profile); // The profile's save holder
-	typedef			void*							(__fastcall GetClassType)						(); // A game class, for the IsA check
 	// Window focus
 	typedef			void							(__fastcall FocusLostStepType)					(); // First step of the game's focus lost handler
 	typedef			void							(__fastcall FocusLostPauseType)					(void* Mode); // Pauses with the "paused" message
@@ -780,8 +778,6 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GetProfileStatType*							GetProfileStat;
 	extern GetProfileStatBitsType*						GetProfileStatBits;
 	extern FloydProfileHashType*						FloydProfileHash;
-	extern GetProfileSaveType*							GetProfileSave;
-	extern GetClassType*								GetStatsSaveClass;
 	extern FocusLostStepType*							FocusLostStep;
 	extern FocusLostPauseType*							FocusLostPause;
 	extern BootScreenWaitType*							BootScreenWait;
@@ -798,7 +794,6 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GetTeamDefinitionsType*						GetTeamDefinitions;
 	constexpr uint8_t								ProfileStatScope = 2;
 	constexpr uint8_t								ProfileStatBitsScope = 8;
-	uint64_t										FloydStoredSeed(void* Profile); // The seed the game keeps for Floyd's current challenges, 0 when it has none
 	constexpr uint32_t								StatSetSlot = 0x60 / 8; // Virtual, on a stat object: sets its value
 	typedef			void							(__fastcall StatSetType)						(void* Stat, uint64_t Value);
 	// Writes a stat in this PC's copy of the profile only. The game's own setter also marks the stat changed, which sends

@@ -95,8 +95,6 @@ MK12::GetStatsContainerType*			MK12::GetStatsContainer				= nullptr;
 MK12::GetProfileStatType*				MK12::GetProfileStat				= nullptr;
 MK12::GetProfileStatBitsType*			MK12::GetProfileStatBits			= nullptr;
 MK12::FloydProfileHashType*				MK12::FloydProfileHash				= nullptr;
-MK12::GetProfileSaveType*				MK12::GetProfileSave				= nullptr;
-MK12::GetClassType*						MK12::GetStatsSaveClass				= nullptr;
 MK12::FocusLostStepType*				MK12::FocusLostStep					= nullptr;
 MK12::FocusLostPauseType*				MK12::FocusLostPause				= nullptr;
 MK12::BootScreenWaitType*				MK12::BootScreenWait				= nullptr;
@@ -120,33 +118,6 @@ void* MK12::MapModeGetProfile(void* MapMode)
 	return GetProfile(MapMode, 0, true);
 }
 
-// The engine's IsA: a class lists its whole parent chain, a class is a parent when it sits at its own depth there
-static bool IsA(void* Object, void* Class)
-{
-	char* ObjectClass = *(char**)((char*)Object + 0x10);
-	char* ClassChain = (char*)Class + 0x30;
-	int32_t Depth = *(int32_t*)(ClassChain + 8);
-	return ObjectClass && Depth <= *(int32_t*)(ObjectClass + 0x38) && (*(char***)(ObjectClass + 0x30))[Depth] == ClassChain;
-}
-
-uint64_t MK12::FloydStoredSeed(void* Profile)
-{
-	if (!Profile || !GetProfileSave || !GetStatsSaveClass)
-		return 0;
-	__try
-	{
-		char* Holder = *(char**)((char*)GetProfileSave(Profile) + 0x98);
-		char* Save = Holder ? *(char**)(Holder + 0x10) : nullptr;
-		void* Class = GetStatsSaveClass();
-		if (!Save || !Class || !IsA(Save, Class))
-			return 0;
-		return *(uint64_t*)(Save + 0x90);
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		return 0;
-	}
-}
 // The stats container's hash sets, looked up like the game's own stat setter does: a set by scope bit, each holding a
 // set by stat id whose value is the stat object
 static char* FindInSet(char* Set, int32_t Key, int32_t ElementSize, int32_t HashOffset, int32_t NextOffset, bool bByteKey)
