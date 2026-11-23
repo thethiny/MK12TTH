@@ -1,6 +1,7 @@
 #pragma once
 #include<string>
 #include<unordered_map>
+#include<vector>
 #include "..\IniReader.h"
 
 namespace Log {
@@ -216,17 +217,35 @@ private:
 class eCachedPatternsManager
 {
 private:
-	char* HashKey = nullptr;
-	CIniReader* ini;
-	static __int64 GameAddr;
-	std::unordered_map<std::string, uint64_t> Cache;
-	bool bAutoFlush = true;
+	static const size_t MAX_BUILDS = 5; // Room for a few builds with small exe patches between them
+	struct Build {
+		uint64_t								Hash;
+		std::vector<std::string>				Keys;
+		std::vector<uint64_t>					Offsets;	// From the exe base, same place as its key
+		std::unordered_map<std::string, size_t>	Index;		// Key -> its place
+	};
 
-	void FlushEntry(const std::string& key, uint64_t value);
+	std::string Path;
+	std::vector<Build> Builds;					// Newest first, Builds[0] is the running one when enabled
+	bool bEnabled = false;						// False when the build's hash is unknown: nothing is cached
+	bool bDirty = false;						// Memory differs from the file
+	bool bWriteQueued = false;
+	bool bAutoFlush = true;						// Off: finds wait for Flush
+	SRWLOCK Lock = SRWLOCK_INIT;
+	static __int64 GameAddr;
+
+	static uint64_t* Find(Build& In, const std::string& key);
+	static void Put(Build& In, const std::string& key, uint64_t offset);
+	void Load(uint64_t Hash);
+	bool LoadBinary(const std::string& Bytes);
+	void LoadIni(const std::string& Text, uint64_t Hash);
+	void Write();								// Whole file from memory, under Lock
+	void QueueWrite();							// Under Lock
 
 public:
-	void Init(uint64_t Hash, const char* version, const char* name = "PatternsCache");
-	void Flush();
+	void Init(uint64_t Hash, const char* name = "PatternsCache");
+	void Flush();								// Writes the queued finds now
+	void WriteQueued();							// The writer thread, a moment after the first find it was queued for
 
 	// Keyed by the pattern (uppercase, single spaces, wildcards as "?"): an edited pattern is scanned again, a cosmetic edit isn't
 	static std::string Key(const std::string& pattern);
@@ -237,7 +256,7 @@ public:
 	void EnableAutoFlush() { bAutoFlush = true; }
 	void DisableAutoFlush() { bAutoFlush = false; }
 
-	~eCachedPatternsManager() { Flush(); if (HashKey) delete[] HashKey; }
+	~eCachedPatternsManager() { Flush(); }
 };
 
 extern eSettingsManager* SettingsMgr;

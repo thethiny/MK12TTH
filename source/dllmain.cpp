@@ -193,7 +193,7 @@ bool OnInitializeHook()
 	size_t dot = dllName.find_last_of('.');
 	if (dot != std::string::npos) dllName = dllName.substr(0, dot);
 	for (size_t i = 0; i < dllName.length(); i++) dllName[i] = std::tolower(dllName[i]);
-	CachedPatternsMgr->Init(EXEHash, CURRENT_HOOK_VERSION, dllName.c_str());
+	CachedPatternsMgr->Init(EXEHash, dllName.c_str());
 
 	PreGameHooks(); // Queue Blocker
 

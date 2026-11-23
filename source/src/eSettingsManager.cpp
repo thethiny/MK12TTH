@@ -7,46 +7,275 @@ eFirstRunManager*		FirstRunMgr			= new eFirstRunManager;
 eCachedPatternsManager*	CachedPatternsMgr	= new eCachedPatternsManager;
 __int64 eCachedPatternsManager::GameAddr = reinterpret_cast<__int64>(GetModuleHandle(nullptr));
 
-void eCachedPatternsManager::Init(uint64_t Hash, const char* version, const char* name)
-{
-	std::string cacheFile = std::string(name) + ".cache";
-	ini = new CIniReader((char*)cacheFile.c_str());
-	if (Hash)
-	{
-		size_t totalLen = 8 + 1 + strlen(version) + 1;
-		char* hashStr = new char[totalLen];
-		sprintf_s(hashStr, totalLen, "%08X.%s", (uint32_t)(Hash >> 32), version);
-		eCachedPatternsManager::HashKey = hashStr;
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
-		// Load all cached entries into memory, no more per-call file I/O
-		// INI reader doesn't support enumerating keys, so entries are loaded on first access via Get()
-	}
-	else
-		eCachedPatternsManager::HashKey = nullptr;
+// The cache file: "TPCF", version, build count, then per build: hash, entry count, entries (key length, key, offset).
+// Older caches were ini files: [<build hash, 16 hex>] or [<upper half of the hash, 8 hex>.<mod version>] sections of
+// "<pattern>=<offset, hex>" lines; they are read once and written again as the binary file
+static const char		CACHE_MAGIC[4]		= { 'T', 'P', 'C', 'F' }; // thethiny pattern cache file
+static const uint32_t	CACHE_VERSION		= 1;
+static const DWORD		WRITE_DELAY_MS		= 1000; // Finds made close together go out in one write
+
+static void PutBytes(std::string& Out, const void* Value, size_t Size)
+{
+	Out.append((const char*)Value, Size);
 }
 
-void eCachedPatternsManager::FlushEntry(const std::string& key, uint64_t value)
+static bool TakeBytes(const std::string& In, size_t& At, void* Value, size_t Size)
 {
-	if (!HashKey || !ini)
-		return;
+	if (At + Size > In.size())
+		return false;
+	memcpy(Value, In.data() + At, Size);
+	At += Size;
+	return true;
+}
 
-	uint64_t offset = value;
-	if (offset > (uint64_t)GameAddr)
-		offset -= GameAddr;
-	char buf[20];
-	sprintf_s(buf, sizeof(buf), "%llX", offset);
-	ini->WriteString(HashKey, (char*)key.c_str(), buf);
+static DWORD WINAPI PatternCacheWriter(LPVOID Self)
+{
+	Sleep(WRITE_DELAY_MS);
+	((eCachedPatternsManager*)Self)->WriteQueued();
+	return 0;
+}
+
+uint64_t* eCachedPatternsManager::Find(Build& In, const std::string& key)
+{
+	if (!In.Index.count(key))
+		return nullptr;
+	return &In.Offsets[In.Index[key]];
+}
+
+void eCachedPatternsManager::Put(Build& In, const std::string& key, uint64_t offset)
+{
+	uint64_t* Stored = Find(In, key);
+	if (Stored)
+	{
+		*Stored = offset;
+		return;
+	}
+	In.Index[key] = In.Keys.size();
+	In.Keys.push_back(key);
+	In.Offsets.push_back(offset);
+}
+
+void eCachedPatternsManager::Init(uint64_t Hash, const char* name)
+{
+	char ModulePath[MAX_PATH * 4] = {};
+	GetModuleFileNameA((HINSTANCE)&__ImageBase, ModulePath, sizeof(ModulePath));
+	std::string Folder = ModulePath;
+	Folder = Folder.substr(0, Folder.find_last_of("/\\") + 1);
+
+	AcquireSRWLockExclusive(&Lock);
+	Path = Folder + name + ".cache";
+	Builds.clear();
+	Load(Hash);
+	bEnabled = Hash != 0; // Unknown build: nothing is read or written for it
+	if (bEnabled)
+	{
+		// The running build goes first, past MAX_BUILDS the oldest ones are dropped
+		size_t Running = Builds.size();
+		for (size_t i = 0; i < Builds.size(); i++)
+		{
+			if (Builds[i].Hash == Hash)
+				Running = i;
+		}
+		if (Running == Builds.size())
+		{
+			Build New;
+			New.Hash = Hash;
+			Builds.insert(Builds.begin(), New);
+			bDirty = true;
+		}
+		else if (Running != 0)
+		{
+			Build Moved = Builds[Running];
+			Builds.erase(Builds.begin() + Running);
+			Builds.insert(Builds.begin(), Moved);
+			bDirty = true;
+		}
+		if (Builds.size() > MAX_BUILDS)
+		{
+			Builds.resize((size_t)MAX_BUILDS);
+			bDirty = true;
+		}
+		if (bDirty)
+			QueueWrite();
+	}
+	ReleaseSRWLockExclusive(&Lock);
+}
+
+void eCachedPatternsManager::Load(uint64_t Hash)
+{
+	HANDLE File = CreateFileA(Path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+	if (File == INVALID_HANDLE_VALUE)
+		return;
+	std::string Bytes;
+	LARGE_INTEGER Size = {};
+	if (GetFileSizeEx(File, &Size) && Size.QuadPart > 0 && Size.QuadPart < (1ll << 30))
+	{
+		Bytes.resize((size_t)Size.QuadPart);
+		DWORD Read = 0;
+		if (!ReadFile(File, &Bytes[0], (DWORD)Bytes.size(), &Read, nullptr))
+			Read = 0;
+		Bytes.resize(Read);
+	}
+	CloseHandle(File);
+
+	if (Bytes.size() >= sizeof(CACHE_MAGIC) && memcmp(Bytes.data(), CACHE_MAGIC, sizeof(CACHE_MAGIC)) == 0)
+	{
+		if (!LoadBinary(Bytes))
+		{
+			Builds.clear(); // Unreadable: scanned again and rewritten
+			bDirty = true;
+		}
+	}
+	else
+	{
+		LoadIni(Bytes, Hash);
+		bDirty = !Builds.empty(); // An older ini cache: written again as binary
+	}
+}
+
+bool eCachedPatternsManager::LoadBinary(const std::string& Bytes)
+{
+	size_t At = sizeof(CACHE_MAGIC);
+	uint32_t Version = 0, BuildCount = 0;
+	if (!TakeBytes(Bytes, At, &Version, sizeof(Version)) || Version != CACHE_VERSION || !TakeBytes(Bytes, At, &BuildCount, sizeof(BuildCount)))
+		return false;
+	for (uint32_t b = 0; b < BuildCount; b++)
+	{
+		Build B;
+		uint32_t Count = 0;
+		if (!TakeBytes(Bytes, At, &B.Hash, sizeof(B.Hash)) || !TakeBytes(Bytes, At, &Count, sizeof(Count)))
+			return false;
+		for (uint32_t e = 0; e < Count; e++)
+		{
+			uint32_t KeyLength = 0;
+			uint64_t Offset = 0;
+			if (!TakeBytes(Bytes, At, &KeyLength, sizeof(KeyLength)) || At + KeyLength > Bytes.size())
+				return false;
+			std::string Entry = Bytes.substr(At, KeyLength);
+			At += KeyLength;
+			if (!TakeBytes(Bytes, At, &Offset, sizeof(Offset)))
+				return false;
+			Put(B, Entry, Offset);
+		}
+		Builds.push_back(B);
+	}
+	return true;
+}
+
+// Sections in file order. A section of the older per mod version form ("<upper half>.<version>") goes into the running
+// build when its half matches (same exe, the offsets don't depend on the mod version), other ones are dropped
+void eCachedPatternsManager::LoadIni(const std::string& Text, uint64_t Hash)
+{
+	int Current = -1;
+	size_t At = 0;
+	while (At < Text.size())
+	{
+		size_t End = Text.find('\n', At);
+		if (End == std::string::npos)
+			End = Text.size();
+		std::string Line = Text.substr(At, End - At);
+		At = End + 1;
+		while (!Line.empty() && (Line[Line.size() - 1] == '\r' || Line[Line.size() - 1] == ' ' || Line[Line.size() - 1] == '\t'))
+			Line.erase(Line.size() - 1);
+		if (Line.empty() || Line[0] == ';')
+			continue;
+		if (Line[0] == '[')
+		{
+			size_t Close = Line.find(']');
+			std::string Name = Line.substr(1, Close == std::string::npos ? std::string::npos : Close - 1);
+			uint64_t SectionHash = strtoull(Name.c_str(), nullptr, 16);
+			size_t Dot = Name.find('.');
+			if (Dot == 8) // Older form: only the upper half of the hash
+				SectionHash = Hash && (SectionHash << 32) == (Hash & 0xFFFFFFFF00000000ull) ? Hash : 0;
+			Current = -1;
+			for (size_t i = 0; i < Builds.size(); i++)
+			{
+				if (Builds[i].Hash == SectionHash)
+					Current = (int)i;
+			}
+			if (Current == -1 && SectionHash)
+			{
+				Build New;
+				New.Hash = SectionHash;
+				Builds.push_back(New);
+				Current = (int)Builds.size() - 1;
+			}
+			continue;
+		}
+		size_t Equals = Line.rfind('=');
+		if (Current == -1 || Equals == std::string::npos)
+			continue;
+		uint64_t Offset = strtoull(Line.c_str() + Equals + 1, nullptr, 16);
+		std::string Entry = Key(Line.substr(0, Equals));
+		if (Offset && !Find(Builds[Current], Entry)) // The first section of a build wins
+			Put(Builds[Current], Entry, Offset);
+	}
+}
+
+// The whole cache, written to a temporary file that then replaces it
+void eCachedPatternsManager::Write()
+{
+	std::string Out(CACHE_MAGIC, sizeof(CACHE_MAGIC));
+	PutBytes(Out, &CACHE_VERSION, sizeof(CACHE_VERSION));
+	uint32_t BuildCount = (uint32_t)Builds.size();
+	PutBytes(Out, &BuildCount, sizeof(BuildCount));
+	for (size_t b = 0; b < Builds.size(); b++)
+	{
+		const Build& B = Builds[b];
+		uint32_t Count = (uint32_t)B.Keys.size();
+		PutBytes(Out, &B.Hash, sizeof(B.Hash));
+		PutBytes(Out, &Count, sizeof(Count));
+		for (size_t e = 0; e < B.Keys.size(); e++)
+		{
+			uint32_t KeyLength = (uint32_t)B.Keys[e].size();
+			PutBytes(Out, &KeyLength, sizeof(KeyLength));
+			Out += B.Keys[e];
+			PutBytes(Out, &B.Offsets[e], sizeof(B.Offsets[e]));
+		}
+	}
+
+	std::string Temp = Path + ".tmp";
+	HANDLE File = CreateFileA(Temp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (File == INVALID_HANDLE_VALUE)
+		return;
+	DWORD Written = 0;
+	bool bOk = WriteFile(File, Out.data(), (DWORD)Out.size(), &Written, nullptr) && Written == Out.size();
+	CloseHandle(File);
+	if (bOk && MoveFileExA(Temp.c_str(), Path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+		bDirty = false;
+	else
+		DeleteFileA(Temp.c_str());
+}
+
+void eCachedPatternsManager::QueueWrite()
+{
+	if (bWriteQueued || !bAutoFlush)
+		return;
+	bWriteQueued = true;
+	HANDLE Writer = CreateThread(nullptr, 0, PatternCacheWriter, this, 0, nullptr);
+	if (Writer)
+		CloseHandle(Writer); // The thread runs on, its handle isn't needed
+	else
+		bWriteQueued = false; // No writer: the next change queues one again
+}
+
+void eCachedPatternsManager::WriteQueued()
+{
+	AcquireSRWLockExclusive(&Lock);
+	bWriteQueued = false;
+	if (bDirty)
+		Write();
+	ReleaseSRWLockExclusive(&Lock);
 }
 
 void eCachedPatternsManager::Flush()
 {
-	if (!HashKey || !ini)
-		return;
-
-	for (auto& pair : Cache)
-		FlushEntry(pair.first, pair.second);
-
-	Cache.clear();
+	AcquireSRWLockExclusive(&Lock);
+	if (bDirty && !Path.empty())
+		Write();
+	ReleaseSRWLockExclusive(&Lock);
 }
 
 std::string eCachedPatternsManager::Key(const std::string& pattern)
@@ -74,36 +303,39 @@ std::string eCachedPatternsManager::Key(const std::string& pattern)
 
 void eCachedPatternsManager::Set(const std::string& pattern, uint64_t value)
 {
-	std::string key = Key(pattern);
-	Cache[key] = value;
-	if (bAutoFlush)
-		FlushEntry(key, value);
+	AcquireSRWLockExclusive(&Lock);
+	if (bEnabled)
+	{
+		uint64_t Offset = value > (uint64_t)GameAddr ? value - GameAddr : value;
+		std::string Entry = Key(pattern);
+		uint64_t* Stored = Find(Builds[0], Entry);
+		if (!Stored || *Stored != Offset)
+		{
+			Put(Builds[0], Entry, Offset);
+			bDirty = true;
+			QueueWrite();
+		}
+	}
+	ReleaseSRWLockExclusive(&Lock);
 }
 
 uint64_t eCachedPatternsManager::Get(const std::string& pattern)
 {
-	std::string key = Key(pattern);
-	auto it = Cache.find(key);
-	if (it != Cache.end())
-		return it->second;
-
-	if (HashKey)
+	uint64_t Result = 0;
+	AcquireSRWLockExclusive(&Lock);
+	if (bEnabled)
 	{
-		char* result = ini->ReadString(HashKey, (char*)key.c_str(), "0");
-		uint64_t val = strtoull(result, nullptr, 16);
-		if (val)
-		{
-			val += GameAddr;
-			Cache[key] = val;
-			return val;
-		}
+		uint64_t* Stored = Find(Builds[0], Key(pattern));
+		if (Stored && *Stored)
+			Result = *Stored + GameAddr;
 	}
-	return 0;
+	ReleaseSRWLockExclusive(&Lock);
+	return Result;
 }
 
 bool eCachedPatternsManager::Has(const std::string& pattern)
 {
-	return Cache.find(Key(pattern)) != Cache.end();
+	return Get(pattern) != 0;
 }
 
 static DWORD WINAPI PaidModWarningThread(LPVOID)
