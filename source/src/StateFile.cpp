@@ -28,6 +28,14 @@ namespace StateFile {
 			GetModuleFileNameA((HINSTANCE)&__ImageBase, Path, MAX_PATH);
 			std::string Module = Path;
 			Module = Module.substr(Module.find_last_of("\\/") + 1);
+			// The path we were loaded by can be lowercased, the file system has the name as the player wrote it
+			WIN32_FIND_DATAA Found = {};
+			HANDLE Find = FindFirstFileA(Path, &Found);
+			if (Find != INVALID_HANDLE_VALUE)
+			{
+				Module = Found.cFileName;
+				FindClose(Find);
+			}
 			Name = Module.substr(0, Module.find_last_of('.')) + "_State.ini";
 		}
 		return Name.c_str();
