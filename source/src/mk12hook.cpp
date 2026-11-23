@@ -356,13 +356,13 @@ namespace MK12Hook::Proxies {
 	}
 
 	void __fastcall PauseCollectEntriesProxy(void* Source, void* Player, MK12::TArray<MK12::FPauseEntry>* Out)
-	{ // The pause menu listing its entries, ours goes in after KONTROLS
+	{ // The pause menu listing its entries, ours goes in after KONTROLS (first without it)
 		MK12::PauseCollectEntries(Source, Player, Out);
 		PauseMenu::OnEntriesCollected(Out);
 	}
 
 	void __fastcall PausePanelPageSetupProxy(MK12::USettingsScreen* Screen, void* Player, int64_t Mode)
-	{ // The pause menu's KONTROLS panel filling its pages, MOD SETTINGS uses the same panel
+	{ // A pause settings panel filling its pages (KONTROLS', or MOD SETTINGS' own)
 		MK12::PausePanelPageSetup(Screen, Player, Mode);
 		PauseMenu::OnPanelSetUp(Screen, Player, Mode);
 	}
@@ -1065,7 +1065,8 @@ namespace MK12Hook::Hooks {
 			MK12Hook::Proxies::FooterBuildProxy, &MK12::FooterBuild, PATCH_CALL))
 			printfWarning("Mod Settings: No COPY button, values can be read in the description");
 
-		// MOD SETTINGS in the pause menu: the entry list, its growth, the panel holder, and the KONTROLS panel setup
+		// MOD SETTINGS in the pause menu: the entry list, its growth, the panel holder, the pause panels' setup, and our
+		// own panel object (the engine's object functions)
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pGrowPauseEntries, "GrowPauseEntries");
 		if (pat) MK12::GrowPauseEntries = (MK12::GrowPauseEntriesType*)ProcessPatch::ResolveDestination(pat + 32);
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pPanelHolder, "PanelHolder");
@@ -1076,8 +1077,20 @@ namespace MK12Hook::Hooks {
 		}
 		pat = GamePatcher->ResolvePattern(SettingsMgr->pPauseSelectedIndex, "PauseSelectedIndex");
 		if (pat) MK12::PauseSelectedIndex = (MK12::PauseSelectedIndexType*)ProcessPatch::ResolveDestination(pat + 12);
+		if (!MK12::StaticFindObject)
+			MK12::StaticFindObject = (MK12::StaticFindObjectType*)GamePatcher->ResolvePattern(SettingsMgr->pStaticFindObject, "StaticFindObject");
+		if (!MK12::StaticLoadObject)
+			MK12::StaticLoadObject = (MK12::StaticLoadObjectType*)GamePatcher->ResolvePattern(SettingsMgr->pStaticLoadObject, "StaticLoadObject");
+		if (!MK12::StaticConstructObject)
+			MK12::StaticConstructObject = (MK12::StaticConstructObjectType*)GamePatcher->ResolvePattern(SettingsMgr->pStaticConstructObject, "StaticConstructObject");
+		if (!MK12::ObjectArray && (pat = GamePatcher->ResolvePattern(SettingsMgr->pObjectArray, "ObjectArray")))
+			MK12::ObjectArray = (void*)ProcessPatch::ResolveDestination(pat + 13, 3, 7, 4);
+		pat = GamePatcher->ResolvePattern(SettingsMgr->pTransientPackageCall, "TransientPackageCall");
+		if (pat && *(uint8_t*)pat == 0xE8)
+			MK12::TransientPackage = (MK12::TransientPackageType*)ProcessPatch::ResolveDestination(pat);
 		uint64_t CloseStart = GamePatcher->ResolvePattern(SettingsMgr->pPauseClose, "PauseClose");
-		bool bPause = MK12::GrowPauseEntries && MK12::GameAlloc && MK12::PanelHolderConstruct && MK12::PauseSelectedIndex
+		bool bPause = MK12::GrowPauseEntries && MK12::GameAlloc && MK12::PanelHolderConstruct && MK12::StaticFindObject
+			&& MK12::StaticLoadObject && MK12::StaticConstructObject && MK12::ObjectArray && MK12::TransientPackage
 			&& CloseStart && GamePatcher->ProxyFunctionAt(CloseStart, MK12Hook::Proxies::PauseCloseProxy, &MK12::PauseClose, "PauseClose")
 			&& GamePatcher->ProxyByPattern(SettingsMgr->pPausePanelPageSetup, "PausePanelPageSetup", 13,
 				MK12Hook::Proxies::PausePanelPageSetupProxy, &MK12::PausePanelPageSetup, PATCH_CALL)

@@ -662,9 +662,28 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			void							(__fastcall GrowPauseEntriesType)				(TArray<FPauseEntry>* Array, int32_t OldCount); // After its count was bumped
 	typedef			void*							(__fastcall GameAllocType)						(size_t Size);
 	typedef			void*							(__fastcall PanelHolderConstructType)			(void* Memory, void* Object);
+	typedef			void*							(__fastcall TransientPackageType)				(); // The package for objects that are never saved
 	typedef			int32_t							(__fastcall PauseSelectedIndexType)				(void* MenuList, int32_t Player); // The highlighted entry
 	typedef			void							(__fastcall PauseCloseType)						(void* Pause); // The pause menu closing: its panels shut, its entries go
 	typedef			uint8_t*						(__fastcall FloydSetLevelType)					(uint8_t* AI, uint8_t Level); // Floyd's fight: the AI level of each of his fighters (AI + 1)
+	// Engine objects
+	typedef			void*							(__fastcall StaticFindObjectType)				(void* Class, void* Outer, const wchar_t* Name, bool bExactClass); // An object by its path (outer -1: any package), null when not loaded
+	typedef			void*							(__fastcall StaticLoadObjectType)				(void* Class, void* Outer, const wchar_t* Name, const wchar_t* FileName, uint32_t LoadFlags, void* Sandbox, bool bAllowReconciliation, void* InstancingContext); // Loads an object by its path, right away
+	struct FConstructObjectParams // What the game's NewObject fills before it builds an object
+	{
+		void*		Class;
+		void*		Outer;
+		uint64_t	Name;			// None: the game makes a unique name
+		uint32_t	Flags;
+		uint32_t	InternalFlags;
+		bool		bCopyTransientsFromClassDefaults;
+		bool		bAssumeTemplateIsArchetype;
+		void*		Template;		// The object whose property values the new one starts with
+		void*		InstanceGraph;
+		void*		ExternalPackage;
+		uint8_t		Rest[0x40];		// Later fields (a property init callback...): all empty
+	};
+	typedef			void*							(__fastcall StaticConstructObjectType)			(FConstructObjectParams* Params); // Builds a new object (NewObject)
 	// Main menu, Living Towers
 	typedef			bool							(__fastcall IsModeOnTopType)					(void* ModeManager, void* ModeClass); // The attract mode idle timer restarts while it's false
 	typedef			FScriptRecord*					(__fastcall FindScriptType)						(uint32_t NameHash); // A loaded script by ScriptNameHash, null while it isn't loaded. Doesn't load it
@@ -780,11 +799,19 @@ namespace MK12 { // Namespace for game functions / structs
 	extern GrowPauseEntriesType*						GrowPauseEntries;
 	extern GameAllocType*								GameAlloc;
 	extern PanelHolderConstructType*					PanelHolderConstruct;
+	extern TransientPackageType*						TransientPackage;
+	extern StaticFindObjectType*						StaticFindObject;
+	extern StaticLoadObjectType*						StaticLoadObject;
+	extern StaticConstructObjectType*					StaticConstructObject;
 	extern PauseSelectedIndexType*						PauseSelectedIndex;
 	extern PauseCloseType*								PauseClose;
 	extern FloydSetLevelType*							FloydSetLevel;
 	// One of the game's own settings rows, found by its title key and kind. They are static objects, there from startup
 	FSettingsOption*									FindStaticOption(const wchar_t* Key, int32_t Type);
+	// The engine's list of every object (GUObjectArray): items 24 bytes apart in chunks of 0x10000, flags at +8
+	extern void*										ObjectArray;
+	// Keeps an object loaded for the rest of the session (the engine's root set, like AddToRoot). Game thread only
+	bool												KeepLoaded(void* Object);
 	// Every virtual table entry of the game that is Function now points to Replacement; how many
 	int													RedirectVirtuals(void* Function, void* Replacement);
 	extern SettingsVersionTextType*						SettingsVersionText;

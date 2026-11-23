@@ -83,6 +83,11 @@ MK12::PauseCollectEntriesType*			MK12::PauseCollectEntries			= nullptr;
 MK12::GrowPauseEntriesType*				MK12::GrowPauseEntries				= nullptr;
 MK12::GameAllocType*					MK12::GameAlloc						= nullptr;
 MK12::PanelHolderConstructType*			MK12::PanelHolderConstruct			= nullptr;
+MK12::TransientPackageType*				MK12::TransientPackage				= nullptr;
+MK12::StaticFindObjectType*				MK12::StaticFindObject				= nullptr;
+MK12::StaticLoadObjectType*				MK12::StaticLoadObject				= nullptr;
+MK12::StaticConstructObjectType*		MK12::StaticConstructObject			= nullptr;
+void*									MK12::ObjectArray					= nullptr;
 MK12::PauseSelectedIndexType*			MK12::PauseSelectedIndex			= nullptr;
 MK12::PauseCloseType*					MK12::PauseClose					= nullptr;
 MK12::FloydSetLevelType*				MK12::FloydSetLevel					= nullptr;
@@ -228,6 +233,28 @@ static void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
 		if (Option->Type == Search->Type && Option->VTable)
 			Search->Found = Option;
 	}
+}
+
+bool MK12::KeepLoaded(void* Object)
+{
+	constexpr uint32_t	OBJECT_INDEX	= 0x0C;		// An object's place in the list
+	constexpr uint32_t	ARRAY_CHUNKS	= 0x10;		// The list's chunk table
+	constexpr uint32_t	ARRAY_COUNT		= 0x24;		// Its item count
+	constexpr int32_t	ITEMS_PER_CHUNK	= 0x10000;
+	constexpr size_t	ITEM_SIZE		= 24;		// Object, flags, cluster root, serial number
+	constexpr int32_t	ROOT_SET		= 1 << 30;
+	if (!Object || !ObjectArray)
+		return false;
+	int32_t Index = *(int32_t*)((char*)Object + OBJECT_INDEX);
+	char* Array = (char*)ObjectArray;
+	if (Index < 0 || Index >= *(int32_t*)(Array + ARRAY_COUNT))
+		return false;
+	char* Chunk = (*(char***)(Array + ARRAY_CHUNKS))[Index / ITEMS_PER_CHUNK];
+	char* Item = Chunk ? Chunk + ITEM_SIZE * (Index % ITEMS_PER_CHUNK) : nullptr;
+	if (!Item || *(void**)Item != Object)
+		return false;
+	*(int32_t*)(Item + 8) |= ROOT_SET;
+	return true;
 }
 
 uint32_t MK12::ScriptNameHash(const char* Name)

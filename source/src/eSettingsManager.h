@@ -138,10 +138,16 @@ public:
 	std::string pPausePanelPageSetup;
 	std::string pGrowPauseEntries;
 	std::string pPanelHolder;
+	std::string pTransientPackageCall; // The game making KONTROLS' panel: its call for the transient package (the panel's outer)
 	std::string pPauseSelectedIndex;
 	std::string pPauseClose;
 	// Paks
 	std::string pPakMount;
+	// Engine
+	std::string pStaticFindObject;
+	std::string pStaticLoadObject;
+	std::string pStaticConstructObject;
+	std::string pObjectArray;
 	std::string pConfigInit;
 	std::string pConfigGlobals;
 	std::string pConfigSetString;

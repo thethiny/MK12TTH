@@ -492,11 +492,17 @@ void eSettingsManager::Init()
 	pPausePanelPageSetup		= ini.ReadString	("Patterns.SettingsScreen",	"pPausePanelPageSetup",		"");
 	pGrowPauseEntries			= ini.ReadString	("Patterns.SettingsScreen",	"pGrowPauseEntries",			"");
 	pPanelHolder				= ini.ReadString	("Patterns.SettingsScreen",	"pPanelHolder",				"");
+	pTransientPackageCall		= ini.ReadString	("Patterns.SettingsScreen",	"pTransientPackageCall",	"");
 	pPauseSelectedIndex			= ini.ReadString	("Patterns.SettingsScreen",	"pPauseSelectedIndex",		"");
 	pPauseClose					= ini.ReadString	("Patterns.SettingsScreen",	"pPauseClose",				"");
 	// Paks
 	pPakMount					= ini.ReadString	("Patterns.Paks",		"pPakMount",				"");
 	pConfigInit					= ini.ReadString	("Patterns.Paks",		"pConfigInit",				"");
+	// Engine
+	pStaticFindObject			= ini.ReadString	("Patterns.Engine",		"pStaticFindObject",		"");
+	pStaticLoadObject			= ini.ReadString	("Patterns.Engine",		"pStaticLoadObject",		"");
+	pStaticConstructObject		= ini.ReadString	("Patterns.Engine",		"pStaticConstructObject",	"");
+	pObjectArray				= ini.ReadString	("Patterns.Engine",		"pObjectArray",				"");
 	pConfigGlobals				= ini.ReadString	("Patterns.Paks",		"pConfigGlobals",			"");
 	pConfigSetString			= ini.ReadString	("Patterns.Paks",		"pConfigSetString",			"");
 	pConfigGetString			= ini.ReadString	("Patterns.Paks",		"pConfigGetString",			"");
