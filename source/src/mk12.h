@@ -729,6 +729,11 @@ namespace MK12 { // Namespace for game functions / structs
 	constexpr uint8_t								ProfileStatScope = 2;
 	constexpr uint8_t								ProfileStatBitsScope = 8;
 	uint64_t										FloydStoredSeed(void* Profile); // The seed the game keeps for Floyd's current challenges, 0 when it has none
+	constexpr uint32_t								StatSetSlot = 0x60 / 8; // Virtual, on a stat object: sets its value
+	typedef			void							(__fastcall StatSetType)						(void* Stat, uint64_t Value);
+	// Writes a stat in this PC's copy of the profile only. The game's own setter also marks the stat changed, which sends
+	// it to the server after the next match; this one doesn't, so the server copy only changes when the game writes it
+	bool											SetProfileStatLocal(void* Stats, uint8_t ScopeMask, int32_t StatId, uint64_t Value);
 	constexpr uint32_t								MapModeTacoScheduleOffset = 0x368;
 	constexpr uint32_t								MapModeGetProfileSlot = 0x2D0 / 8; // Virtual
 	void*											MapModeGetProfile(void* MapMode); // The local player's profile, null without one

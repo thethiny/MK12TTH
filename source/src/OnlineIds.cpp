@@ -173,6 +173,14 @@ namespace OnlineIds {
 		return false;
 	}
 
+	void* LocalProfile()
+	{
+		if (!GetLocalProfiles)
+			return nullptr;
+		MK12::TArray<void*>* Profiles = GetLocalProfiles();
+		return Profiles && Profiles->ElementsCount > 0 ? Profiles->Data[0] : nullptr;
+	}
+
 	bool IsOnline()
 	{
 		return bWasOnline;

@@ -2,9 +2,8 @@
 #include <cstdint>
 #include <ctime>
 
-// When the Floyd Tower shows up, in a toast once back on the main menu after opening Living Towers (only the main menu
-// has toasts). Only once Floyd was beaten, the game has no Floyd Tower before that. Opening Living Towers also reads the
-// Floyd stats and the player's 10 Floyd challenges
+// When the Floyd Tower shows up, in the game's message box as Living Towers opens. Only once Floyd was beaten, the game
+// has no Floyd Tower before that. Opening Living Towers also reads the Floyd stats
 namespace FloydTowerAlert {
 	// Floyd profile stats
 	enum class Stat {
@@ -20,7 +19,14 @@ namespace FloydTowerAlert {
 	const FloydStats& LastStats();
 	bool IsChallengeDone(const FloydStats& Stats, uint8_t Challenge); // Numbered from 1
 
+	// Marks all of Floyd's challenges done in this PC's copy of the profile, Floyd shows up at the end of the next match
+	// he can. Nothing goes to the server, the game syncs as usual after the Floyd fight. Game thread
+	enum class SummonResult { Summoned, AlreadyDone, NotAvailable, NoProfile };
+	bool CanSummon();
+	SummonResult Summon();
+
 	// Game thread
 	void OnTowersEntered(void* TacoSchedule); // Right after the game set up the towers
+	void Refresh(); // Reads the stats again, once the game is up
 	void Tick();
 }

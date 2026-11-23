@@ -18,6 +18,7 @@ namespace OnlineIds {
 	// come from it alone
 	void SetOnlineCheck(void* LocalProfiles, void* ProfileOnline);
 	bool HasOnlineCheck();
+	void* LocalProfile(); // The first local player's, null before the game made it
 
 	bool IsOnline(); // As of the last frame the game could show UI, any thread
 }

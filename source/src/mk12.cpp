@@ -127,6 +127,50 @@ uint64_t MK12::FloydStoredSeed(void* Profile)
 		return 0;
 	}
 }
+// The stats container's hash sets, looked up like the game's own stat setter does: a set by scope bit, each holding a
+// set by stat id whose value is the stat object
+static char* FindInSet(char* Set, int32_t Key, int32_t ElementSize, int32_t HashOffset, int32_t NextOffset, bool bByteKey)
+{
+	int32_t HashSize = *(int32_t*)(Set + HashOffset + 0x10);
+	int32_t* Hash = *(int32_t**)(Set + HashOffset + 8) ? *(int32_t**)(Set + HashOffset + 8) : (int32_t*)(Set + HashOffset);
+	char* Elements = *(char**)Set;
+	for (int32_t i = Hash[Key & (HashSize - 1)]; i != -1; i = *(int32_t*)(Elements + (int64_t)i * ElementSize + NextOffset))
+	{
+		char* Element = Elements + (int64_t)i * ElementSize;
+		if (bByteKey ? *(uint8_t*)Element == (uint8_t)Key : *(int32_t*)Element == Key)
+			return Element;
+	}
+	return nullptr;
+}
+
+bool MK12::SetProfileStatLocal(void* Stats, uint8_t ScopeMask, int32_t StatId, uint64_t Value)
+{
+	if (!Stats)
+		return false;
+	__try
+	{
+		char* Scopes = (char*)Stats + 8;
+		if (*(int32_t*)(Scopes + 8) == *(int32_t*)(Scopes + 0x34)) // Empty
+			return false;
+		char* Scope = FindInSet(Scopes, ScopeMask, 0x60, 0x38, 0x58, true);
+		if (!Scope)
+			return false;
+		char* Ids = Scope + 8;
+		if (*(int32_t*)(Ids + 8) == *(int32_t*)(Ids + 0x34))
+			return false;
+		char* Entry = FindInSet(Ids, StatId, 0x18, 0x38, 0x10, false);
+		void* Stat = Entry ? *(void**)(Entry + 8) : nullptr;
+		if (!Stat)
+			return false;
+		MK12::StatSetType* Set = (MK12::StatSetType*)(*(void***)Stat)[StatSetSlot];
+		Set(Stat, Value);
+		return true;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
+}
 MK12::FindTextType*						MK12::FindTextPlatform				= nullptr;
 
 

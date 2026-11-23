@@ -1,7 +1,10 @@
 #include "mkutils.h"
 #include "FloydTowerAlert.h"
 #include "FloydTower.h"
+#include "GameMessageBox.h"
 #include "GameToast.h"
+#include "GameState.h"
+#include "OnlineIds.h"
 #include "Features.h"
 #include "mk12_enums.h"
 #include "mk12.h"
@@ -11,7 +14,7 @@
 #include <string>
 
 namespace FloydTowerAlert {
-	static bool			bPending = false; // Living Towers opened, shows once the screen is up
+	static bool			bPending = false; // Living Towers opened, shows once the game can show it
 	static FloydStats	Stats;
 
 	// The Floyd profile stats, in Stat order
@@ -46,28 +49,42 @@ namespace FloydTowerAlert {
 		Stats.ReadAt = time(nullptr);
 	}
 
-	// The seed the game picks Floyd's challenges with: the one it kept, else the profile hash and encounters.
-	// Working out the hash also reads the online ids for PROFILE
-	static void ReadChallenges(void* Profile)
-	{
-		if (!MK12::FloydProfileHash || !Features::IsActive(Features::Id::FloydTracking))
+	void Refresh()
+	{ // No profiles before the game is up, never at startup
+		if (!Features::IsInstalled(Features::Id::FloydTowerAlert) || !GameState::CanShowUI())
 			return;
-		uint32_t Hash = MK12::FloydProfileHash(&Profile);
-		uint64_t Seed = MK12::FloydStoredSeed(Profile);
-		bool bKept = Seed != 0;
-		if (!bKept)
-			Seed = ((uint64_t)Hash << 32) ^ (uint64_t)(int64_t)(int32_t)Stats.Values[(size_t)Stat::Encounters];
+		void* Profile = OnlineIds::LocalProfile();
+		if (!Profile)
+			return;
+		ReadStats(Profile);
+	}
 
-		HookMetadata::FloydCluesInfo& Floyd = HookMetadata::CurrentFloydInfo;
-		uint32_t Encounters = (uint32_t)Seed;
-		if (Floyd.HasClues && Encounters <= Floyd.FloydEncounters)
-			return; // The game's own read wins
-		Floyd.Clues = FloydTower::FloydChallenges(Seed);
-		Floyd.UserProfileHash = (uint32_t)(Seed >> 32);
-		Floyd.FloydEncounters = Encounters;
-		Floyd.HasClues = true;
+	bool CanSummon()
+	{
+		return MK12::GetProfileStatBits && MK12::GetStatsContainer && MK12::FloydProfileHash && OnlineIds::HasOnlineCheck();
+	}
+
+	SummonResult Summon()
+	{
+		if (!CanSummon())
+			return SummonResult::NotAvailable;
+		void* Profile = OnlineIds::LocalProfile();
+		void* Container = Profile ? MK12::GetStatsContainer(Profile) : nullptr;
+		if (!Container)
+			return SummonResult::NoProfile;
+		ReadStats(Profile);
+
+		// Every challenge, not only the 10 read last: those can be out of date
+		uint64_t Done = MK12::GetProfileStatBits(Container, MK12::ProfileStatBitsScope, (int32_t)STAT_IDS[(size_t)Stat::ChallengesDone]);
+		uint64_t All = Done | ((1ull << FloydTower::CHALLENGE_COUNT) - 1);
+		if (All == Done)
+			return SummonResult::AlreadyDone;
+		if (!MK12::SetProfileStatLocal(Container, MK12::ProfileStatBitsScope, (int32_t)STAT_IDS[(size_t)Stat::ChallengesDone], All))
+			return SummonResult::NotAvailable;
+		ReadStats(Profile);
 		if (SettingsMgr->ShouldLogFloyd())
-			printf("Floyd Seed: %llX (%s)\n", Seed, bKept ? "kept by the game" : "from the profile");
+			printf("Floyd Summoned: challenges done %llX -> %llX\n", Done, All);
+		return SummonResult::Summoned;
 	}
 
 	const FloydStats& LastStats()
@@ -80,12 +97,19 @@ namespace FloydTowerAlert {
 		return Challenge >= 1 && Challenge <= 64 && (Stats.Values[(size_t)Stat::ChallengesDone] >> (Challenge - 1)) & 1;
 	}
 
-	static std::wstring Clock(time_t Seconds)
-	{ // "01:05", rounded up to the minute
+	static std::wstring Part(long long Count, const wchar_t* Unit)
+	{
+		return std::to_wstring(Count) + L" " + Unit + (Count == 1 ? L"" : L"s");
+	}
+
+	static std::wstring Words(time_t Seconds)
+	{ // "1 hour 5 minutes", "26 minutes", rounded up to the minute
 		long long Minutes = (Seconds + 59) / 60;
-		wchar_t Text[16];
-		swprintf_s(Text, L"%02lld:%02lld", Minutes / 60, Minutes % 60);
-		return Text;
+		long long Hours = Minutes / 60;
+		Minutes %= 60;
+		if (!Hours)
+			return Part(Minutes ? Minutes : 1, L"minute");
+		return Minutes ? Part(Hours, L"hour") + L" " + Part(Minutes, L"minute") : Part(Hours, L"hour");
 	}
 
 	static bool IsOn()
@@ -102,7 +126,6 @@ namespace FloydTowerAlert {
 		if (!Profile)
 			return;
 		ReadStats(Profile);
-		ReadChallenges(Profile);
 		if (!IsOn())
 			return;
 		int32_t Victories = MK12::GetFloydVictories(Profile);
@@ -112,8 +135,9 @@ namespace FloydTowerAlert {
 	}
 
 	void Tick()
-	{ // Only the main menu has toasts: waits there, then says how it is right now
-		if (!bPending || !GameToast::IsUp())
+	{ // Message box over Living Towers, or a toast back on the main menu without it
+		bool bBox = GameMessageBox::IsReady();
+		if (!bPending || !GameState::CanShowUI() || (!bBox && !GameToast::IsUp()))
 			return;
 		bPending = false;
 		if (!IsOn())
@@ -124,6 +148,13 @@ namespace FloydTowerAlert {
 		if (FloydTower::Find(Now, HookMetadata::CurrentTacoInfo.UserProfileHash, SettingsMgr->bFloydTowerFromGame, window) != FloydTower::Status::Ready)
 			return;
 		bool bUp = window.Start <= Now;
-		GameToast::Show(L"Floyd Tower", bUp ? L"Up now, ends in " + Clock(window.End - Now) : L"In " + Clock(window.Start - Now));
+		if (!bBox)
+		{
+			GameToast::Show(L"Floyd Tower", bUp ? L"Up now, ends in " + Words(window.End - Now) : L"In " + Words(window.Start - Now));
+			return;
+		}
+		std::wstring Body = bUp ? L"The Floyd Tower is up now in Living Towers.\n\nIt ends in " + Words(window.End - Now) + L"."
+			: L"The Floyd Tower shows up in Living Towers in " + Words(window.Start - Now) + L".";
+		GameMessageBox::Confirm(Body, nullptr, L"FLOYD TOWER");
 	}
 }
