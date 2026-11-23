@@ -564,6 +564,21 @@ namespace MK12 { // Namespace for game functions / structs
 		TArray<FString> PageDescriptions; // 0x708 Text keys in the Settings table, one per page
 	};
 
+	// A loaded script (.mko): its shared part, which every running copy of the script reads. The script's tweakable
+	// numbers (timers, counts) sit in a list here and are read from it each time the script uses one
+	struct FScriptConstant {
+		int64_t		Value;
+		uint32_t	Kind;			// SCRIPT_CONSTANT_REFERENCE: Value points at a variable, anything else (the size, 4) is the number itself
+		uint8_t		Pad[12];
+	};
+	static_assert(sizeof(FScriptConstant) == 24, "FScriptConstant size");
+	constexpr uint32_t SCRIPT_CONSTANT_REFERENCE = 0x208;
+
+	struct FScriptRecord {
+		uint8_t						Pad[0xB8];
+		TArray<FScriptConstant>		Constants;
+	};
+
 
 	// Vars
 	extern uint64_t*									lpGameVersion;
@@ -580,6 +595,7 @@ namespace MK12 { // Namespace for game functions / structs
 
 	FName* NameTableIndexToFName(FNameInfoStruct*);
 	FName* NameTableIndexToFName(uint16_t NameTableId, uint16_t NameOffset);
+	uint32_t ScriptNameHash(const char* Name); // The game finds a loaded script by this hash of its file name ("Attract.mko")
 
 	// Game Functions
 	// FString
@@ -651,6 +667,7 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			uint8_t*						(__fastcall FloydSetLevelType)					(uint8_t* AI, uint8_t Level); // Floyd's fight: the AI level of each of his fighters (AI + 1)
 	// Main menu, Living Towers
 	typedef			bool							(__fastcall IsModeOnTopType)					(void* ModeManager, void* ModeClass); // The attract mode idle timer restarts while it's false
+	typedef			FScriptRecord*					(__fastcall FindScriptType)						(uint32_t NameHash); // A loaded script by ScriptNameHash, null while it isn't loaded. Doesn't load it
 	typedef			char							(__fastcall TowersSetupType)					(void* TacoSchedule); // Sets up the towers as Living Towers loads, the schedule sits in the map mode
 	typedef			int32_t							(__fastcall GetFloydVictoriesType)				(void* Profile); // Profile stat 9005, the game has no Floyd Tower below 1
 	typedef			void*							(__fastcall GetStatsContainerType)				(void* Profile);
@@ -775,6 +792,7 @@ namespace MK12 { // Namespace for game functions / structs
 	extern SettingsCopyTabsType*						MainMenuCopyTabs; // Same copy, the call that builds the main menu's entries
 	extern PakMountType*								PakMount;
 	extern IsModeOnTopType*								IsModeOnTop;
+	extern FindScriptType*								FindScript;
 	extern TowersSetupType*								TowersSetup;
 	extern GetFloydVictoriesType*						GetFloydVictories;
 	extern GetStatsContainerType*						GetStatsContainer;

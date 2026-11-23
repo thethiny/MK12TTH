@@ -1091,7 +1091,7 @@ namespace ModSettings {
 
 	static void AddAttractRow()
 	{
-		const wchar_t* About = L"How long you idle on the main menu before attract mode, the demo, starts.";
+		const wchar_t* About = L"How long you idle on the title screen or the main menu before attract mode, the demo, starts.";
 		if (!AttractMode::IsReady())
 		{
 			AddLiveRow(LivePage, L"ATTRACT MODE", Own(NotAvailable(About, Features::Id::AttractMode)), nullptr, nullptr, false);

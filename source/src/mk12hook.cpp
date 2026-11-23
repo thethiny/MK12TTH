@@ -251,6 +251,7 @@ namespace MK12Hook::Proxies {
 		FloydTowerAlert::Tick();
 		OnlineIds::Tick();
 		ModSettings::Tick();
+		AttractMode::Tick();
 		PauseMenu::Tick();
 		return Result;
 	}
@@ -1105,19 +1106,31 @@ namespace MK12Hook::Hooks {
 	}
 
 	bool AttractModeHooks()
-	{ // The main menu's idle timer: its frame limit sets the delay, restarting it stops attract mode
+	{ // The main menu's idle timer: its frame limit sets the delay, restarting it stops attract mode.
+	  // The title screen's wait is the attract script's own: the frame tick changes it in the loaded script
 		printf("\n==AttractModeHooks==\n");
 		uint64_t LimitAt = GamePatcher->ResolvePattern(SettingsMgr->pAttractModeLimit, "AttractModeLimit");
 		bool bHooked = LimitAt && AttractMode::Init(LimitAt + 14)
 			&& GamePatcher->ProxyByPattern(SettingsMgr->pAttractModeIdle, "AttractModeIdle", 6,
 			MK12Hook::Proxies::AttractModeIdleProxy, &MK12::IsModeOnTop, PATCH_CALL);
-		if (bHooked)
-			AttractMode::SetDelay(AttractMode::FromIni(SettingsMgr->szAttractModeDelay.c_str()));
-		if (bHooked)
+		if (!bHooked)
+		{
+			printfError("Attract Mode Switch not working!");
+			return false;
+		}
+
+		// A call in the game's script lookup, right after it hashes the name: finds a loaded script by that hash
+		uint64_t FindAt = GamePatcher->ResolvePattern(SettingsMgr->pFindScript, "FindScript");
+		if (FindAt && *(uint8_t*)(FindAt + 14) == 0xE8)
+			MK12::FindScript = (MK12::FindScriptType*)ProcessPatch::ResolveDestination(FindAt + 14);
+		AttractMode::InitTitle();
+
+		AttractMode::SetDelay(AttractMode::FromIni(SettingsMgr->szAttractModeDelay.c_str()));
+		if (AttractMode::IsTitleReady())
 			printfSuccess("Attract Mode Switch On");
 		else
-			printfError("Attract Mode Switch not working!");
-		return bHooked;
+			printfWarning("Attract Mode Switch On for the main menu only: the title screen keeps the game's delay");
+		return true;
 	}
 
 	bool FloydTrackingHooks()

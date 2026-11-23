@@ -149,6 +149,7 @@ public:
 	std::string pLoadFileToString;
 	std::string pAttractModeIdle;
 	std::string pAttractModeLimit;
+	std::string pFindScript;
 	std::string pKeepRunning;
 	std::string pFocusLost;
 	std::string pFocusLostPause;

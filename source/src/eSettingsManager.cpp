@@ -194,6 +194,7 @@ void eSettingsManager::Init()
 	pGetFloydVictories			= ini.ReadString	("Patterns.Floyd",		"pGetFloydVictories",		"");
 	pAttractModeIdle			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeIdle",			"");
 	pAttractModeLimit			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeLimit",			"");
+	pFindScript					= ini.ReadString	("Patterns.MainMenu",	"pFindScript",				"");
 	pKeepRunning				= ini.ReadString	("Patterns.MainMenu",	"pKeepRunning",				"");
 	pFocusLost					= ini.ReadString	("Patterns.MainMenu",	"pFocusLost",				"");
 	pFocusLostPause				= ini.ReadString	("Patterns.MainMenu",	"pFocusLostPause",			"");

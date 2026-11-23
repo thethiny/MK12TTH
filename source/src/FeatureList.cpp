@@ -54,8 +54,8 @@ namespace Features {
 			true, "Server" });
 
 		// Quality of life
-		Define({ Id::AttractMode, "bAttractModeSwitch", true, Kind::Startup, {}, AttractModeHooks,
-			L"ATTRACT MODE SWITCH", L"Lets you change when attract mode, the demo after idling on the main menu, starts." });
+		Define({ Id::AttractMode, "bAttractModeSwitch", true, Kind::Startup, { Id::GameState }, AttractModeHooks,
+			L"ATTRACT MODE SWITCH", L"Lets you change when attract mode, the demo after idling on the title screen or the main menu, starts." });
 		Definition KeepRunning = { Id::KeepRunning, "bKeepRunning", true, Kind::Live, {}, KeepRunningHooks,
 			L"KEEP RUNNING IN BACKGROUND", L"Keeps the game running when its window isn't in focus, instead of pausing.", false };
 		KeepRunning.OnSwitch = SetKeepRunning;

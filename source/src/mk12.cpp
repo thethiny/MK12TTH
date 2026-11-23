@@ -89,6 +89,7 @@ MK12::FloydSetLevelType*				MK12::FloydSetLevel					= nullptr;
 MK12::SettingsCopyTabsType*				MK12::MainMenuCopyTabs				= nullptr;
 MK12::PakMountType*						MK12::PakMount						= nullptr;
 MK12::IsModeOnTopType*					MK12::IsModeOnTop					= nullptr;
+MK12::FindScriptType*					MK12::FindScript					= nullptr;
 MK12::TowersSetupType*					MK12::TowersSetup					= nullptr;
 MK12::GetFloydVictoriesType*			MK12::GetFloydVictories				= nullptr;
 MK12::GetStatsContainerType*			MK12::GetStatsContainer				= nullptr;
@@ -227,6 +228,14 @@ static void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
 		if (Option->Type == Search->Type && Option->VTable)
 			Search->Found = Option;
 	}
+}
+
+uint32_t MK12::ScriptNameHash(const char* Name)
+{
+	uint32_t Hash = 0x811C9DC5;
+	for (size_t i = 0; Name[i]; i++)
+		Hash = (Hash * 0x1000193) ^ (uint32_t)(int32_t)(signed char)Name[i];
+	return Hash;
 }
 
 struct VirtualRedirect {
