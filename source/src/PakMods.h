@@ -6,9 +6,10 @@
 // Pak mods: lists them, orders them and keeps the ones turned off from mounting. On/off is saved per mod in the state
 // file (missing is on), a change needs a restart since the game can't unmount
 // Content\Mods: one folder per mod (any number of .pak and .utoc/.ucas, its Engine.ini), a pak right in it is a mod of
-// its own. We mount them with the game's own mount over the game's files, each with its own priority: mods with
-// .utoc/.ucas first, then .pak only mods, then by name (last name wins). _P<number> at the end of a mod's name sets
-// it, higher wins over everything without one
+// its own. We mount them with the game's own mount, all at one priority over the game's files: the last name wins like
+// in Paks. _P<number> at the end of a mod's name raises it, higher wins. A mod with several paks has a switch per pak
+// and per folder holding more than one pak, a pak mounts only when it, its folders and its mod are on. A folder's
+// description.txt is shown with it
 // Content\Paks: the old place, mounted by the game itself at the priority of its own files
 namespace PakMods {
 	enum class Kind {
@@ -28,6 +29,21 @@ namespace PakMods {
 		std::wstring	Name;				// Without extension
 		Kind			Type = Kind::Pak;
 		uint32_t		Order = 0;			// Mount priority, the game's own files have 3
+		bool			bLoads = true;		// As the game started: it, its folders and its mod are on
+		std::wstring	DescriptionInPak;	// Its description.txt in the game's file system
+		std::wstring	Description;		// Read once it's mounted (Content\Mods only)
+	};
+
+	// Content\Mods, mod with several paks: one per pak and per folder with more than one pak
+	struct Switch {
+		std::string		Key;				// The mod's key + the path under it
+		std::wstring	Path;				// Under the mod's root, paks without extension
+		std::wstring	Name;
+		bool			bFolder = false;
+		int				Depth = 1;			// Switches above it, the mod included
+		size_t			Pak = 0;			// Index in the mod's Paks
+		bool			bEnabled = true;	// As the game started
+		std::wstring	Description;		// Folders: their description.txt
 	};
 
 	// What the game really uses from a mod. Higher priority wins, at the same priority the pak mounted first wins (Paks
@@ -56,10 +72,13 @@ namespace PakMods {
 		Kind					Type = Kind::Pak;	// Pak when all its paks are .pak only
 		bool					bEnabled = true;	// As the game started
 		int						Priority = -1;		// _P<number>
+		std::vector<Switch>		Switches;			// Parents first
+		std::wstring			Description;		// Content\Mods folder with several paks
 		int						MountRank = 0;		// 0 wins over everything
 		LoadInfo				Load;				// Mods that are off: as if they were on
 	};
 	const Mod* Find(const std::string& Key);
+	bool AnyLoads(const Mod& mod);
 
 	void Init(); // Before the game mounts paks
 	const std::vector<Mod>& List();
