@@ -7,6 +7,19 @@ eFirstRunManager*		FirstRunMgr			= new eFirstRunManager;
 eCachedPatternsManager*	CachedPatternsMgr	= new eCachedPatternsManager;
 __int64 eCachedPatternsManager::GameAddr = reinterpret_cast<__int64>(GetModuleHandle(nullptr));
 
+// Patterns added after 1.0.0: an ini without the key (an older MK12TTH.ini) gets the one this version shipped with.
+// A key in the ini always wins, an empty one turns its feature off
+namespace NewPatterns {
+	constexpr const char* FindScript				= "69 C9 93 01 00 01 33 C8 48 83 EA 01 75 ? E8 ? ? ? ? 4C 8B F0 48 85 C0";
+	constexpr const char* FightStartupCall			= "48 8B F9 E8 ? ? ? ? BA 01 00 00 00 B9 20 01 00 00 E8 ? ? ? ? 33 DB 48 85 C0 74";
+	constexpr const char* FightStartupCallCpu		= "48 85 C9 74 05 E8 ? ? ? ? 48 8B CE E8 ? ? ? ? 48 8B 5C";
+	constexpr const char* TransientPackageCall		= "E8 ? ? ? ? 4C 8B 44 24 78 48 8B C8 48 89 5C 24 38 45 33 C9 48 89 5C 24 30 48 8B D7 88 5C 24 28";
+	constexpr const char* StaticFindObject			= "48 89 5C 24 08 48 89 74 24 18 55 57 41 54 41 56 41 57 48 8B EC 48 83 EC 60 80 3D ? ? ? ? 00 45 0F B6 F1 49 8B F8 48 8B DA 4C 8B F9";
+	constexpr const char* StaticLoadObject			= "4C 89 4C 24 20 48 89 54 24 10 48 89 4C 24 08 55 53 56 57 41 54 41 55 41 56 41 57 48 8B EC 48 83 EC 68 45 33 F6";
+	constexpr const char* StaticConstructObject		= "48 89 5C 24 10 48 89 74 24 18 55 57 41 54 41 56 41 57 48 8D AC 24 50 FF FF FF 48 81 EC B0 01 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 A8 00 00 00 48 8B 39 4C 8D 25 ? ? ? ? 4C 8B 79 08 48 8B D9 8B 71 18 4C 8B 71 28 F7 87 CC 00 00 00 80 00 00 10";
+	constexpr const char* ObjectArray				= "0F BA EB 19 83 E0 FB 89 47 08 45 33 C0 48 8D 0D ? ? ? ? 48 8B D7 E8";
+}
+
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 // The cache file: "TPCF", version, build count, then per build: hash, entry count, entries (key length, key, offset).
@@ -426,7 +439,7 @@ void eSettingsManager::Init()
 	pGetFloydVictories			= ini.ReadString	("Patterns.Floyd",		"pGetFloydVictories",		"");
 	pAttractModeIdle			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeIdle",			"");
 	pAttractModeLimit			= ini.ReadString	("Patterns.MainMenu",	"pAttractModeLimit",			"");
-	pFindScript					= ini.ReadString	("Patterns.MainMenu",	"pFindScript",				"");
+	pFindScript					= ini.ReadString	("Patterns.MainMenu",	"pFindScript",				NewPatterns::FindScript);
 	pKeepRunning				= ini.ReadString	("Patterns.MainMenu",	"pKeepRunning",				"");
 	pFocusLost					= ini.ReadString	("Patterns.MainMenu",	"pFocusLost",				"");
 	pFocusLostPause				= ini.ReadString	("Patterns.MainMenu",	"pFocusLostPause",			"");
@@ -449,8 +462,8 @@ void eSettingsManager::Init()
 	pGetCurrentMission			= ini.ReadString	("Patterns.Announcer",	"pGetCurrentMission",		"");
 	pGetTeam					= ini.ReadString	("Patterns.Announcer",	"pGetTeam",					"");
 	pGetTeamDefinitions			= ini.ReadString	("Patterns.Announcer",	"pGetTeamDefinitions",		"");
-	pFightStartupCall			= ini.ReadString	("Patterns.Announcer",	"pFightStartupCall",		"");
-	pFightStartupCallCpu		= ini.ReadString	("Patterns.Announcer",	"pFightStartupCallCpu",		"");
+	pFightStartupCall			= ini.ReadString	("Patterns.Announcer",	"pFightStartupCall",		NewPatterns::FightStartupCall);
+	pFightStartupCallCpu		= ini.ReadString	("Patterns.Announcer",	"pFightStartupCallCpu",		NewPatterns::FightStartupCallCpu);
 	// Message Box
 	pTextFromString				= ini.ReadString	("Patterns.MessageBox",	"pTextFromString",			"");
 	pFindText					= ini.ReadString	("Patterns.MessageBox",	"pFindText",				"");
@@ -492,22 +505,22 @@ void eSettingsManager::Init()
 	pPausePanelPageSetup		= ini.ReadString	("Patterns.SettingsScreen",	"pPausePanelPageSetup",		"");
 	pGrowPauseEntries			= ini.ReadString	("Patterns.SettingsScreen",	"pGrowPauseEntries",			"");
 	pPanelHolder				= ini.ReadString	("Patterns.SettingsScreen",	"pPanelHolder",				"");
-	pTransientPackageCall		= ini.ReadString	("Patterns.SettingsScreen",	"pTransientPackageCall",	"");
+	pTransientPackageCall		= ini.ReadString	("Patterns.SettingsScreen",	"pTransientPackageCall",	NewPatterns::TransientPackageCall);
 	pPauseSelectedIndex			= ini.ReadString	("Patterns.SettingsScreen",	"pPauseSelectedIndex",		"");
 	pPauseClose					= ini.ReadString	("Patterns.SettingsScreen",	"pPauseClose",				"");
 	// Paks
 	pPakMount					= ini.ReadString	("Patterns.Paks",		"pPakMount",				"");
 	pConfigInit					= ini.ReadString	("Patterns.Paks",		"pConfigInit",				"");
-	// Engine
-	pStaticFindObject			= ini.ReadString	("Patterns.Engine",		"pStaticFindObject",		"");
-	pStaticLoadObject			= ini.ReadString	("Patterns.Engine",		"pStaticLoadObject",		"");
-	pStaticConstructObject		= ini.ReadString	("Patterns.Engine",		"pStaticConstructObject",	"");
-	pObjectArray				= ini.ReadString	("Patterns.Engine",		"pObjectArray",				"");
 	pConfigGlobals				= ini.ReadString	("Patterns.Paks",		"pConfigGlobals",			"");
 	pConfigSetString			= ini.ReadString	("Patterns.Paks",		"pConfigSetString",			"");
 	pConfigGetString			= ini.ReadString	("Patterns.Paks",		"pConfigGetString",			"");
 	pConfigFindFile				= ini.ReadString	("Patterns.Paks",		"pConfigFindFile",			"");
 	pLoadFileToString			= ini.ReadString	("Patterns.Paks",		"pLoadFileToString",		"");
+	// Engine
+	pStaticFindObject			= ini.ReadString	("Patterns.Engine",		"pStaticFindObject",		NewPatterns::StaticFindObject);
+	pStaticLoadObject			= ini.ReadString	("Patterns.Engine",		"pStaticLoadObject",		NewPatterns::StaticLoadObject);
+	pStaticConstructObject		= ini.ReadString	("Patterns.Engine",		"pStaticConstructObject",	NewPatterns::StaticConstructObject);
+	pObjectArray				= ini.ReadString	("Patterns.Engine",		"pObjectArray",				NewPatterns::ObjectArray);
 
 
 	// Keybinds

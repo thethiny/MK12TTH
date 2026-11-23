@@ -143,11 +143,6 @@ public:
 	std::string pPauseClose;
 	// Paks
 	std::string pPakMount;
-	// Engine
-	std::string pStaticFindObject;
-	std::string pStaticLoadObject;
-	std::string pStaticConstructObject;
-	std::string pObjectArray;
 	std::string pConfigInit;
 	std::string pConfigGlobals;
 	std::string pConfigSetString;
@@ -183,6 +178,11 @@ public:
 	std::string pBootMovieSkip;
 	std::string pTowersSetup;
 	std::string pGetFloydVictories;
+	// Engine
+	std::string pStaticFindObject;
+	std::string pStaticLoadObject;
+	std::string pStaticConstructObject;
+	std::string pObjectArray;
 
 
 	// Menu Section
