@@ -3,6 +3,10 @@
 #include "ModSettings.h"
 #include "GameToast.h"
 #include "PakMods.h"
+#include "GameMessageBox.h"
+#include "StateFile.h"
+#include "Changelog.h"
+#include "../IniReader.h"
 #include <algorithm>
 #include "mk12.h"
 #include <cstring>
@@ -70,8 +74,15 @@ namespace ModMenu {
 		Out.Count = Count;
 	}
 
+	constexpr const char* LAST_VERSION_KEY = "szLastVersion"; // [FirstRun] in the state file
+
+	static void ShowWhatsNew()
+	{
+		GameMessageBox::Confirm(Changelog::Current, nullptr, L"MK12TTH " + ModSettings::ModVersion());
+	}
+
 	static void AnnounceLoaded()
-	{ // Once, the first time the main menu is built: the version and how many mods loaded
+	{ // Once, the first time the main menu is built. ACCEPT shows what's new
 		static bool bAnnounced = false;
 		if (bAnnounced)
 			return;
@@ -84,7 +95,24 @@ namespace ModMenu {
 			if (Mods[i].bEnabled)
 				Loaded++;
 		}
-		GameToast::Show(L"MK12TTH " + ModSettings::ModVersion(), L"Loaded mods " + std::to_wstring(Loaded) + L"/" + std::to_wstring(Mods.size()));
+		std::wstring Title = L"MK12TTH " + ModSettings::ModVersion();
+		std::wstring ModsText = L"Loaded mods " + std::to_wstring(Loaded) + L"/" + std::to_wstring(Mods.size());
+
+		CIniReader State((char*)StateFile::FILE_NAME);
+		char* Last = State.ReadString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, "");
+		const std::wstring& ModVersion = ModSettings::ModVersion();
+		std::string Version;
+		for (size_t i = 0; i < ModVersion.size(); i++)
+			Version += (char)ModVersion[i]; // Digits and dots
+		bool bNew = Version != Last;
+		bool bFirst = !*Last;
+		delete[] Last;
+		if (bNew)
+		{
+			State.WriteString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, (char*)Version.c_str());
+			Title += bFirst ? L" installed" : L" updated";
+		}
+		GameToast::Show(Title, ModsText + L". ACCEPT shows what's new.", ShowWhatsNew);
 	}
 
 	static int FindSettings(MK12::FSettingsTab* Tabs, int32_t Count)

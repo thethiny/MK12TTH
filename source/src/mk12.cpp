@@ -2,6 +2,9 @@
 #include "mk12.h"
 #include "mk12hook.h"
 #include "Features.h"
+#include <algorithm>
+#include <cstddef>
+#include <vector>
 
 
 uint64_t*							MK12::lpGameVersionFull			= nullptr;
@@ -48,6 +51,7 @@ MK12::PlayerInputPressedType*			MK12::PlayerInputPressed			= nullptr;
 MK12::PlayerInputUpdateType*			MK12::PlayerInputUpdate				= nullptr;
 MK12::ToastDriverType*					MK12::ToastDriver					= nullptr;
 MK12::ToastEnqueueType*					MK12::ToastEnqueue					= nullptr;
+MK12::ReallocType*						MK12::Realloc						= nullptr;
 MK12::GetLocalPlayerInfoType*			MK12::GetLocalPlayerInfo			= nullptr;
 MK12::FMessageBoxCallbackParts			MK12::MessageBoxCallback;
 // Game State
@@ -68,6 +72,20 @@ MK12::StringReserveType*				MK12::StringReserve					= nullptr;
 MK12::MemoryFreeType*					MK12::MemoryFree					= nullptr;
 MK12::SettingsVersionTextType*			MK12::SettingsVersionText			= nullptr;
 MK12::SettingsRunType*					MK12::SettingsRun					= nullptr;
+MK12::SettingsScreenStepType*			MK12::SettingsUnfocusRow			= nullptr;
+MK12::SettingsScreenStepType*			MK12::SettingsShowPage				= nullptr;
+MK12::SettingsScreenStepType*			MK12::SettingsRefreshFooter			= nullptr;
+MK12::SettingsFocusRowsType*			MK12::SettingsFocusRows				= nullptr;
+MK12::FooterBuildType*					MK12::FooterBuild					= nullptr;
+MK12::PromptTextType*					MK12::PromptText					= nullptr;
+MK12::SettingsPageSetupType*			MK12::PausePanelPageSetup			= nullptr;
+MK12::PauseCollectEntriesType*			MK12::PauseCollectEntries			= nullptr;
+MK12::GrowPauseEntriesType*				MK12::GrowPauseEntries				= nullptr;
+MK12::GameAllocType*					MK12::GameAlloc						= nullptr;
+MK12::PanelHolderConstructType*			MK12::PanelHolderConstruct			= nullptr;
+MK12::PauseSelectedIndexType*			MK12::PauseSelectedIndex			= nullptr;
+MK12::PauseCloseType*					MK12::PauseClose					= nullptr;
+MK12::FloydSetLevelType*				MK12::FloydSetLevel					= nullptr;
 MK12::SettingsCopyTabsType*				MK12::MainMenuCopyTabs				= nullptr;
 MK12::PakMountType*						MK12::PakMount						= nullptr;
 MK12::IsModeOnTopType*					MK12::IsModeOnTop					= nullptr;
@@ -82,6 +100,8 @@ MK12::GetClassType*						MK12::GetStatsSaveClass				= nullptr;
 MK12::FocusLostStepType*				MK12::FocusLostStep					= nullptr;
 MK12::FocusLostPauseType*				MK12::FocusLostPause				= nullptr;
 MK12::BootScreenWaitType*				MK12::BootScreenWait				= nullptr;
+MK12::PlayMovieType*					MK12::PlayMovie						= nullptr;
+MK12::CommandLineParamType*				MK12::CommandLineParam				= nullptr;
 MK12::InitializeConfigSystemType*		MK12::InitializeConfigSystem		= nullptr;
 MK12::LoadFileToStringType*				MK12::LoadFileToString				= nullptr;
 MK12::AnnouncerRerollType*				MK12::AnnouncerReroll				= nullptr;
@@ -172,6 +192,82 @@ bool MK12::SetProfileStatLocal(void* Stats, uint8_t ScopeMask, int32_t StatId, u
 	}
 }
 MK12::FindTextType*						MK12::FindTextPlatform				= nullptr;
+
+typedef void (SectionVisitor)(uint8_t* Start, uint8_t* End, void* Context);
+
+// Readable non code sections of the game's image, where its strings and static objects are. Committed pages only
+static void ForEachDataSection(SectionVisitor* Visit, void* Context)
+{
+	uint8_t* Base = (uint8_t*)GetModuleHandleW(nullptr);
+	IMAGE_DOS_HEADER* Dos = (IMAGE_DOS_HEADER*)Base;
+	IMAGE_NT_HEADERS64* Nt = (IMAGE_NT_HEADERS64*)(Base + Dos->e_lfanew);
+	IMAGE_SECTION_HEADER* Section = IMAGE_FIRST_SECTION(Nt);
+	for (WORD i = 0; i < Nt->FileHeader.NumberOfSections; i++, Section++)
+	{
+		if (Section->Characteristics & IMAGE_SCN_MEM_EXECUTE || !(Section->Characteristics & IMAGE_SCN_MEM_READ))
+			continue;
+		uint8_t* Start = Base + Section->VirtualAddress;
+		uint8_t* End = Start + Section->Misc.VirtualSize;
+		for (uint8_t* At = Start; At < End;)
+		{
+			MEMORY_BASIC_INFORMATION Info;
+			if (!VirtualQuery(At, &Info, sizeof(Info)))
+				break;
+			uint8_t* RegionEnd = (std::min)(End, (uint8_t*)Info.BaseAddress + Info.RegionSize);
+			bool bReadable = Info.State == MEM_COMMIT && !(Info.Protect & (PAGE_NOACCESS | PAGE_GUARD))
+				&& (Info.Protect & (PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE));
+			if (bReadable)
+				Visit(At, RegionEnd, Context);
+			At = RegionEnd;
+		}
+	}
+}
+
+struct StaticOptionSearch {
+	const wchar_t*				Key;
+	int32_t						Type;
+	size_t						Bytes;
+	std::vector<uint8_t*>		Texts;
+	MK12::FSettingsOption*		Found;
+};
+
+static void FindKeyTexts(uint8_t* Start, uint8_t* End, void* Context)
+{ // The key text, whole (null before and after it)
+	StaticOptionSearch* Search = (StaticOptionSearch*)Context;
+	for (uint8_t* At = Start + 2; At + Search->Bytes <= End; At += 2)
+	{
+		if (*(wchar_t*)At == Search->Key[0] && *(wchar_t*)(At - 2) == 0 && !memcmp(At, Search->Key, Search->Bytes))
+			Search->Texts.push_back(At);
+	}
+}
+
+static void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
+{ // A row whose title key points at one of them
+	StaticOptionSearch* Search = (StaticOptionSearch*)Context;
+	Start = (uint8_t*)(((uintptr_t)Start + 7) & ~(uintptr_t)7);
+	// Room up to the row's Type, read below
+	for (uint8_t* At = Start + offsetof(MK12::FSettingsOption, Key); !Search->Found && At - offsetof(MK12::FSettingsOption, Key) + offsetof(MK12::FSettingsOption, Type) + 4 <= End; At += 8)
+	{
+		uint8_t* Value = *(uint8_t**)At;
+		if (std::find(Search->Texts.begin(), Search->Texts.end(), Value) == Search->Texts.end())
+			continue;
+		MK12::FSettingsOption* Option = (MK12::FSettingsOption*)(At - offsetof(MK12::FSettingsOption, Key));
+		if (Option->Type == Search->Type && Option->VTable)
+			Search->Found = Option;
+	}
+}
+
+MK12::FSettingsOption* MK12::FindStaticOption(const wchar_t* Key, int32_t Type)
+{
+	StaticOptionSearch Search;
+	Search.Key = Key;
+	Search.Type = Type;
+	Search.Bytes = (wcslen(Key) + 1) * sizeof(wchar_t);
+	Search.Found = nullptr;
+	ForEachDataSection(FindKeyTexts, &Search);
+	ForEachDataSection(FindOptionWithKey, &Search);
+	return Search.Found;
+}
 
 
 uint8_t									MK12::KlassicTowerSecretFightDataOffset   = 0;

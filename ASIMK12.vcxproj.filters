@@ -72,6 +72,9 @@
     <ClCompile Include="source\src\ModSettings.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
+    <ClCompile Include="source\src\PauseMenu.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
     <ClCompile Include="source\src\ModMenu.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
@@ -79,6 +82,9 @@
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
     <ClCompile Include="source\src\EngineConfig.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\src\FloydFight.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
     <ClCompile Include="source\src\Announcer.cpp">
@@ -170,6 +176,12 @@
     <ClInclude Include="source\src\ModSettings.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
+    <ClInclude Include="source\src\Changelog.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\PauseMenu.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
     <ClInclude Include="source\src\ModMenu.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
@@ -177,6 +189,9 @@
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\EngineConfig.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\FloydFight.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\Announcer.h">

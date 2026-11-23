@@ -1,6 +1,6 @@
 #pragma once
 
-// The player's online ids: Hydra (MK1 account), WB account and offline profile id, from the game's online identity once it's
+// The player's online ids: Hydra (MK1 account), WB account and platform id, from the game's online identity once it's
 // signed in. The same text the game hashes for Floyd
 namespace OnlineIds {
 	// "PLATFORM:id/hydra/wb", with "|offline id" after the platform id when there is one. Keeps what's already read

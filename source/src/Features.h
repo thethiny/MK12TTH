@@ -27,6 +27,7 @@ namespace Features {
 		AttractMode,
 		KeepRunning,
 		FastBoot,
+		FloydFight,
 		Count
 	};
 
@@ -47,6 +48,11 @@ namespace Features {
 	typedef bool (InstallType)();
 	typedef void (OnSwitchType)(bool bActive);
 
+	struct Mode {
+		const wchar_t*	Label;
+		const char*		IniValue;
+	};
+
 	struct Definition {
 		Id					Which;
 		const char*			IniKey;					// Also the live switch's key in the state file
@@ -59,6 +65,7 @@ namespace Features {
 		bool				bLiveDefault = true;
 		const char*			IniSection = "Patches";	// Null: no startup switch, only the live one
 		OnSwitchType*		OnSwitch = nullptr;		// Live: after install and on each change
+		std::vector<Mode>	Modes;					// Startup choices instead of OFF / ON. The first is off, bIniDefault picks the second
 	};
 
 	void DefineAll(); // FeatureList.cpp
@@ -74,6 +81,7 @@ namespace Features {
 	void SetActive(Id Which, bool bActive); // Live switch, saved
 
 	bool HasStartupSwitch(Id Which);
+	int StartupMode(Id Which); // Index into Modes (0 is off)
 
 	std::wstring Explain(Id Which); // Why it isn't running, empty when installed
 	void PrintSummary();
