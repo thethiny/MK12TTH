@@ -81,7 +81,7 @@ namespace Features {
 
 	static bool ReadLiveSwitch(const Definition& Feature)
 	{
-		CIniReader ini((char*)StateFile::FILE_NAME);
+		CIniReader ini((char*)StateFile::FileName());
 		return ini.ReadBoolean((char*)StateFile::LIVE, (char*)Feature.IniKey, Feature.bLiveDefault);
 	}
 
@@ -167,7 +167,7 @@ namespace Features {
 		entry->bActive = bActive;
 		if (entry->Feature.OnSwitch)
 			entry->Feature.OnSwitch(bActive);
-		CIniReader ini((char*)StateFile::FILE_NAME);
+		CIniReader ini((char*)StateFile::FileName());
 		ini.WriteBoolean((char*)StateFile::LIVE, (char*)entry->Feature.IniKey, bActive);
 	}
 

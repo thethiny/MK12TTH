@@ -24,7 +24,7 @@ namespace FloydFight {
 
 	static int ReadChoice(const char* Key, const std::vector<Option>& Options)
 	{
-		CIniReader ini((char*)StateFile::FILE_NAME);
+		CIniReader ini((char*)StateFile::FileName());
 		char* Saved = ini.ReadString((char*)StateFile::LIVE, (char*)Key, (char*)Options[GAME].Value);
 		int Picked = GAME;
 		for (int i = 0; i < (int)Options.size(); i++)
@@ -89,7 +89,7 @@ namespace FloydFight {
 
 	static void Save(const char* Key, const char* Value)
 	{
-		CIniReader ini((char*)StateFile::FILE_NAME);
+		CIniReader ini((char*)StateFile::FileName());
 		ini.WriteString((char*)StateFile::LIVE, (char*)Key, (char*)Value);
 	}
 

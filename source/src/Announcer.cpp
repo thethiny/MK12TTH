@@ -58,7 +58,7 @@ namespace Announcer {
 			for (size_t i = 0; i < _countof(VOICES); i++)
 				AllOptions.push_back({ VOICES[i].Label, VOICES[i].ItemId });
 
-			CIniReader ini((char*)StateFile::FILE_NAME);
+			CIniReader ini((char*)StateFile::FileName());
 			char* Saved = ini.ReadString((char*)StateFile::LIVE, (char*)LIVE_KEY, "Game");
 			for (int i = 0; i < (int)AllOptions.size(); i++)
 			{
@@ -119,7 +119,7 @@ namespace Announcer {
 		if (Index < 0 || Index >= (int)Options().size())
 			return;
 		Choice = Index;
-		CIniReader ini((char*)StateFile::FILE_NAME);
+		CIniReader ini((char*)StateFile::FileName());
 		ini.WriteString((char*)StateFile::LIVE, (char*)LIVE_KEY, (char*)Options()[Index].Value);
 		bool bInFight = false; // Picked in the pause menu: the fight's fighter right away
 		if (Choice == AUTO)

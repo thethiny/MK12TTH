@@ -114,7 +114,7 @@ static DWORD WINAPI PaidModWarningThread(LPVOID)
 
 void eFirstRunManager::Init()
 {
-	ini = new CIniReader((char*)StateFile::FILE_NAME);
+	ini = new CIniReader((char*)StateFile::FileName());
 
 	bPaidModWarned				= ini->ReadBoolean	("FirstRun",			"bPaidModWarned",			false);
 

@@ -98,7 +98,7 @@ namespace ModMenu {
 		std::wstring Title = L"MK12TTH " + ModSettings::ModVersion();
 		std::wstring ModsText = L"Loaded mods " + std::to_wstring(Loaded) + L"/" + std::to_wstring(Mods.size());
 
-		CIniReader State((char*)StateFile::FILE_NAME);
+		CIniReader State((char*)StateFile::FileName());
 		char* Last = State.ReadString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, "");
 		const std::wstring& ModVersion = ModSettings::ModVersion();
 		std::string Version;

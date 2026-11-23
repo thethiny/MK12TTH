@@ -9,6 +9,7 @@ EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 namespace StateFile {
 	constexpr const char* OLD_MODS_FILE		= "MK12TTH_Mods.ini";
 	constexpr const char* OLD_STATE_FILE	= "tt_state.ini";
+	constexpr const char* FIRST_STATE_FILE	= "MK12TTH_State.ini"; // The state file's name before it followed the mod's
 
 	static std::string ModFolder()
 	{
@@ -16,6 +17,20 @@ namespace StateFile {
 		GetModuleFileNameA((HINSTANCE)&__ImageBase, Path, MAX_PATH);
 		std::string Folder = Path;
 		return Folder.substr(0, Folder.find_last_of("\\/") + 1);
+	}
+
+	const char* FileName()
+	{
+		static std::string Name;
+		if (Name.empty())
+		{
+			char Path[MAX_PATH] = {};
+			GetModuleFileNameA((HINSTANCE)&__ImageBase, Path, MAX_PATH);
+			std::string Module = Path;
+			Module = Module.substr(Module.find_last_of("\\/") + 1);
+			Name = Module.substr(0, Module.find_last_of('.')) + "_State.ini";
+		}
+		return Name.c_str();
 	}
 
 	static std::string MainIniPath()
@@ -56,7 +71,13 @@ namespace StateFile {
 	void Migrate()
 	{
 		std::string Folder = ModFolder();
-		std::string State = Folder + FILE_NAME;
+		std::string State = Folder + FileName();
+
+		// Copied, not moved: the file stays for the mod it was made by
+		std::string FirstState = Folder + FIRST_STATE_FILE;
+		if (_stricmp(FileName(), FIRST_STATE_FILE) != 0 && GetFileAttributesA(State.c_str()) == INVALID_FILE_ATTRIBUTES &&
+			GetFileAttributesA(FirstState.c_str()) != INVALID_FILE_ATTRIBUTES)
+			CopyFileA(FirstState.c_str(), State.c_str(), TRUE);
 
 		std::string OldMods = Folder + OLD_MODS_FILE;
 		if (GetFileAttributesA(OldMods.c_str()) != INVALID_FILE_ATTRIBUTES)

@@ -616,7 +616,7 @@ namespace PakMods {
 		ModsRoot = PathAppend(Content, L"Mods");
 
 		std::wstring LastGamePak; // The game's pakchunk that mounts first: Paks mods sorting below it mount after some game files
-		CIniReader StateIni((char*)StateFile::FILE_NAME);
+		CIniReader StateIni((char*)StateFile::FileName());
 		AddMods(Scan(ModsRoot, Source::ModsFolder, nullptr), Source::ModsFolder, StateIni);
 		AddMods(Scan(PaksRoot, Source::Paks, &LastGamePak), Source::Paks, StateIni);
 

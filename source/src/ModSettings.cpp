@@ -503,7 +503,7 @@ namespace ModSettings {
 	static Row& AddModRow(Page& page, const Row& row, const std::wstring& Summary = L"")
 	{
 		Row* Added = new Row(row);
-		Added->IniFile = StateFile::FILE_NAME;
+		Added->IniFile = StateFile::FileName();
 		if (!Summary.empty())
 			Added->Choices[ON].Description = Own(Summary);
 		ModRows.push_back(Added);
