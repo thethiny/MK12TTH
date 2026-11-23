@@ -169,6 +169,8 @@ public:
 	std::string pGetCurrentMission;
 	std::string pGetTeam;
 	std::string pGetTeamDefinitions;
+	std::string pFightStartupCall;
+	std::string pFightStartupCallCpu;
 	std::string pBootStudioLogos;
 	std::string pBootMovieSkip;
 	std::string pTowersSetup;

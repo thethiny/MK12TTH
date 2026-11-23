@@ -668,6 +668,7 @@ namespace MK12 { // Namespace for game functions / structs
 	typedef			bool							(__fastcall LoadFileToStringType)				(FString* Out, const wchar_t* FileName, uint8_t VerifyFlags, uint32_t ReadFlags); // Through the game's file system, paks included
 	// Announcer
 	typedef			__int64							(__fastcall AnnouncerRerollType)					(void* AudioSettings); // Re-rolls a random announcer, ladder fights
+	typedef			__int64*						(__fastcall FightStartupType)						(void* Mode); // A fight starts: its fighters are set, nothing spawned yet. A virtual of the game modes
 	typedef			__int64							(__fastcall AnnouncerSetterType)					(void* AudioSettings, FString* ItemId); // The player's setting, only owned announcers
 	typedef			void							(__fastcall ApplyAnnouncerType)					(uint64_t Key, uint64_t* ItemName, bool bUnknown); // Key 0 is the game's own
 	typedef			uint64_t*						(__fastcall EngineNameConstructType)				(uint64_t* Out, const wchar_t* Text, int32_t FindType); // An engine name from text, FindType 1 adds it
@@ -767,6 +768,8 @@ namespace MK12 { // Namespace for game functions / structs
 	extern FloydSetLevelType*							FloydSetLevel;
 	// One of the game's own settings rows, found by its title key and kind. They are static objects, there from startup
 	FSettingsOption*									FindStaticOption(const wchar_t* Key, int32_t Type);
+	// Every virtual table entry of the game that is Function now points to Replacement; how many
+	int													RedirectVirtuals(void* Function, void* Replacement);
 	extern SettingsVersionTextType*						SettingsVersionText;
 	extern SettingsRunType*								SettingsRun;
 	extern SettingsCopyTabsType*						MainMenuCopyTabs; // Same copy, the call that builds the main menu's entries
@@ -787,6 +790,7 @@ namespace MK12 { // Namespace for game functions / structs
 	extern LoadFileToStringType*						LoadFileToString;
 	extern AnnouncerRerollType*							AnnouncerReroll;
 	extern AnnouncerSetterType*							AnnouncerSetter;
+	extern FightStartupType*							FightStartup;
 	extern ApplyAnnouncerType*							ApplyAnnouncer;
 	extern EngineNameConstructType*						EngineNameConstruct;
 	extern GetCurrentMissionType*						GetCurrentMission;

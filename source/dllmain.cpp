@@ -242,8 +242,7 @@ void MK12HookPlugin::OnFrameTick()
 
 void MK12HookPlugin::OnFightStartup()
 {
-	if (Features::IsInstalled(Features::Id::Announcer))
-		Announcer::OnFightStartup();
+	MK12Hook::Hooks::FightStarting();
 }
 
 char* GetVersionedHookName()

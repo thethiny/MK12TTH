@@ -216,6 +216,8 @@ void eSettingsManager::Init()
 	pGetCurrentMission			= ini.ReadString	("Patterns.Announcer",	"pGetCurrentMission",		"");
 	pGetTeam					= ini.ReadString	("Patterns.Announcer",	"pGetTeam",					"");
 	pGetTeamDefinitions			= ini.ReadString	("Patterns.Announcer",	"pGetTeamDefinitions",		"");
+	pFightStartupCall			= ini.ReadString	("Patterns.Announcer",	"pFightStartupCall",		"");
+	pFightStartupCallCpu		= ini.ReadString	("Patterns.Announcer",	"pFightStartupCallCpu",		"");
 	// Message Box
 	pTextFromString				= ini.ReadString	("Patterns.MessageBox",	"pTextFromString",			"");
 	pFindText					= ini.ReadString	("Patterns.MessageBox",	"pFindText",				"");

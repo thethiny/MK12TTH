@@ -12,6 +12,7 @@
 #include "PakMods.h"
 #include "Features.h"
 #include "Announcer.h"
+#include "../mk12sdk/sdk.h"
 #include "EngineConfig.h"
 #include "FloydTowerAlert.h"
 #include "OnlineIds.h"
@@ -323,6 +324,13 @@ namespace MK12Hook::Proxies {
 		if (Announcer::OnLadderReroll())
 			return 0;
 		return MK12::AnnouncerReroll(AudioSettings);
+	}
+
+	__int64* __fastcall FightStartupProxy(void* Mode)
+	{ // MK1Hook tells its plugins about each fight start; without it, the game's own calls do
+		if (!MK12HOOKSDK::IsOK())
+			Hooks::FightStarting();
+		return MK12::FightStartup(Mode);
 	}
 
 	__int64 __fastcall AnnouncerMenuApplyProxy(void* AudioSettings, MK12::FString* ItemId)
@@ -1321,6 +1329,29 @@ namespace MK12Hook::Hooks {
 		return MK12::GetCurrentMission && MK12::GetTeam && MK12::GetTeamDefinitions;
 	}
 
+	bool FightStartupEvents()
+	{ // The game starts a fight through a virtual of its modes (two of them call the base one directly): every call
+	  // goes through our proxy, and the function itself is left alone (it's MK1Hook's to hook)
+		static int Installed = -1;
+		if (Installed >= 0)
+			return Installed == 1;
+		bool bDirect = GamePatcher->ProxyByPattern(SettingsMgr->pFightStartupCall, "FightStartupCall", 3,
+				MK12Hook::Proxies::FightStartupProxy, &MK12::FightStartup, PATCH_CALL);
+		bDirect = GamePatcher->ProxyByPattern(SettingsMgr->pFightStartupCallCpu, "FightStartupCallCpu", 13,
+				MK12Hook::Proxies::FightStartupProxy, &MK12::FightStartup, PATCH_CALL) && bDirect;
+		int Virtuals = MK12::FightStartup ? MK12::RedirectVirtuals((void*)MK12::FightStartup, (void*)MK12Hook::Proxies::FightStartupProxy) : 0;
+		if (SettingsMgr->ShouldLog(Log::Verbose))
+			printf("Fight start: %s calls and %d mode tables go through MK12TTH\n", bDirect ? "both direct" : "not all direct", Virtuals);
+		Installed = bDirect && Virtuals > 0;
+		return Installed == 1;
+	}
+
+	void FightStarting()
+	{
+		if (Features::IsInstalled(Features::Id::Announcer))
+			Announcer::OnFightStartup();
+	}
+
 	bool AnnouncerHooks()
 	{ // Applied with the game's own function, at fight start, ladder setup and main menu load
 		printf("\n==AnnouncerHooks==\n");
@@ -1340,9 +1371,11 @@ namespace MK12Hook::Hooks {
 			MK12Hook::Proxies::AnnouncerRerollProxy, &MK12::AnnouncerReroll, PATCH_CALL))
 			printfWarning("Announcer Override: ladder fights may re-roll a random announcer");
 
-		// AUTO: the first human player's fighter
+		// AUTO: the first human player's fighter, at each fight start (both of the game's calls to it)
 		if (!ResolveFightFunctions())
 			printfWarning("Announcer Override: AUTO uses your own setting");
+		else if (!FightStartupEvents())
+			printfWarning("Announcer Override: AUTO only works with MK1Hook");
 		printfSuccess("Announcer Override On");
 		return true;
 	}

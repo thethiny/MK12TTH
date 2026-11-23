@@ -104,6 +104,7 @@ MK12::InitializeConfigSystemType*		MK12::InitializeConfigSystem		= nullptr;
 MK12::LoadFileToStringType*				MK12::LoadFileToString				= nullptr;
 MK12::AnnouncerRerollType*				MK12::AnnouncerReroll				= nullptr;
 MK12::AnnouncerSetterType*				MK12::AnnouncerSetter				= nullptr;
+MK12::FightStartupType*					MK12::FightStartup					= nullptr;
 MK12::ApplyAnnouncerType*				MK12::ApplyAnnouncer				= nullptr;
 MK12::EngineNameConstructType*			MK12::EngineNameConstruct			= nullptr;
 MK12::GetCurrentMissionType*			MK12::GetCurrentMission				= nullptr;
@@ -226,6 +227,38 @@ static void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
 		if (Option->Type == Search->Type && Option->VTable)
 			Search->Found = Option;
 	}
+}
+
+struct VirtualRedirect {
+	void*						Function;
+	void*						Replacement;
+	int							Count;
+};
+
+static void RedirectInSection(uint8_t* Start, uint8_t* End, void* Context)
+{ // Pointer sized slots only
+	VirtualRedirect* Redirect = (VirtualRedirect*)Context;
+	for (uint8_t* At = (uint8_t*)(((uintptr_t)Start + 7) & ~(uintptr_t)7); At + sizeof(void*) <= End; At += sizeof(void*))
+	{
+		if (*(void**)At != Redirect->Function)
+			continue;
+		DWORD Old;
+		if (!VirtualProtect(At, sizeof(void*), PAGE_READWRITE, &Old))
+			continue;
+		*(void**)At = Redirect->Replacement;
+		VirtualProtect(At, sizeof(void*), Old, &Old);
+		Redirect->Count++;
+	}
+}
+
+int MK12::RedirectVirtuals(void* Function, void* Replacement)
+{
+	VirtualRedirect Redirect;
+	Redirect.Function = Function;
+	Redirect.Replacement = Replacement;
+	Redirect.Count = 0;
+	ForEachDataSection(RedirectInSection, &Redirect);
+	return Redirect.Count;
 }
 
 MK12::FSettingsOption* MK12::FindStaticOption(const wchar_t* Key, int32_t Type)

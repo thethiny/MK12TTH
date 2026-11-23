@@ -39,6 +39,7 @@ namespace MK12Hook {
 		bool									__fastcall	StudioLogosProxy(const wchar_t* Name, int32_t A, int32_t B, int32_t C, int32_t D, void* Out);
 		bool									__fastcall	SkipBootMovieProxy(const wchar_t* CommandLine, const wchar_t* Param);
 		__int64									__fastcall	AnnouncerRerollProxy(void* AudioSettings);
+		__int64*								__fastcall	FightStartupProxy(void* Mode);
 		void									__fastcall	PauseCloseProxy(void* Pause);
 		uint8_t*								__fastcall	FloydSetLevelProxy(uint8_t* AI, uint8_t Level);
 		void									__fastcall	ConfigInitProxy();
@@ -72,6 +73,8 @@ namespace MK12Hook {
 		bool PakModsHooks();
 		bool AttractModeHooks();
 		bool ResolveFightFunctions(); // The fight's fighters (Fight::), once found stays found
+		bool FightStartupEvents(); // Our own fight start event from the game's calls (without MK1Hook), once
+		void FightStarting(); // Each fight as it starts: its fighters are set, nothing spawned yet
 	};
 
 	namespace Mods {
