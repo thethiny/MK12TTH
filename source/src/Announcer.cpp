@@ -44,8 +44,9 @@ namespace Announcer {
 
 	static std::vector<Option>	AllOptions;
 	static int					Choice				= GAME;
-	static const char*			AutoItem			= nullptr; // The last fight's pick for AUTO
+	static const char*			AutoItem			= nullptr; // The fight's fighter's announcer, null without one
 	static void*				LastAudioSettings	= nullptr;
+	static const char* AutoPick();
 
 	const std::vector<Option>& Options()
 	{
@@ -64,6 +65,8 @@ namespace Announcer {
 				if (!_stricmp(Saved, AllOptions[i].Value))
 					Choice = i;
 			}
+			if (!_stricmp(Saved, "AutoGameplay")) // AUTO's old fights only twin
+				Choice = AUTO;
 			delete[] Saved;
 		}
 		return AllOptions;
@@ -80,9 +83,9 @@ namespace Announcer {
 		return Choice;
 	}
 
-	static const char* Target()
-	{ // Null keeps the player's setting
-		if (Choice == GAME)
+	static const char* Target(bool bMenus)
+	{ // Null keeps the player's setting. AUTO leaves menus alone
+		if (Choice == GAME || (Choice == AUTO && bMenus))
 			return nullptr;
 		if (Choice == AUTO)
 			return AutoItem;
@@ -95,11 +98,11 @@ namespace Announcer {
 			MK12::AnnouncerSetter(LastAudioSettings, (MK12::FString*)((char*)LastAudioSettings + AUDIO_SETTINGS_VOICE));
 	}
 
-	static void Apply()
+	static void Apply(bool bMenus)
 	{
 		if (!IsReady() || GameState::IsOnline())
 			return;
-		const char* Item = Target();
+		const char* Item = Target(bMenus);
 		if (!Item)
 		{
 			RestorePlayerSetting();
@@ -118,7 +121,13 @@ namespace Announcer {
 		Choice = Index;
 		CIniReader ini((char*)StateFile::FILE_NAME);
 		ini.WriteString((char*)StateFile::LIVE, (char*)LIVE_KEY, (char*)Options()[Index].Value);
-		Apply();
+		bool bInFight = false; // Picked in the pause menu: the fight's fighter right away
+		if (Choice == AUTO)
+		{
+			AutoItem = AutoPick();
+			bInFight = AutoItem != nullptr;
+		}
+		Apply(!bInFight);
 	}
 
 	static bool ReadFirstHumanName(MK12::FNameInfoStruct* Out)
@@ -155,26 +164,37 @@ namespace Announcer {
 		return false;
 	}
 
+	static const char* ItemFor(const char* Fighter)
+	{
+		for (size_t i = 0; i < _countof(VOICES); i++)
+		{
+			if (!_stricmp(VOICES[i].Fighter, Fighter))
+				return VOICES[i].ItemId;
+		}
+		return nullptr;
+	}
+
+	static std::string FighterName(MK12::FNameInfoStruct& NameInfo)
+	{ // Short, "SubZero"
+		MK12::FName* Name = MK12::UNameTable ? MK12::NameTableIndexToFName(&NameInfo) : nullptr;
+		if (!Name)
+			return "";
+		std::string Fighter = Name->ToStr();
+		size_t Dot = Fighter.find_last_of('.');
+		return Dot == std::string::npos ? Fighter : Fighter.substr(Dot + 1);
+	}
+
 	static const char* AutoPick()
 	{
 		MK12::FNameInfoStruct NameInfo;
 		if (!MK12::UNameTable || !ReadFirstHumanName(&NameInfo))
 			return nullptr;
-		MK12::FName* Name = MK12::NameTableIndexToFName(&NameInfo);
-		if (!Name)
+		std::string Fighter = FighterName(NameInfo);
+		if (Fighter.empty())
 			return nullptr;
-		std::string Fighter = Name->ToStr(); // Short, "SubZero"
-		size_t Dot = Fighter.find_last_of('.');
-		if (Dot != std::string::npos)
-			Fighter = Fighter.substr(Dot + 1);
 		if (SettingsMgr->ShouldLog(Log::Verbose))
 			printf("Announcer: first human fighter is %s\n", Fighter.c_str());
-		for (size_t i = 0; i < _countof(VOICES); i++)
-		{
-			if (!_stricmp(VOICES[i].Fighter, Fighter.c_str()))
-				return VOICES[i].ItemId;
-		}
-		return nullptr;
+		return ItemFor(Fighter.c_str());
 	}
 
 	void OnFightStartup()
@@ -184,15 +204,15 @@ namespace Announcer {
 			return;
 		if (Choice == AUTO)
 			AutoItem = AutoPick();
-		Apply();
+		Apply(false);
 	}
 
 	bool OnLadderReroll()
 	{
 		Options();
-		if (!Target())
+		if (!Target(false))
 			return false;
-		Apply();
+		Apply(false);
 		return true;
 	}
 
@@ -200,7 +220,7 @@ namespace Announcer {
 	{
 		LastAudioSettings = AudioSettings;
 		Options();
-		if (Target())
-			Apply();
+		if (Target(true))
+			Apply(true);
 	}
 }
