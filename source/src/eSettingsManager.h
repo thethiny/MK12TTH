@@ -37,6 +37,10 @@ public:
 	 *  bProfileDebug works on its own, Log::Verbose and up still show them. */
 	inline bool ShouldLogProfile() { return bProfileDebug || ShouldLog(Log::Verbose); }
 
+	/** Check if dev logs should print: investigation logs and checks.
+	 *  Only bDevLogs turns them on, whatever the log level, so DEBUG stays readable. */
+	inline bool ShouldLogDev() { return bDevLogs; }
+
 public:
 	// Settings
 
@@ -50,6 +54,7 @@ public:
 	bool bAllowNonMK;
 	bool bFloydDebug;
 	bool bProfileDebug;
+	bool bDevLogs;
 	struct {
 		bool bFName = false;
 		bool bEndpoint = false;

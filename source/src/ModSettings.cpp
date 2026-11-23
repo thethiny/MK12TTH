@@ -896,6 +896,8 @@ namespace ModSettings {
 			"Settings.Debug", "bFloydDebug", OffOn(), OFF);
 		AddSettingsRow(L"PROFILE DEBUG", L"Shows profile dev logs: platform, platform ID and save key." MK_NEEDS(L"PROFILE GETTER"),
 			"Settings.Debug", "bProfileDebug", OffOn(), OFF);
+		AddSettingsRow(L"DEV LOGS", L"Shows the developers' investigation logs and checks. Some of them only start with the game.",
+			"Settings.Debug", "bDevLogs", OffOn(), OFF);
 		AddSettingsRow(L"FNAME FLOOD", L"At LOG LEVEL FLOOD, logs every name lookup.",
 			"Settings.Debug.FloodToggles", "bFName", OffOn(), OFF);
 		AddSettingsRow(L"CURL FLOOD", L"At LOG LEVEL FLOOD, logs every web request.",
@@ -1455,6 +1457,7 @@ namespace ModSettings {
 		AddFlagRow(LoggingPage, L"DEBUG LOGS", L"Shows logs up to the DEBUG level whatever the LOG LEVEL is.", SettingsMgr->bDebug).bInGame = true;
 		AddFlagRow(LoggingPage, L"FLOYD DEBUG", L"Shows Floyd dev logs: hash inputs, seeds and extracted IDs.", SettingsMgr->bFloydDebug, bFloyd, L"FLOYD TRACKING").bInGame = true;
 		AddFlagRow(LoggingPage, L"PROFILE DEBUG", L"Shows profile dev logs: platform, platform ID and save key.", SettingsMgr->bProfileDebug, bProfile, L"PROFILE GETTER");
+		AddFlagRow(LoggingPage, L"DEV LOGS", L"Shows the developers' investigation logs and checks. Some of them only start with the game.", SettingsMgr->bDevLogs);
 		AddCategory(LoggingPage, L"FLOOD");
 		AddFlagRow(LoggingPage, L"FNAME FLOOD", L"At LOG LEVEL FLOOD, logs every name lookup.", SettingsMgr->Floods.bFName).bInGame = true;
 		AddFlagRow(LoggingPage, L"CURL FLOOD", L"At LOG LEVEL FLOOD, logs every web request.", SettingsMgr->Floods.bCurl);

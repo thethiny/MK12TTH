@@ -142,6 +142,7 @@ void eSettingsManager::Init()
 	bAllowNonMK					= ini.ReadBoolean	("Settings.Debug",		"bAllowNonMK",				false);
 	bFloydDebug					= ini.ReadBoolean	("Settings.Debug",		"bFloydDebug",				false);
 	bProfileDebug				= ini.ReadBoolean	("Settings.Debug",		"bProfileDebug",			false);
+	bDevLogs					= ini.ReadBoolean	("Settings.Debug",		"bDevLogs",					false);
 
 	// Flood Toggles
 	Floods.bFName				= ini.ReadBoolean	("Settings.Debug.FloodToggles",	"bFName",			false);
