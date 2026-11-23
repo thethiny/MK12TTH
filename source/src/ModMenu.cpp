@@ -14,6 +14,8 @@
 #include <cwchar>
 #include <vector>
 
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+
 namespace ModMenu {
 	constexpr const wchar_t* SETTINGS_KEY = L"Settings"; // The game's own Settings entry, ours goes right after it
 
@@ -40,6 +42,15 @@ namespace ModMenu {
 	}
 
 	constexpr const char* LAST_VERSION_KEY = "szLastVersion"; // [FirstRun] in the state file
+	constexpr const char* LAST_BUILD_KEY = "szLastBuild"; // [FirstRun], the build that offered what's new last
+
+	static std::string BuildStamp()
+	{ // Link time from our own PE header: the same for one build of the mod, new for every rebuild
+		IMAGE_NT_HEADERS* Nt = (IMAGE_NT_HEADERS*)((BYTE*)&__ImageBase + __ImageBase.e_lfanew);
+		char Stamp[16] = {};
+		snprintf(Stamp, sizeof(Stamp), "%08X", (unsigned int)Nt->FileHeader.TimeDateStamp);
+		return Stamp;
+	}
 
 	static void ShowWhatsNew()
 	{
@@ -47,7 +58,7 @@ namespace ModMenu {
 	}
 
 	static void AnnounceLoaded()
-	{ // Once, the first time the main menu is built. ACCEPT shows what's new
+	{ // Once, the first time the main menu is built. After the mod changed (version or build) ACCEPT shows what's new
 		static bool bAnnounced = false;
 		if (bAnnounced)
 			return;
@@ -65,13 +76,23 @@ namespace ModMenu {
 
 		CIniReader State((char*)StateFile::FileName());
 		char* Last = State.ReadString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, "");
+		char* LastBuild = State.ReadString((char*)StateFile::FIRST_RUN, (char*)LAST_BUILD_KEY, "");
 		const std::wstring& ModVersion = ModSettings::ModVersion();
 		std::string Version;
 		for (size_t i = 0; i < ModVersion.size(); i++)
 			Version += (char)ModVersion[i]; // Digits and dots
+		std::string Build = BuildStamp();
 		bool bNew = Version != Last;
 		bool bFirst = !*Last;
+		bool bRebuilt = Build != LastBuild; // No build saved yet (state files before this) counts as changed, once
 		delete[] Last;
+		delete[] LastBuild;
+		if (!bNew && !bRebuilt)
+		{
+			GameToast::Show(Title, ModsText); // Offered for this build already: no buttons
+			return;
+		}
+		State.WriteString((char*)StateFile::FIRST_RUN, (char*)LAST_BUILD_KEY, (char*)Build.c_str());
 		if (bNew)
 		{
 			State.WriteString((char*)StateFile::FIRST_RUN, (char*)LAST_VERSION_KEY, (char*)Version.c_str());
