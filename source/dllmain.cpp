@@ -268,6 +268,13 @@ static std::string OverlaySafe(std::string Text)
 	return Text;
 }
 
+static void DisplayField(const char* label, const std::string& value, char* buffer, size_t size)
+{
+	strncpy(buffer, value.c_str(), size - 1);
+	buffer[size - 1] = 0;
+	MK12HOOKSDK::ImGui_InputText(label, buffer, size);
+}
+
 void MK12HookPlugin::TabFunction()
 {
 	if (!MK12HOOKSDK::IsOK())
@@ -432,19 +439,6 @@ void MK12HookPlugin::TabFunction()
 			MK12HOOKSDK::ImGui_Checkbox("Response Capture", &bResponseCapture);
 		}
 
-		MK12HOOKSDK::ImGui_Separator();
-
-		static char platformBuffer[16];
-		strncpy(platformBuffer, HookMetadata::sUserKeys.Platform.c_str(), sizeof(platformBuffer) - 1);
-		MK12HOOKSDK::ImGui_InputText("Auth Platform", platformBuffer, sizeof(platformBuffer));
-
-		static char ticketBuffer[2048];
-		strncpy(ticketBuffer, HookMetadata::sUserKeys.PlatformTicket.c_str(), sizeof(ticketBuffer) - 1);
-		MK12HOOKSDK::ImGui_InputText("Auth Ticket", ticketBuffer, sizeof(ticketBuffer));
-
-		static char tokenBuffer[2048];
-		strncpy(tokenBuffer, HookMetadata::sUserKeys.AccessToken.c_str(), sizeof(tokenBuffer) - 1);
-		MK12HOOKSDK::ImGui_InputText("Access Token", tokenBuffer, sizeof(tokenBuffer));
 	}
 
 	if (Features::IsInstalled(Features::Id::ProfileGetter))
@@ -474,6 +468,15 @@ void MK12HookPlugin::TabFunction()
 			{
 				MK12HOOKSDK::ImGui_Text("HydraId and WBId need Profile Getter or Floyd Tracking");
 			}
+
+			// Read once signed in to MK1's servers
+			MK12HOOKSDK::ImGui_Separator();
+			static char platformBuffer[16];
+			static char ticketBuffer[2048];
+			static char tokenBuffer[2048];
+			DisplayField("Auth Platform", HookMetadata::sUserKeys.Platform, platformBuffer, sizeof(platformBuffer));
+			DisplayField("Auth Ticket", HookMetadata::sUserKeys.PlatformTicket, ticketBuffer, sizeof(ticketBuffer));
+			DisplayField("Access Token", HookMetadata::sUserKeys.AccessToken, tokenBuffer, sizeof(tokenBuffer));
 		}
 	}
 	else

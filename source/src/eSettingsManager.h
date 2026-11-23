@@ -74,6 +74,7 @@ public:
 	std::string pProfileGetter;
 	std::string pOnlineSubsystem;
 	std::string pOnlineCheck;
+	std::string pAuthToken;
 	// Curl
 	std::string pCurlSetOpt;
 	std::string pCurlMultiAddHandle;

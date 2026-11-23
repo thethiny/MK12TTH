@@ -119,7 +119,7 @@ namespace HookMetadata { //Namespace for helpers for game functions
 
 	struct UserKeysStruct
 	{
-		PyString Platform = "";       // "steam" or "epic"
+		PyString Platform = "";       // "steam" or "epic", read from the game by OnlineIds
 		PyString PlatformTicket = ""; // Steam hex ticket or EGS JWT
 		PyString AccessToken = "";    // Session token from /access response
 	};
@@ -188,5 +188,4 @@ namespace HookMetadata { //Namespace for helpers for game functions
 	extern ProfileInfo			UserProfileInfo;
 
 	bool HasResponseCapture();
-	bool CurlCaptureComplete();
 };

@@ -101,6 +101,7 @@ namespace ModSettings {
 		Group*					SectionGroup	= nullptr;
 		const wchar_t*			About			= nullptr;
 		wchar_t**				Field			= nullptr;
+		TextType*				ReadValue		= nullptr;
 		TextType*				WhenRead		= nullptr;
 		bool					bPrivate		= false;
 		StatShowType*			ShowStat		= nullptr;
@@ -1301,24 +1302,34 @@ namespace ModSettings {
 		SetInfo(row, bOnline ? L"SIGNED IN" : L"OFFLINE", About);
 	}
 
-	static void RefreshAccessToken(Row& row)
+	static std::wstring KeyValue(Row& row)
 	{
-		std::wstring Token = Widen(HookMetadata::sUserKeys.AccessToken.c_str());
-		std::wstring About = L"The key the game signs in to its server with this session.";
-		if (!Token.empty())
-			SetInfo(row, L"SELECT TO SEE", About + L"\n\n" MK_BOLD(L"Value: ") + Short(Token, 160) + L"\n\nThe full token is in the MK12TTH overlay menu.");
-		else if (!Features::IsInstalled(Features::Id::Curl))
-			SetInfo(row, NOT_READ, About + L"\n\n" MK_RED(L"Not available: ") + Features::Explain(Features::Id::Curl));
-		else if (!Features::IsActive(Features::Id::Curl))
-			SetInfo(row, NOT_READ, About + L"\n\nTurn on WEB CAPTURE in LIVE FEATURES, it's read the next time the game signs in.");
-		else
-			SetInfo(row, NOT_READ, About + L"\n\nNot read yet, it's read when the game signs in.");
+		return row.ReadValue();
 	}
 
-	static std::wstring AccessTokenValue(Row& row)
-	{
-		return Widen(HookMetadata::sUserKeys.AccessToken.c_str());
+	static void RefreshKeyRow(Row& row)
+	{ // Sign in keys, read once signed in to MK1's servers, too long to show in full
+		std::wstring Value = row.ReadValue();
+		if (!Value.empty())
+			SetInfo(row, L"SELECT TO SEE", std::wstring(row.About) + L"\n\n" MK_BOLD(L"Value: ") + Short(Value, 160) + L"\n\nCOPY puts the full value on your clipboard.");
+		else if (!Features::IsInstalled(Features::Id::ProfileGetter))
+			SetInfo(row, NOT_READ, NotAvailable(row.About, Features::Id::ProfileGetter));
+		else if (!Features::IsActive(Features::Id::ProfileGetter))
+			SetInfo(row, NOT_READ, std::wstring(row.About) + L"\n\n" MK_RED(L"Needs PROFILE GETTER on."));
+		else
+			SetInfo(row, NOT_READ, std::wstring(row.About) + L"\n\nNot read yet, it's read once you're signed in to MK1's servers.");
 	}
+
+	static void AddKeyRow(const wchar_t* Title, const wchar_t* About, TextType* Read)
+	{
+		Row& row = AddInfoRow(TokensPage, Title, RefreshKeyRow);
+		row.About = About;
+		row.ReadValue = Read;
+		row.CopyValue = KeyValue;
+	}
+
+	static std::wstring AccessToken() { return Widen(HookMetadata::sUserKeys.AccessToken.c_str()); }
+	static std::wstring PlatformTicket() { return Widen(HookMetadata::sUserKeys.PlatformTicket.c_str()); }
 
 	static void RefreshFloydTower(Row& row)
 	{
@@ -1457,7 +1468,8 @@ namespace ModSettings {
 		AddValueRow(AccountPage, L"WB ID", L"Your WB account ID, when it's linked.", &Info.WBId, Features::Id::ProfileGetter, false, OnlineIdWhenRead);
 
 		AddValueRow(TokensPage, L"SAVE KEY", L"The key your save is encrypted with.", &Info.SaveKey, Features::Id::ProfileGetter, true);
-		AddInfoRow(TokensPage, L"ACCESS TOKEN", RefreshAccessToken).CopyValue = AccessTokenValue;
+		AddKeyRow(L"ACCESS TOKEN", L"The key the game signs in to its server with this session.", AccessToken);
+		AddKeyRow(L"PLATFORM TICKET", L"What your platform gave the game to sign you in to MK1's servers.", PlatformTicket);
 
 		AddInfoRow(FloydPage, L"FLOYD TOWER", RefreshFloydTower).bInGame = true;
 		AddInfoRow(FloydPage, L"FLOYD CHALLENGES", RefreshFloydChallenges).bInGame = true;

@@ -19,6 +19,8 @@ namespace OnlineIds {
 	void SetOnlineCheck(void* LocalProfiles, void* ProfileOnline);
 	bool HasOnlineCheck();
 	void* LocalProfile(); // The first local player's, null before the game made it
+	// Access token, and the signed in players' registry that holds the platform ticket
+	void SetAuthReaders(void* TokenGetter, void* RegistryGetter, void* PlayerLookup);
 
 	bool IsOnline(); // As of the last frame the game could show UI, any thread
 }

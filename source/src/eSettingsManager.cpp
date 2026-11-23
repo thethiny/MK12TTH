@@ -172,6 +172,7 @@ void eSettingsManager::Init()
 	pProfileGetter				= ini.ReadString	("Patterns",			"pProfileGetter",			"");
 	pOnlineSubsystem			= ini.ReadString	("Patterns",			"pOnlineSubsystem",			"");
 	pOnlineCheck				= ini.ReadString	("Patterns",			"pOnlineCheck",				"");
+	pAuthToken					= ini.ReadString	("Patterns",			"pAuthToken",				"");
 	// Curl
 	pCurlSetOpt					= ini.ReadString	("Patterns.Curl",		"pCurlSetOpt",				"");
 	pCurlMultiAddHandle			= ini.ReadString	("Patterns.Curl",		"pCurlMultiAddHandle",		"");
