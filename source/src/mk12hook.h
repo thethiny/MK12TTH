@@ -8,7 +8,6 @@
 
 namespace MK12Hook {
 	namespace Proxies {
-		MK12::FName*							__fastcall	ReadFNameToWStr(MK12::FName&, char*);
 		wchar_t**								__fastcall	OverrideGameEndpoint(MK12::JSONEndpointValue, wchar_t**);
 		MK12::FKlassicLadderSecretFightData*	__fastcall	SetupSecretFightConditionsProxy(MK12::FKlassicLadderSecretFightData*);
 		MK12::TArray<uint32_t>*					__fastcall	GenerateFloydCluesFromHashProxy(MK12::TArray<uint32_t>* ArrayLocation, uint64_t ShuffleSeed, uint64_t unk, uint64_t unk2);
@@ -20,30 +19,53 @@ namespace MK12Hook {
 		__int64									__fastcall	CurlSetOptProxy(__int64 handle, __int64 option, __int64 value);
 		__int64									__fastcall	CurlMultiAddHandleProxy(__int64 multiHandle, __int64 easyHandle);
 		__int64									__fastcall	CurlMultiInfoReadProxy(__int64 multiHandle, __int64* msgsInQueue);
+		__int64									__fastcall	FrameTickProxy();
+		bool									__fastcall	PlayerInputPressedProxy(void* Player, int32_t Input, MK12::FString* Id, uint32_t Flags);
+		void									__fastcall	PlayerInputUpdateProxy(MK12::FPlayerInput* Input, void* Sample);
+		__int64									__fastcall	SettingsBuildTabsProxy(MK12::USettingsScreen* Screen, bool bOnline);
+		void									__fastcall	SettingsCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB);
+		MK12::FText*							__fastcall	FindTextProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key);
+		MK12::FString*							__fastcall	SettingsVersionTextProxy();
+		void									__fastcall	SettingsRunProxy(void* Screen, void* Player, int64_t Mode);
+		void									__fastcall	MainMenuCopyTabsProxy(void* Out, MK12::FSettingsTab* Tabs, int32_t Count, int32_t ExtraA, int32_t ExtraB);
+		__int64									__fastcall	PakMountProxy(void* PakPlatformFile, const wchar_t* PakFilename, uint32_t PakOrder, const wchar_t* MountPath, bool bLoadIndex);
+		MK12::FText*							__fastcall	FindTextPlatformProxy(MK12::FText* Out, const wchar_t* Table, const wchar_t* Key);
+		bool									__fastcall	AttractModeIdleProxy(void* ModeManager, void* ModeClass);
+		char									__fastcall	TowersSetupProxy(void* TacoSchedule);
+		bool									__fastcall	BootScreenWaitProxy(int32_t FirstBootFrames, int32_t Frames, int32_t Counter);
+		__int64									__fastcall	AnnouncerRerollProxy(void* AudioSettings);
+		void									__fastcall	ConfigInitProxy();
+		__int64									__fastcall	AnnouncerMenuApplyProxy(void* AudioSettings, MK12::FString* ItemId);
+		void									__fastcall	FocusLostStepProxy();
+		void									__fastcall	FocusLostPauseProxy(void* Mode);
 	};
 
 	namespace Hooks {
-		bool DisableSignatureCheck();
-		bool DisableSignatureWarn();
-		bool DisableChunkSigCheck();
-		bool DisableTOCSigCheck();
-		bool DisablePakTOCCheck();
 		bool DisablePakSigning();
 		bool UNameTableGetter();
-		bool FNameToStrWithIdLoader();
-		bool FNameToStrNoIdLoader();
-		bool FNameToStrCommonLoader();
-		bool OverrideFNameToWStrFuncs();
+		bool NameTableHooks();
+		bool StringSwapHooks();
 		bool OverrideGameEndpointsData();
+		bool PrivateServerHooks();
 		bool ExtractFightMetadataFromSecretFightSetupStage();
 		bool ProfileGetterHooks();
 		bool ResolveVersionFunctions();
-		int	 FloydTrackingHooks();
+		bool FloydTrackingHooks();
+		bool FloydTowerAlertHooks();
+		bool KeepRunningHooks();
+		void SetKeepRunning(bool bOn);
+		bool FastBootHooks();
+		bool AnnouncerHooks();
+		bool EngineConfigHooks();
 		bool PatchCurl();
+		bool GameStateHooks();
+		bool GameMessageBoxHooks();
+		bool ModSettingsHooks();
+		bool PakModsHooks();
+		bool AttractModeHooks();
 	};
 
 	namespace Mods {
-		int AnnouncerSwap();
 		int StringSwaps();
 	}
 }
