@@ -90,6 +90,9 @@
     <ClCompile Include="source\src\Announcer.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
+    <ClCompile Include="source\src\MenuActions.cpp">
+      <Filter>Source Files\MK12</Filter>
+    </ClCompile>
     <ClCompile Include="source\src\LogFile.cpp">
       <Filter>Source Files\MK12</Filter>
     </ClCompile>
@@ -201,6 +204,9 @@
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\Announcer.h">
+      <Filter>Header Files\MK12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\src\MenuActions.h">
       <Filter>Header Files\MK12</Filter>
     </ClInclude>
     <ClInclude Include="source\src\LogFile.h">
