@@ -16,6 +16,7 @@ std::string		toUpper(std::string s);
 std::string		GetFileName(std::string filename);
 int				StringToVK(std::string);
 void			RaiseException(const char*, int64_t = 1);
+std::string		CallChain(int Skip, int Depth); // Debug: the callers, as offsets into the game, nearest first
 
 class PatternFinder
 {

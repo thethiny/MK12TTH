@@ -152,6 +152,21 @@ void RaiseException(const char* Message, int64_t ErrorCode)
 	throw(ErrorCode);
 }
 
+std::string CallChain(int Skip, int Depth)
+{ // Debug: the callers, as offsets into the game, nearest first
+	void* Frames[16] = {};
+	USHORT Count = CaptureStackBackTrace(Skip + 1, Depth < 16 ? Depth : 16, Frames, nullptr);
+	uint64_t Base = (uint64_t)GetModuleHandleA(nullptr);
+	std::string Chain;
+	for (USHORT i = 0; i < Count; i++)
+	{
+		char Frame[24];
+		snprintf(Frame, sizeof(Frame), " +%llX", (uint64_t)Frames[i] - Base);
+		Chain += Frame;
+	}
+	return Chain;
+}
+
 LibFuncStruct ParseLibFunc(CPPython::string path)
 {
 	LibFuncStruct LFS;
