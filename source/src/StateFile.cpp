@@ -1,4 +1,5 @@
 #include "StateFile.h"
+#include "../IniReader.h"
 #include <Windows.h>
 #include <string>
 #include <vector>
@@ -28,8 +29,8 @@ namespace StateFile {
 	// key=value lines of a section, empty when it's missing
 	static std::vector<std::string> ReadSection(const std::string& File, const char* Section)
 	{
-		std::vector<char> Buffer(64 * 1024);
-		DWORD Length = GetPrivateProfileSectionA(Section, Buffer.data(), (DWORD)Buffer.size(), File.c_str());
+		std::vector<char> Buffer;
+		DWORD Length = IniReadSection(Section, Buffer, File.c_str());
 		std::vector<std::string> Lines;
 		for (const char* Line = Buffer.data(); Line < Buffer.data() + Length && *Line; Line += strlen(Line) + 1)
 			Lines.push_back(Line);
@@ -47,9 +48,8 @@ namespace StateFile {
 			if (Equals == std::string::npos)
 				continue;
 			std::string Key = Line.substr(0, Equals);
-			char Existing[8] = {};
-			if (GetPrivateProfileStringA(ToSection, Key.c_str(), "", Existing, sizeof(Existing), To.c_str()) == 0)
-				WritePrivateProfileStringA(ToSection, Key.c_str(), Line.substr(Equals + 1).c_str(), To.c_str());
+			if (!IniHasKey(ToSection, Key.c_str(), To.c_str()))
+				IniWriteSafe(ToSection, Key.c_str(), Line.substr(Equals + 1).c_str(), To.c_str());
 		}
 	}
 
@@ -77,7 +77,7 @@ namespace StateFile {
 		if (!ReadSection(MainIni, "Mods").empty())
 		{
 			MoveSection(MainIni, "Mods", State, MODS);
-			WritePrivateProfileStringA("Mods", nullptr, nullptr, MainIni.c_str()); // Removes the section
+			IniWriteSafe("Mods", nullptr, nullptr, MainIni.c_str()); // Removes the section
 		}
 	}
 }
