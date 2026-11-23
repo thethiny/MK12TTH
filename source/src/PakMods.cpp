@@ -516,9 +516,11 @@ namespace PakMods {
 	{
 		for (size_t i = 0; i < mod.Paks.size(); i++)
 			mod.Paks[i].bLoads = mod.bEnabled;
+		// The mod folder's description.txt, for a folder with a single pak too
+		if (mod.From == Source::ModsFolder && !mod.Folder.empty())
+			mod.Description = ReadDescription(PathAppend(PathAppend(ModsRoot, mod.Folder), DESCRIPTION_FILE));
 		if (mod.From != Source::ModsFolder || mod.Paks.size() < 2)
 			return;
-		mod.Description = ReadDescription(PathAppend(PathAppend(ModsRoot, mod.Folder), DESCRIPTION_FILE));
 
 		std::map<std::wstring, size_t> PaksUnder; // Lowercase folder -> paks in it and below
 		for (size_t i = 0; i < mod.Paks.size(); i++)

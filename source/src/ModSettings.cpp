@@ -565,7 +565,8 @@ namespace ModSettings {
 			Engine += EngineValues(*Files[i]);
 		if (!Engine.empty())
 			Engine = L"\n\n" MK_BOLD(L"Engine settings: ") + Engine;
-		std::wstring Description = mod.Paks.size() == 1 ? mod.Paks.front().Description : mod.Description;
+		// A single pak's own description.txt first, else the one in its folder
+		std::wstring Description = mod.Paks.size() == 1 && !mod.Paks.front().Description.empty() ? mod.Paks.front().Description : mod.Description;
 		std::wstring Inside = mod.Switches.empty() ? L"" : L"\n\nEach pak, and each folder with several paks, has its own switch below.";
 		return L"In " + WhereIs(mod.From, BackSlashes(mod.Folder)) + L"." + DescriptionText(Description) + L"\n\n" MK_BOLD(L"Files: ") + PakFiles(mod)
 			+ Engine + OrderText(mod) + LoadText(mod) + Inside + L"\n\nTurning it off keeps the game from mounting it after a restart.";
