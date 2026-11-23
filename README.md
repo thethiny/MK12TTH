@@ -14,7 +14,7 @@ MK12TTH is a hook mod for Mortal Kombat 1. It patches game functions at runtime 
 - **Floyd**: your 10 challenges, encounters and wins, the Floyd Tower schedule and an alert when it shows up.
 - **Floyd fight**: set his difficulty level and your retries, spawn the Floyd Tower now, or summon Floyd.
 - **Profile**: your platform, platform ID, save key, MK1 and WB IDs, platform ticket and access token, with COPY.
-- **Quality of life**: keep running in the background, fast boot, attract mode delay.
+- **Quality of life**: keep running in the background, fast boot, attract mode delay on the title screen and the main menu.
 - **String swap**: swap game names using `string_swaps.txt`.
 - **Private server**: send the game's server traffic to your own server (see the `[Server]` section of the ini).
 - **MK1Hook plugin**: loads as a plugin for [Ermaccer's MK1Hook](https://github.com/ermaccer/MK1Hook), with its own overlay tab showing the same pages as MODS.
@@ -31,7 +31,7 @@ The zip contains:
 - `MK12TTH.ini`: startup switches and byte patterns
 - `dsound.dll`: the ASI loader
 
-Your in-game choices are saved in `MK12TTH_State.ini` next to the mod. When the game updates and a feature stops working, its patterns in `MK12TTH.ini` may need updating; the menus show which features aren't running and why.
+Your in-game choices are saved in `MK12TTH_State.ini` next to the mod. Everything the mod prints is also written to `mk12tth_log.txt` next to the game, emptied every launch. When the game updates and a feature stops working, its patterns in `MK12TTH.ini` may need updating; the menus show which features aren't running and why.
 
 **Turn mods off before playing online.**
 

@@ -16,7 +16,7 @@
 #include <string>
 #include <VersionHelpers.h>
 
-constexpr const char * CURRENT_HOOK_VERSION = "1.0.0";
+constexpr const char * CURRENT_HOOK_VERSION = "1.1.0";
 
 
 void CreateConsole();
