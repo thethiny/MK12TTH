@@ -15,7 +15,7 @@ namespace Features {
 	static Entry Entries[(int)Id::Count];
 	static std::vector<Id> InstallOrder;
 
-	static Entry* Find(Id Which)
+	Entry* Find(Id Which)
 	{
 		int Index = (int)Which;
 		if (Index < 0 || Index >= (int)Id::Count || !Entries[Index].bDefined)
@@ -23,7 +23,7 @@ namespace Features {
 		return &Entries[Index];
 	}
 
-	static void Transition(Entry& entry, State To)
+	void Transition(Entry& entry, State To)
 	{ // Only Pending -> anything else, once
 		if (entry.Current != State::Pending || To == State::Pending)
 		{
@@ -47,7 +47,7 @@ namespace Features {
 		entry.bDefined = true;
 	}
 
-	static int ReadIniMode(const Definition& Feature)
+	int ReadIniMode(const Definition& Feature)
 	{
 		CIniReader ini("");
 		int Mode = Feature.bIniDefault ? 1 : 0;
@@ -61,7 +61,7 @@ namespace Features {
 		return Mode;
 	}
 
-	static bool ReadIniSwitch(const Definition& Feature)
+	bool ReadIniSwitch(const Definition& Feature)
 	{
 		if (!Feature.IniKey || !Feature.IniSection)
 			return true;
@@ -79,7 +79,7 @@ namespace Features {
 		return ReadIniMode(Feature);
 	}
 
-	static bool ReadLiveSwitch(const Definition& Feature)
+	bool ReadLiveSwitch(const Definition& Feature)
 	{
 		CIniReader ini((char*)StateFile::FileName());
 		return ini.ReadBoolean((char*)StateFile::LIVE, (char*)Feature.IniKey, Feature.bLiveDefault);

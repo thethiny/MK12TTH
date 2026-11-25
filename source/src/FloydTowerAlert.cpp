@@ -26,12 +26,12 @@ namespace FloydTowerAlert {
 		MK12::Enums::MKProfileStatID::ProfileStat9106 };
 	static_assert(sizeof(STAT_IDS) / sizeof(STAT_IDS[0]) == (size_t)Stat::Count, "One id per stat");
 
-	static bool IsBitStat(Stat Which)
+	bool IsBitStat(Stat Which)
 	{ // One bit per challenge or chapter step
 		return Which == Stat::ChallengesDone || Which == Stat::Chapter15;
 	}
 
-	static void ReadStats(void* Profile)
+	void ReadStats(void* Profile)
 	{
 		if (!MK12::GetStatsContainer || !MK12::GetProfileStat)
 			return;
@@ -97,12 +97,12 @@ namespace FloydTowerAlert {
 		return Challenge >= 1 && Challenge <= 64 && (Stats.Values[(size_t)Stat::ChallengesDone] >> (Challenge - 1)) & 1;
 	}
 
-	static std::wstring Part(long long Count, const wchar_t* Unit)
+	std::wstring Part(long long Count, const wchar_t* Unit)
 	{
 		return std::to_wstring(Count) + L" " + Unit + (Count == 1 ? L"" : L"s");
 	}
 
-	static std::wstring Words(time_t Seconds)
+	std::wstring Words(time_t Seconds)
 	{ // "1 hour 5 minutes", "26 minutes", rounded up to the minute
 		long long Minutes = (Seconds + 59) / 60;
 		long long Hours = Minutes / 60;
@@ -112,7 +112,7 @@ namespace FloydTowerAlert {
 		return Minutes ? Part(Hours, L"hour") + L" " + Part(Minutes, L"minute") : Part(Hours, L"hour");
 	}
 
-	static bool IsOn()
+	bool IsOn()
 	{
 		return Features::IsActive(Features::Id::FloydTowerAlert) && Features::IsActive(Features::Id::FloydTracking);
 	}

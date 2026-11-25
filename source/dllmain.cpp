@@ -261,14 +261,14 @@ char* GetVersionedHookName()
 	return tabText;
 }
 
-static std::string OverlaySafe(std::string Text)
+std::string OverlaySafe(std::string Text)
 { // ImGui_Text takes a format, % is doubled
 	for (size_t At = Text.find('%'); At != std::string::npos; At = Text.find('%', At + 2))
 		Text.insert(At, 1, '%');
 	return Text;
 }
 
-static void DisplayField(const char* label, const std::string& value, char* buffer, size_t size)
+void DisplayField(const char* label, const std::string& value, char* buffer, size_t size)
 {
 	strncpy(buffer, value.c_str(), size - 1);
 	buffer[size - 1] = 0;

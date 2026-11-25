@@ -52,7 +52,7 @@ namespace GameMessageBox {
 	static volatile bool		bTakingInput		= false;
 	static uint32_t				KeptPresses			= 0; // Taken from the game for the box on screen
 
-	static bool Advance(Request& Req, Phase To)
+	bool Advance(Request& Req, Phase To)
 	{
 		for (size_t i = 0; i < _countof(AllowedMoves); i++)
 		{
@@ -99,7 +99,7 @@ namespace GameMessageBox {
 			&& MK12::MessageBoxShow && MK12::MessageBoxClose && MK12::MessageBoxDestruct;
 	}
 
-	static Handle Enqueue(Request* Req)
+	Handle Enqueue(Request* Req)
 	{
 		if (!IsReady())
 		{
@@ -123,7 +123,7 @@ namespace GameMessageBox {
 		return Id;
 	}
 
-	static Request* NewRequest(const Text& Body, const Text& Title, bool bPausesGame)
+	Request* NewRequest(const Text& Body, const Text& Title, bool bPausesGame)
 	{
 		Request* Req = new Request;
 		Req->Body = Body;
@@ -211,7 +211,7 @@ namespace GameMessageBox {
 		return true;
 	}
 
-	static void* MenuPlayer()
+	void* MenuPlayer()
 	{ // The first local player, the menus are his
 		uint8_t* Info = MK12::GetLocalPlayerInfo ? (uint8_t*)MK12::GetLocalPlayerInfo(0) : nullptr;
 		return Info ? *(void**)(Info + MK12::LocalPlayerInfoPlayerOffset) : nullptr;
@@ -237,7 +237,7 @@ namespace GameMessageBox {
 		return Out;
 	}
 
-	static int ButtonInput(int Index, int Count)
+	int ButtonInput(int Index, int Count)
 	{
 		if (Index == 0)
 			return ButtonInputs[0];
@@ -246,7 +246,7 @@ namespace GameMessageBox {
 		return ButtonInputs[1];
 	}
 
-	static void Open(Request& Req)
+	void Open(Request& Req)
 	{
 		Req.Box = new MK12::UIMessageBox;
 		MK12::UIMessageBox* Box = Req.Box;
@@ -284,7 +284,7 @@ namespace GameMessageBox {
 	}
 
 	// Ends a request and adds its callback to Callbacks, they run after Tick is done with the queue
-	static void DeleteRequest(Request* Req)
+	void DeleteRequest(Request* Req)
 	{
 		if (Req->Box)
 		{
@@ -294,7 +294,7 @@ namespace GameMessageBox {
 		delete Req;
 	}
 
-	static void Finish(Request* Req, int Picked, std::vector<Callback>& Callbacks)
+	void Finish(Request* Req, int Picked, std::vector<Callback>& Callbacks)
 	{
 		if (!Req)
 			return;
@@ -313,7 +313,7 @@ namespace GameMessageBox {
 		DeleteRequest(Req);
 	}
 
-	static bool Contains(const std::vector<Handle>& Handles, Handle Id)
+	bool Contains(const std::vector<Handle>& Handles, Handle Id)
 	{
 		for (size_t i = 0; i < Handles.size(); i++)
 		{

@@ -22,12 +22,12 @@ namespace MenuActions {
 	static Kind	Kinds[MAX_KINDS]; // Game thread only
 	static int	KindCount = 0;
 
-	static void** Ours(Kind& Of)
+	void** Ours(Kind& Of)
 	{
 		return &Of.WithInfo[1];
 	}
 
-	static Kind* KindOf(void* Self)
+	Kind* KindOf(void* Self)
 	{
 		void** VTable = *(void***)Self;
 		for (int i = 0; i < KindCount; i++)
@@ -38,7 +38,7 @@ namespace MenuActions {
 		return nullptr;
 	}
 
-	static void __fastcall OurClone(void* Self, MK12::FMenuEntryCallback* Destination)
+	void __fastcall OurClone(void* Self, MK12::FMenuEntryCallback* Destination)
 	{
 		Kind* Of = KindOf(Self);
 		Of->Clone(Self, Destination); // Writes the game's vtable into the copy
@@ -46,7 +46,7 @@ namespace MenuActions {
 			*(void***)Destination->Instance = Ours(*Of);
 	}
 
-	static __int64 RunWrapped(Kind* Of, RunType* Run, void* Self, void* Context)
+	__int64 RunWrapped(Kind* Of, RunType* Run, void* Self, void* Context)
 	{
 		if (Of->With->Before)
 			Of->With->Before();
@@ -56,13 +56,13 @@ namespace MenuActions {
 		return Result;
 	}
 
-	static __int64 __fastcall OurRun(void* Self, void* Context)
+	__int64 __fastcall OurRun(void* Self, void* Context)
 	{
 		Kind* Of = KindOf(Self);
 		return RunWrapped(Of, Of->Run, Self, Context);
 	}
 
-	static __int64 __fastcall OurRunPicked(void* Self, void* Context)
+	__int64 __fastcall OurRunPicked(void* Self, void* Context)
 	{
 		Kind* Of = KindOf(Self);
 		return RunWrapped(Of, Of->RunPicked, Self, Context);
@@ -73,7 +73,7 @@ namespace MenuActions {
 		return Action && KindOf(Action) != nullptr;
 	}
 
-	static Kind* KindFor(void* Action, const Wrap* With)
+	Kind* KindFor(void* Action, const Wrap* With)
 	{
 		if (!Action || !With)
 			return nullptr;

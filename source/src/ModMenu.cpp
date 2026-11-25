@@ -21,19 +21,19 @@ namespace ModMenu {
 
 	// Our entry runs the Settings entry's own action (a copy through our vtable): opening the settings screen waits
 	// until the player backs out, so our pages show for the whole visit
-	static void OpenOwnMenu()
+	void OpenOwnMenu()
 	{
 		ModSettings::SetOwnMenu(true);
 	}
 
-	static void CloseOwnMenu()
+	void CloseOwnMenu()
 	{
 		ModSettings::SetOwnMenu(false);
 	}
 
 	static const MenuActions::Wrap OwnMenu = { OpenOwnMenu, CloseOwnMenu };
 
-	static void SetGameString(MK12::FString& Out, const wchar_t* Text)
+	void SetGameString(MK12::FString& Out, const wchar_t* Text)
 	{ // The entry frees its strings, so they go in the game's memory
 		int32_t Count = (int32_t)wcslen(Text) + 1;
 		MK12::StringReserve(&Out, Count);
@@ -44,7 +44,7 @@ namespace ModMenu {
 	constexpr const char* LAST_VERSION_KEY = "szLastVersion"; // [FirstRun] in the state file
 	constexpr const char* LAST_BUILD_KEY = "szLastBuild"; // [FirstRun], the build that offered what's new last
 
-	static std::string BuildStamp()
+	std::string BuildStamp()
 	{ // Link time from our own PE header: the same for one build of the mod, new for every rebuild
 		IMAGE_NT_HEADERS* Nt = (IMAGE_NT_HEADERS*)((BYTE*)&__ImageBase + __ImageBase.e_lfanew);
 		char Stamp[16] = {};
@@ -52,12 +52,12 @@ namespace ModMenu {
 		return Stamp;
 	}
 
-	static void ShowWhatsNew()
+	void ShowWhatsNew()
 	{
 		GameMessageBox::Confirm(Changelog::Current, nullptr, L"MK12TTH " + ModSettings::ModVersion());
 	}
 
-	static void AnnounceLoaded()
+	void AnnounceLoaded()
 	{ // Once, the first time the main menu is built. After the mod changed (version or build) ACCEPT shows what's new
 		static bool bAnnounced = false;
 		if (bAnnounced)
@@ -101,7 +101,7 @@ namespace ModMenu {
 		GameToast::Show(Title, ModsText + L". ACCEPT shows what's new.", ShowWhatsNew);
 	}
 
-	static int FindSettings(MK12::FSettingsTab* Tabs, int32_t Count)
+	int FindSettings(MK12::FSettingsTab* Tabs, int32_t Count)
 	{
 		for (int32_t i = 0; i < Count; i++)
 		{

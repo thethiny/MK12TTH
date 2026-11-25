@@ -127,7 +127,7 @@ void* MK12::MapModeGetProfile(void* MapMode)
 
 // The stats container's hash sets, looked up like the game's own stat setter does: a set by scope bit, each holding a
 // set by stat id whose value is the stat object
-static char* FindInSet(char* Set, int32_t Key, int32_t ElementSize, int32_t HashOffset, int32_t NextOffset, bool bByteKey)
+char* FindInSet(char* Set, int32_t Key, int32_t ElementSize, int32_t HashOffset, int32_t NextOffset, bool bByteKey)
 {
 	int32_t HashSize = *(int32_t*)(Set + HashOffset + 0x10);
 	int32_t* Hash = *(int32_t**)(Set + HashOffset + 8) ? *(int32_t**)(Set + HashOffset + 8) : (int32_t*)(Set + HashOffset);
@@ -174,7 +174,7 @@ MK12::FindTextType*						MK12::FindTextPlatform				= nullptr;
 typedef void (SectionVisitor)(uint8_t* Start, uint8_t* End, void* Context);
 
 // Readable non code sections of the game's image, where its strings and static objects are. Committed pages only
-static void ForEachDataSection(SectionVisitor* Visit, void* Context)
+void ForEachDataSection(SectionVisitor* Visit, void* Context)
 {
 	uint8_t* Base = (uint8_t*)GetModuleHandleW(nullptr);
 	IMAGE_DOS_HEADER* Dos = (IMAGE_DOS_HEADER*)Base;
@@ -209,7 +209,7 @@ struct StaticOptionSearch {
 	MK12::FSettingsOption*		Found;
 };
 
-static void FindKeyTexts(uint8_t* Start, uint8_t* End, void* Context)
+void FindKeyTexts(uint8_t* Start, uint8_t* End, void* Context)
 { // The key text, whole (null before and after it)
 	StaticOptionSearch* Search = (StaticOptionSearch*)Context;
 	for (uint8_t* At = Start + 2; At + Search->Bytes <= End; At += 2)
@@ -219,7 +219,7 @@ static void FindKeyTexts(uint8_t* Start, uint8_t* End, void* Context)
 	}
 }
 
-static void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
+void FindOptionWithKey(uint8_t* Start, uint8_t* End, void* Context)
 { // A row whose title key points at one of them
 	StaticOptionSearch* Search = (StaticOptionSearch*)Context;
 	Start = (uint8_t*)(((uintptr_t)Start + 7) & ~(uintptr_t)7);
@@ -271,7 +271,7 @@ struct VirtualRedirect {
 	int							Count;
 };
 
-static void RedirectInSection(uint8_t* Start, uint8_t* End, void* Context)
+void RedirectInSection(uint8_t* Start, uint8_t* End, void* Context)
 { // Pointer sized slots only
 	VirtualRedirect* Redirect = (VirtualRedirect*)Context;
 	for (uint8_t* At = (uint8_t*)(((uintptr_t)Start + 7) & ~(uintptr_t)7); At + sizeof(void*) <= End; At += sizeof(void*))

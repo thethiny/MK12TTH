@@ -58,12 +58,12 @@ namespace OnlineIds {
 	static bool						bWasOnline			= false;
 	static bool						bGaveUp				= false;
 
-	static void* Virtual(void* Object, size_t Slot)
+	void* Virtual(void* Object, size_t Slot)
 	{
 		return (*(void***)Object)[Slot];
 	}
 
-	static void Release(SharedRef& Ref)
+	void Release(SharedRef& Ref)
 	{ // Like the game: the last shared reference destroys the object, the last weak one the counter
 		if (!Ref.Counter)
 			return;
@@ -78,7 +78,7 @@ namespace OnlineIds {
 		Ref.Counter = nullptr;
 	}
 
-	static std::vector<std::wstring> Split(const std::wstring& Text, wchar_t Separator)
+	std::vector<std::wstring> Split(const std::wstring& Text, wchar_t Separator)
 	{
 		std::vector<std::wstring> Parts;
 		size_t Start = 0;
@@ -92,7 +92,7 @@ namespace OnlineIds {
 		}
 	}
 
-	static void Keep(wchar_t*& Field, const std::wstring& Value, const char* Name)
+	void Keep(wchar_t*& Field, const std::wstring& Value, const char* Name)
 	{
 		if (Field || Value.empty())
 			return;
@@ -173,7 +173,7 @@ namespace OnlineIds {
 		GetAuthPlayer = (AuthPlayerType*)PlayerLookup;
 	}
 
-	static bool Narrow(const wchar_t* Text, char* Out, size_t OutSize)
+	bool Narrow(const wchar_t* Text, char* Out, size_t OutSize)
 	{ // UTF-8, false when empty or it doesn't fit
 		if (!Text || !*Text)
 			return false;
@@ -181,7 +181,7 @@ namespace OnlineIds {
 	}
 
 	// Plain data only, so a bad read ends here and not in the game. Bit 0 is the token, bit 1 the ticket
-	static unsigned ReadAuthRaw(char* Token, size_t TokenSize, char* Ticket, size_t TicketSize)
+	unsigned ReadAuthRaw(char* Token, size_t TokenSize, char* Ticket, size_t TicketSize)
 	{
 		unsigned Got = 0;
 		__try
@@ -230,12 +230,12 @@ namespace OnlineIds {
 		return Got;
 	}
 
-	static const char* PlatformName()
+	const char* PlatformName()
 	{ // Only the Epic build loads Epic's online library
 		return GetModuleHandleW(L"EOSSDK-Win64-Shipping.dll") ? "epic" : "steam";
 	}
 
-	static void ReadAuth()
+	void ReadAuth()
 	{ // Game thread. Signing in again gives a new token, so it's read again
 		if (!GetAuthToken && !(GetAuthRegistry && GetAuthPlayer))
 			return;
@@ -268,9 +268,9 @@ namespace OnlineIds {
 		}
 	}
 
-	static bool AskOnline();
+	bool AskOnline();
 
-	static void TickAuth(ULONGLONG Now)
+	void TickAuth(ULONGLONG Now)
 	{ // While signed in: until the token is there, then now and then
 		ULONGLONG Wait = HookMetadata::sUserKeys.AccessToken.empty() ? AUTH_RETRY : AUTH_REFRESH;
 		if (Now - LastAuthTry < Wait)
@@ -292,7 +292,7 @@ namespace OnlineIds {
 		IsProfileOnline = (IsProfileOnlineType*)ProfileOnline;
 	}
 
-	static bool AskOnline()
+	bool AskOnline()
 	{ // Any local profile signed in to MK1's servers. Game thread once the game is up, no profiles at startup
 		if (!GetLocalProfiles || !IsProfileOnline)
 			return false;

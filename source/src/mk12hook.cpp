@@ -553,7 +553,7 @@ namespace MK12Hook::Proxies {
 	static bool bCurlSawRequest = false;
 	static bool bCurlSawResponse = false;
 
-	static void CurlCleanupIfDone()
+	void CurlCleanupIfDone()
 	{
 		if (bCurlSawRequest && (!HookMetadata::HasResponseCapture() || bCurlSawResponse))
 		{
@@ -586,7 +586,7 @@ namespace MK12Hook::Proxies {
 		return MK12::CurlSetOpt(handle, option, value);
 	}
 
-	static void ParseAccessRequest(MK12::CURL::HTTPRequestWrapper* wrapper)
+	void ParseAccessRequest(MK12::CURL::HTTPRequestWrapper* wrapper)
 	{
 		char* data = nullptr;
 		int32_t size = 0;
@@ -625,7 +625,7 @@ namespace MK12Hook::Proxies {
 		printfWarning("ParseAccessRequest: failed to extract platform ticket from %d bytes", size);
 	}
 
-	static void ParseAccessResponse(MK12::CURL::HTTPRequestWrapper* wrapper)
+	void ParseAccessResponse(MK12::CURL::HTTPRequestWrapper* wrapper)
 	{
 		char* data = nullptr;
 		int32_t size = 0;
@@ -722,7 +722,7 @@ namespace MK12Hook::Hooks {
 	}
 
 	// Start of a name-to-text function, from a pattern on a call inside it
-	static uint64_t FindNameFunction(const std::string& Pattern, const char* Name, uint64_t CallOffset, uint64_t BackToStart)
+	uint64_t FindNameFunction(const std::string& Pattern, const char* Name, uint64_t CallOffset, uint64_t BackToStart)
 	{
 		uint64_t patAddr = GamePatcher->ResolvePattern(Pattern, Name);
 		if (!patAddr)

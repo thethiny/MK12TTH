@@ -29,19 +29,19 @@ namespace PauseMenu {
 	static void*	PauseScreen		= nullptr;	// The pause menu our entry went into, until it closes
 	static void*	OurPanel		= nullptr;	// Our entry's panel object
 
-	static void Forget()
+	void Forget()
 	{
 		PauseScreen = nullptr;
 		OurPanel = nullptr;
 	}
 
-	static bool IsReady()
+	bool IsReady()
 	{
 		return PanelClass && MK12::StaticConstructObject && MK12::TransientPackage && MK12::GrowPauseEntries && MK12::GameAlloc
 			&& MK12::PanelHolderConstruct && MK12::MenuEntryConstruct && MK12::SettingsTabConstruct && MK12::SettingsTabDestruct;
 	}
 
-	static void LoadPanelClass()
+	void LoadPanelClass()
 	{ // Not every fight loads it: loaded once at the main menu, never while a pause menu opens
 		if (bClassTried || !GameState::IsMainMenuUp() || !MK12::StaticFindObject || !MK12::StaticLoadObject)
 			return;
@@ -54,7 +54,7 @@ namespace PauseMenu {
 			printfWarning("Pause Menu: No MOD SETTINGS in the pause menu (its panel didn't load)");
 	}
 
-	static int32_t FindKontrols(MK12::TArray<MK12::FPauseEntry>* Entries)
+	int32_t FindKontrols(MK12::TArray<MK12::FPauseEntry>* Entries)
 	{
 		for (int32_t i = 0; i < Entries->ElementsCount; i++)
 		{
@@ -65,7 +65,7 @@ namespace PauseMenu {
 		return -1;
 	}
 
-	static void* MakePanel()
+	void* MakePanel()
 	{
 		MK12::FConstructObjectParams Params = {};
 		Params.Class = PanelClass;
@@ -79,7 +79,7 @@ namespace PauseMenu {
 		return Panel;
 	}
 
-	static bool MakeLabel(void* Panel, MK12::FMenuEntry& Label)
+	bool MakeLabel(void* Panel, MK12::FMenuEntry& Label)
 	{ // The panel's own tab gives the action that goes into it (and KONTROLS' look): ours is a copy with our key
 		MK12::FSettingsTab Tab = {};
 		((GetTabType*)(*(void***)Panel)[SLOT_GET_TAB])(Panel, &Tab);

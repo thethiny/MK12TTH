@@ -11,7 +11,7 @@ namespace StateFile {
 	constexpr const char* OLD_STATE_FILE	= "tt_state.ini";
 	constexpr const char* FIRST_STATE_FILE	= "MK12TTH_State.ini"; // The state file's name before it followed the mod's
 
-	static std::string ModFolder()
+	std::string ModFolder()
 	{
 		char Path[MAX_PATH] = {};
 		GetModuleFileNameA((HINSTANCE)&__ImageBase, Path, MAX_PATH);
@@ -41,7 +41,7 @@ namespace StateFile {
 		return Name.c_str();
 	}
 
-	static std::string MainIniPath()
+	std::string MainIniPath()
 	{
 		char Path[MAX_PATH] = {};
 		GetModuleFileNameA((HINSTANCE)&__ImageBase, Path, MAX_PATH);
@@ -50,7 +50,7 @@ namespace StateFile {
 	}
 
 	// key=value lines of a section, empty when it's missing
-	static std::vector<std::string> ReadSection(const std::string& File, const char* Section)
+	std::vector<std::string> ReadSection(const std::string& File, const char* Section)
 	{
 		std::vector<char> Buffer;
 		DWORD Length = IniReadSection(Section, Buffer, File.c_str());
@@ -61,7 +61,7 @@ namespace StateFile {
 	}
 
 	// Keys already in the state file win, it's the newer one
-	static void MoveSection(const std::string& From, const char* FromSection, const std::string& To, const char* ToSection)
+	void MoveSection(const std::string& From, const char* FromSection, const std::string& To, const char* ToSection)
 	{
 		std::vector<std::string> Lines = ReadSection(From, FromSection);
 		for (size_t i = 0; i < Lines.size(); i++)

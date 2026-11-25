@@ -51,7 +51,7 @@ namespace FloydTower {
 		}
 	};
 
-	static Window DayWindow(uint32_t ProfileHash, time_t DayStart)
+	Window DayWindow(uint32_t ProfileHash, time_t DayStart)
 	{
 		int64_t DayTicks = UNIX_EPOCH_TICKS + (int64_t)DayStart * TICKS_PER_SECOND;
 		Pcg32 Rng((uint64_t)DayTicks ^ ProfileHash);

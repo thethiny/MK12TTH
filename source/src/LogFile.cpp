@@ -21,7 +21,7 @@ namespace LogFile {
 	static PrintType*		RealPrint		= nullptr;
 	static PrintWideType*	RealPrintWide	= nullptr;
 
-	static void Write(const std::string& Text)
+	void Write(const std::string& Text)
 	{ // Without the console's color codes (ESC [ ... letter)
 		std::string Plain;
 		Plain.reserve(Text.size());
@@ -42,12 +42,12 @@ namespace LogFile {
 		WriteFile(File, Plain.data(), (DWORD)Plain.size(), &Written, nullptr);
 	}
 
-	static bool IsConsoleStream(FILE* Stream)
+	bool IsConsoleStream(FILE* Stream)
 	{
 		return Stream == stdout || Stream == stderr;
 	}
 
-	static int __cdecl ClonePrint(unsigned __int64 Options, FILE* Stream, const char* Format, _locale_t Locale, va_list Args)
+	int __cdecl ClonePrint(unsigned __int64 Options, FILE* Stream, const char* Format, _locale_t Locale, va_list Args)
 	{
 		if (IsConsoleStream(Stream))
 		{
@@ -67,7 +67,7 @@ namespace LogFile {
 		return RealPrint(Options, Stream, Format, Locale, Args);
 	}
 
-	static int __cdecl ClonePrintWide(unsigned __int64 Options, FILE* Stream, const wchar_t* Format, _locale_t Locale, va_list Args)
+	int __cdecl ClonePrintWide(unsigned __int64 Options, FILE* Stream, const wchar_t* Format, _locale_t Locale, va_list Args)
 	{
 		if (IsConsoleStream(Stream))
 		{
@@ -91,7 +91,7 @@ namespace LogFile {
 	}
 
 	// Points this module's import of a C runtime print function at ours; the game and other mods keep theirs
-	static bool Redirect(const char* Function, void* Clone, void** Real)
+	bool Redirect(const char* Function, void* Clone, void** Real)
 	{
 		BYTE* Base = (BYTE*)&__ImageBase;
 		IMAGE_NT_HEADERS* Nt = (IMAGE_NT_HEADERS*)(Base + __ImageBase.e_lfanew);
@@ -123,7 +123,7 @@ namespace LogFile {
 		return false;
 	}
 
-	static std::string FilePath()
+	std::string FilePath()
 	{ // In the game's folder, the mod's name in lowercase
 		char Exe[MAX_PATH] = {};
 		GetModuleFileNameA(nullptr, Exe, MAX_PATH);

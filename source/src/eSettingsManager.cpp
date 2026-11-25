@@ -29,12 +29,12 @@ static const char		CACHE_MAGIC[4]		= { 'T', 'P', 'C', 'F' }; // thethiny pattern
 static const uint32_t	CACHE_VERSION		= 1;
 static const DWORD		WRITE_DELAY_MS		= 1000; // Finds made close together go out in one write
 
-static void PutBytes(std::string& Out, const void* Value, size_t Size)
+void PutBytes(std::string& Out, const void* Value, size_t Size)
 {
 	Out.append((const char*)Value, Size);
 }
 
-static bool TakeBytes(const std::string& In, size_t& At, void* Value, size_t Size)
+bool TakeBytes(const std::string& In, size_t& At, void* Value, size_t Size)
 {
 	if (At + Size > In.size())
 		return false;
@@ -43,7 +43,7 @@ static bool TakeBytes(const std::string& In, size_t& At, void* Value, size_t Siz
 	return true;
 }
 
-static DWORD WINAPI PatternCacheWriter(LPVOID Self)
+DWORD WINAPI PatternCacheWriter(LPVOID Self)
 {
 	Sleep(WRITE_DELAY_MS);
 	((eCachedPatternsManager*)Self)->WriteQueued();
@@ -351,7 +351,7 @@ bool eCachedPatternsManager::Has(const std::string& pattern)
 	return Get(pattern) != 0;
 }
 
-static DWORD WINAPI PaidModWarningThread(LPVOID)
+DWORD WINAPI PaidModWarningThread(LPVOID)
 {
 	MessageBoxA(0, "Please note that MK12TTH is a free modding tool that is meant to be used with free content.\nIf you have paid for anything, ask for a refund.", "MK12TTH Installed", MB_ICONEXCLAMATION);
 	return 0;

@@ -18,7 +18,7 @@ namespace GameState {
 		return MK12::GetModeManager && MK12::IsModeOnStack && MK12::GameModeOnlineClass && MK12::lpGamePhaseOwner;
 	}
 
-	static void* ModeManager()
+	void* ModeManager()
 	{
 		return IsReady() ? MK12::GetModeManager(nullptr) : nullptr;
 	}
@@ -34,13 +34,13 @@ namespace GameState {
 		return Manager && MK12::IsModeOnStack(Manager, MK12::GameModeOnlineClass());
 	}
 
-	static int GamePhase()
+	int GamePhase()
 	{
 		uint8_t* Owner = IsReady() ? *(uint8_t**)MK12::lpGamePhaseOwner : nullptr;
 		return Owner ? Owner[MK12::GamePhaseOffset] : -1;
 	}
 
-	static bool IsLoadingPhase()
+	bool IsLoadingPhase()
 	{
 		return GamePhase() == PHASE_LOADING;
 	}
@@ -51,7 +51,7 @@ namespace GameState {
 	}
 
 	// Why UI can't show right now, or null when it can
-	static const char* Blocker()
+	const char* Blocker()
 	{
 		if (!IsReady())
 			return "not ready";

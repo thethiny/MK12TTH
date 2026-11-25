@@ -6,7 +6,7 @@ namespace Fight {
 	// Where the fight keeps its fighters
 	constexpr uint32_t MISSION_GAME_INFO		= 0x60;	// Then +0x10
 
-	static char* TeamFighter(void* GameInfo, int32_t Team)
+	char* TeamFighter(void* GameInfo, int32_t Team)
 	{ // A bad read gives up instead of crashing
 		__try
 		{
@@ -26,7 +26,7 @@ namespace Fight {
 		return nullptr;
 	}
 
-	static void* CurrentGameInfo()
+	void* CurrentGameInfo()
 	{
 		__try
 		{

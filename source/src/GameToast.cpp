@@ -31,22 +31,22 @@ namespace GameToast {
 	};
 	constexpr int32_t DELEGATE_SLOTS = sizeof(FToastDelegate) / 16; // Its size the way the game counts it
 
-	static void Accept(uint64_t Id)
+	void Accept(uint64_t Id)
 	{ // ACCEPT comes from the game's toast fiber, the action runs in Tick
 		AcquireSRWLockExclusive(&QueueLock);
 		Accepted.push_back(Id);
 		ReleaseSRWLockExclusive(&QueueLock);
 	}
 
-	static void __fastcall DelegateDestroy(FToastDelegate*, int32_t) {} // The game frees the memory
-	static void* __fastcall DelegateNull(FToastDelegate*) { return nullptr; }
-	static bool __fastcall DelegateFalse(FToastDelegate*) { return false; }
-	static bool __fastcall DelegateTrue(FToastDelegate*) { return true; }
-	static uint64_t* __fastcall DelegateHandle(FToastDelegate* Self, uint64_t* Out) { *Out = Self->Handle; return Out; }
-	static void __fastcall DelegateExecute(FToastDelegate* Self) { Accept(Self->Id); }
-	static bool __fastcall DelegateExecuteIfSafe(FToastDelegate* Self) { Accept(Self->Id); return true; }
+	void __fastcall DelegateDestroy(FToastDelegate*, int32_t) {} // The game frees the memory
+	void* __fastcall DelegateNull(FToastDelegate*) { return nullptr; }
+	bool __fastcall DelegateFalse(FToastDelegate*) { return false; }
+	bool __fastcall DelegateTrue(FToastDelegate*) { return true; }
+	uint64_t* __fastcall DelegateHandle(FToastDelegate* Self, uint64_t* Out) { *Out = Self->Handle; return Out; }
+	void __fastcall DelegateExecute(FToastDelegate* Self) { Accept(Self->Id); }
+	bool __fastcall DelegateExecuteIfSafe(FToastDelegate* Self) { Accept(Self->Id); return true; }
 
-	static void __fastcall DelegateCopy(FToastDelegate* Self, MK12::FMenuEntryCallback* Destination)
+	void __fastcall DelegateCopy(FToastDelegate* Self, MK12::FMenuEntryCallback* Destination)
 	{ // Same as the game's own copy: release what's there, size the block, fill it
 		if (Destination->bAllocated && Destination->Instance)
 			(*(void(__fastcall**)(void*, int32_t))*(void***)Destination->Instance)(Destination->Instance, 0);
@@ -63,7 +63,7 @@ namespace GameToast {
 		(void*)DelegateFalse, (void*)DelegateTrue, (void*)DelegateHandle, (void*)DelegateCopy, (void*)DelegateExecute,
 		(void*)DelegateExecuteIfSafe };
 
-	static MK12::FMenuEntryCallback MakeDelegate(uint64_t Id)
+	MK12::FMenuEntryCallback MakeDelegate(uint64_t Id)
 	{
 		MK12::FMenuEntryCallback Callback;
 		FToastDelegate* Delegate = (FToastDelegate*)MK12::Realloc(nullptr, sizeof(FToastDelegate), 0);

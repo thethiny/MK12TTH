@@ -70,7 +70,7 @@ namespace PakContents {
 		bool bFailed = false;
 	};
 
-	static bool ReadBytes(std::ifstream& File, uint64_t Offset, uint64_t Size, std::vector<uint8_t>& Out)
+	bool ReadBytes(std::ifstream& File, uint64_t Offset, uint64_t Size, std::vector<uint8_t>& Out)
 	{
 		if (Size > MAX_INDEX_SIZE)
 			return false;
@@ -80,7 +80,7 @@ namespace PakContents {
 		return (uint64_t)File.gcount() == Size;
 	}
 
-	static std::wstring Normalize(std::wstring Path)
+	std::wstring Normalize(std::wstring Path)
 	{ // The engine's form: lowercase, forward slashes, no relative start
 		for (size_t i = 0; i < Path.size(); i++)
 			Path[i] = Path[i] == L'\\' ? L'/' : (wchar_t)towlower(Path[i]);

@@ -11,24 +11,24 @@ namespace AGBinary {
 		return val;
 	}
 
-	static bool SkipBool(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipBool(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		return true;
 	}
 
-	static bool SkipInt(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipInt(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		cursor += 1 << (sub / 2);
 		return cursor <= size;
 	}
 
-	static bool SkipFloat(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipFloat(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		cursor += (sub == 0) ? 4 : 8;
 		return cursor <= size;
 	}
 
-	static bool SkipString(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipString(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		int lenBytes = 1 << (sub % 3);
 		if (cursor + lenBytes > size) return false;
@@ -37,13 +37,13 @@ namespace AGBinary {
 		return cursor <= size;
 	}
 
-	static bool SkipTime(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipTime(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		cursor += 4;
 		return cursor <= size;
 	}
 
-	static bool SkipArray(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipArray(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		int lenBytes = 1 << sub;
 		if (cursor + lenBytes > size) return false;
@@ -53,7 +53,7 @@ namespace AGBinary {
 		return true;
 	}
 
-	static bool SkipMap(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
+	bool SkipMap(const char* data, int32_t size, int32_t& cursor, uint8_t sub)
 	{
 		if (sub == 7)
 		{

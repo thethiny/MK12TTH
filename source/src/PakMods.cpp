@@ -28,30 +28,30 @@ namespace PakMods {
 	static std::wstring					ModsRoot;
 	static bool							bMounted = false;
 
-	static std::wstring Lower(std::wstring Text)
+	std::wstring Lower(std::wstring Text)
 	{
 		for (size_t i = 0; i < Text.size(); i++)
 			Text[i] = (wchar_t)towlower(Text[i]);
 		return Text;
 	}
 
-	static std::wstring ForwardSlashes(std::wstring Text)
+	std::wstring ForwardSlashes(std::wstring Text)
 	{
 		std::replace(Text.begin(), Text.end(), L'\\', L'/');
 		return Text;
 	}
 
-	static std::wstring Join(const std::wstring& Folder, const std::wstring& Name)
+	std::wstring Join(const std::wstring& Folder, const std::wstring& Name)
 	{
 		return Folder.empty() ? Name : Folder + L"/" + Name;
 	}
 
-	static bool StartsWith(const std::wstring& Text, const wchar_t* Prefix)
+	bool StartsWith(const std::wstring& Text, const wchar_t* Prefix)
 	{
 		return Text.rfind(Prefix, 0) == 0;
 	}
 
-	static bool EndsWith(const std::wstring& Text, const wchar_t* Suffix)
+	bool EndsWith(const std::wstring& Text, const wchar_t* Suffix)
 	{
 		size_t Length = wcslen(Suffix);
 		return Text.size() >= Length && Text.compare(Text.size() - Length, Length, Suffix) == 0;
@@ -65,7 +65,7 @@ namespace PakMods {
 		return Out + Part;
 	}
 
-	static std::string Narrow(const std::wstring& Text)
+	std::string Narrow(const std::wstring& Text)
 	{
 		int Size = WideCharToMultiByte(CP_UTF8, 0, Text.c_str(), (int)Text.size(), nullptr, 0, nullptr, nullptr);
 		std::string Out(Size, '\0');
@@ -74,7 +74,7 @@ namespace PakMods {
 		return Out;
 	}
 
-	static bool IsGamePak(const std::wstring& Name, const std::wstring& Folder)
+	bool IsGamePak(const std::wstring& Name, const std::wstring& Folder)
 	{ // pakchunkN-WindowsNoEditor, pakpcN-WindowsNoEditor and global, right in Paks
 		if (!Folder.empty())
 			return false;
@@ -82,7 +82,7 @@ namespace PakMods {
 		return Lowered == L"global" || ((StartsWith(Lowered, L"pakchunk") || StartsWith(Lowered, L"pakpc")) && EndsWith(Lowered, L"-windowsnoeditor"));
 	}
 
-	static int PriorityFromName(const std::wstring& Name)
+	int PriorityFromName(const std::wstring& Name)
 	{ // "Name_P12" -> 12. A plain "_P" is the engine's patch naming, no priority
 		size_t At = Lower(Name).rfind(L"_p");
 		if (At == std::wstring::npos || At + 2 >= Name.size() || Name.size() - At - 2 > 6)
@@ -96,17 +96,17 @@ namespace PakMods {
 	}
 
 	// What the game sorts Paks by: the path under Paks without case
-	static std::wstring MountKey(const Mod& mod, const Container& Pak)
+	std::wstring MountKey(const Mod& mod, const Container& Pak)
 	{
 		return Lower(Join(Join(mod.Folder, Pak.Folder), Pak.Name) + L".pak");
 	}
 
-	static std::wstring MountKey(const Mod& mod)
+	std::wstring MountKey(const Mod& mod)
 	{
 		return mod.Paks.empty() ? Lower(Join(mod.Folder, mod.Name)) : MountKey(mod, mod.Paks.front());
 	}
 
-	static uint32_t TopOrder(const Mod& mod)
+	uint32_t TopOrder(const Mod& mod)
 	{
 		uint32_t Top = 0;
 		for (size_t i = 0; i < mod.Paks.size(); i++)
@@ -114,13 +114,13 @@ namespace PakMods {
 		return Top;
 	}
 
-	static bool ComparePaks(const Container& A, const Container& B)
+	bool ComparePaks(const Container& A, const Container& B)
 	{
 		return Lower(Join(A.Folder, A.Name)) < Lower(Join(B.Folder, B.Name));
 	}
 
 	// Content\Mods: one priority for all, _P<n> above it. Between mods with the same one the mount order decides
-	static void OrderModsFolder()
+	void OrderModsFolder()
 	{
 		for (size_t i = 0; i < Mods.size(); i++)
 		{
@@ -133,7 +133,7 @@ namespace PakMods {
 		}
 	}
 
-	static bool StrongerMount(const Mod* A, const Mod* B)
+	bool StrongerMount(const Mod* A, const Mod* B)
 	{
 		if (TopOrder(*A) != TopOrder(*B))
 			return TopOrder(*A) > TopOrder(*B);
@@ -145,7 +145,7 @@ namespace PakMods {
 
 	// Strongest first: priority, then mount order. Paks: our IoStore only mods first, then last path first.
 	// Content\Mods: last path first
-	static void RankMounts()
+	void RankMounts()
 	{
 		std::vector<Mod*> Order;
 		for (size_t i = 0; i < Mods.size(); i++)
@@ -155,13 +155,13 @@ namespace PakMods {
 			Order[i]->MountRank = (int)i;
 	}
 
-	static bool IsGameAsset(const std::wstring& File)
+	bool IsGameAsset(const std::wstring& File)
 	{
 		return EndsWith(File, L".uasset") || EndsWith(File, L".umap") || EndsWith(File, L".uexp") || EndsWith(File, L".ubulk");
 	}
 
 	// The pak's own description.txt, the one nearest its root. Loose files are in the .pak, never the .utoc
-	static std::wstring DescriptionIn(const PakContents::Listing& Files)
+	std::wstring DescriptionIn(const PakContents::Listing& Files)
 	{
 		std::wstring Found;
 		std::wstring Name = std::wstring(L"/") + DESCRIPTION_FILE;
@@ -199,7 +199,7 @@ namespace PakMods {
 	};
 
 	// Shared files of Mine that Theirs has too, the ones Mine loses go to Lost
-	static size_t CountShared(const FileSet& Mine, const FileSet& Theirs, bool bOtherWins, std::unordered_map<std::wstring, bool>& Lost)
+	size_t CountShared(const FileSet& Mine, const FileSet& Theirs, bool bOtherWins, std::unordered_map<std::wstring, bool>& Lost)
 	{
 		size_t Shared = 0;
 		for (size_t i = 0; i < Mine.List.size(); i++)
@@ -213,14 +213,14 @@ namespace PakMods {
 		return Shared;
 	}
 
-	static bool StrongerOverride(const Override& A, const Override& B)
+	bool StrongerOverride(const Override& A, const Override& B)
 	{
 		return Find(A.Key)->MountRank < Find(B.Key)->MountRank;
 	}
 
 	// Which files of each mod the game really uses, against the paks that are on. A mod is checked whole, as if all of
 	// it were on
-	static void AnalyzeLoading(const std::wstring& LastGamePak)
+	void AnalyzeLoading(const std::wstring& LastGamePak)
 	{
 		std::vector<Contents> All(Mods.size()), Loading(Mods.size());
 		for (size_t i = 0; i < Mods.size(); i++)
@@ -283,13 +283,13 @@ namespace PakMods {
 		}
 	}
 
-	static std::wstring ParentFolder(const std::wstring& Path)
+	std::wstring ParentFolder(const std::wstring& Path)
 	{
 		size_t Slash = Path.find_last_of(L"\\/");
 		return Slash == std::wstring::npos ? L"" : Path.substr(0, Slash);
 	}
 
-	static std::wstring ContentFolder()
+	std::wstring ContentFolder()
 	{ // MK12\Binaries\Win64\MK12.exe
 		wchar_t ExePath[MAX_PATH] = {};
 		GetModuleFileNameW(nullptr, ExePath, MAX_PATH);
@@ -315,7 +315,7 @@ namespace PakMods {
 		bool							bStop;	// A folder couldn't be listed, like the game's directory iterator we stop there
 	};
 
-	static void AddFound(ScanState& Scan, const std::wstring& Folder, const std::wstring& Name, const std::wstring& Extension)
+	void AddFound(ScanState& Scan, const std::wstring& Folder, const std::wstring& Name, const std::wstring& Extension)
 	{
 		if (Scan.From == Source::Paks && IsGamePak(Name, Folder))
 		{
@@ -347,7 +347,7 @@ namespace PakMods {
 			Entry.bIoStore = true;
 	}
 
-	static void ScanFolder(ScanState& Scan, const std::wstring& Folder)
+	void ScanFolder(ScanState& Scan, const std::wstring& Folder)
 	{ // Folder: under the root, forward slashes
 		if (Scan.bStop)
 			return;
@@ -383,7 +383,7 @@ namespace PakMods {
 		FindClose(Find);
 	}
 
-	static bool CompareFound(const FoundPak& A, const FoundPak& B)
+	bool CompareFound(const FoundPak& A, const FoundPak& B)
 	{ // Mod (folder, name), then pak (folder, name)
 		if (A.ModFolder != B.ModFolder)
 			return A.ModFolder < B.ModFolder;
@@ -396,7 +396,7 @@ namespace PakMods {
 
 	// Paks: every pak is a mod. Content\Mods: a folder right under it is one mod with all the paks inside, a pak right in
 	// it is a mod of its own. Paks also gives the game pak that mounts first
-	static std::vector<FoundPak> Scan(const std::wstring& Root, Source From, std::wstring* LastGamePak)
+	std::vector<FoundPak> Scan(const std::wstring& Root, Source From, std::wstring* LastGamePak)
 	{
 		ScanState State;
 		State.Root = Root;
@@ -408,7 +408,7 @@ namespace PakMods {
 		return State.Found;
 	}
 
-	static void AddMods(const std::vector<FoundPak>& Found, Source From, CIniReader& StateIni)
+	void AddMods(const std::vector<FoundPak>& Found, Source From, CIniReader& StateIni)
 	{
 		for (size_t First = 0; First < Found.size();)
 		{
@@ -441,7 +441,7 @@ namespace PakMods {
 		}
 	}
 
-	static std::wstring Trimmed(std::wstring Text)
+	std::wstring Trimmed(std::wstring Text)
 	{ // No carriage returns or blanks around it, the start of it only
 		Text.erase(std::remove(Text.begin(), Text.end(), L'\r'), Text.end());
 		size_t First = Text.find_first_not_of(L" \t\n");
@@ -451,7 +451,7 @@ namespace PakMods {
 		return Text.size() > DESCRIPTION_MAX_CHARS ? Text.substr(0, DESCRIPTION_MAX_CHARS) + L"..." : Text;
 	}
 
-	static std::wstring ReadDescription(const std::wstring& Path)
+	std::wstring ReadDescription(const std::wstring& Path)
 	{ // UTF-8 or UTF-16
 		std::ifstream File(Path.c_str(), std::ios::binary);
 		if (!File)
@@ -474,14 +474,14 @@ namespace PakMods {
 		return Trimmed(Text);
 	}
 
-	static std::wstring TreeOrder(const std::wstring& Path)
+	std::wstring TreeOrder(const std::wstring& Path)
 	{ // One folder level at a time, so a folder's paks and subfolders follow it
 		std::wstring Key = Lower(Path);
 		std::replace(Key.begin(), Key.end(), L'/', L'\x01');
 		return Key;
 	}
 
-	static std::vector<std::wstring> FolderChain(const std::wstring& Folder)
+	std::vector<std::wstring> FolderChain(const std::wstring& Folder)
 	{ // "a/b/c" -> "a", "a/b", "a/b/c"
 		std::vector<std::wstring> Chain;
 		for (size_t Slash = 0; !Folder.empty(); Slash++)
@@ -494,7 +494,7 @@ namespace PakMods {
 		return Chain;
 	}
 
-	static bool IsInside(const std::wstring& Path, const std::wstring& Folder)
+	bool IsInside(const std::wstring& Path, const std::wstring& Folder)
 	{
 		std::wstring Lowered = Lower(Path), Parent = Lower(Folder);
 		return Lowered.size() > Parent.size() && Lowered.compare(0, Parent.size(), Parent) == 0 && Lowered[Parent.size()] == L'/';
@@ -502,7 +502,7 @@ namespace PakMods {
 
 	static const Mod* SortingMod = nullptr; // For ComparePakIndex
 
-	static bool ComparePakIndex(size_t A, size_t B)
+	bool ComparePakIndex(size_t A, size_t B)
 	{ // Folder tree order, then name
 		const Container& PakA = SortingMod->Paks[A];
 		const Container& PakB = SortingMod->Paks[B];
@@ -512,7 +512,7 @@ namespace PakMods {
 	}
 
 	// Content\Mods with several paks: a switch per pak and per folder holding more than one, and what really loads
-	static void BuildSwitches(Mod& mod, CIniReader& StateIni)
+	void BuildSwitches(Mod& mod, CIniReader& StateIni)
 	{
 		for (size_t i = 0; i < mod.Paks.size(); i++)
 			mod.Paks[i].bLoads = mod.bEnabled;
@@ -602,7 +602,7 @@ namespace PakMods {
 		return false;
 	}
 
-	static bool CompareMods(const Mod& A, const Mod& B)
+	bool CompareMods(const Mod& A, const Mod& B)
 	{ // Content\Mods first, then Paks, each by path
 		if (A.From != B.From)
 			return A.From == Source::ModsFolder;
@@ -685,7 +685,7 @@ namespace PakMods {
 	}
 
 	// The game's mount sets up the IoStore container next to the .pak path, even without a .pak
-	static void MountPak(void* PakPlatformFile, MountType* Mount, const Mod& mod, Container& Pak)
+	void MountPak(void* PakPlatformFile, MountType* Mount, const Mod& mod, Container& Pak)
 	{
 		std::wstring PakPath = FileOf(mod, Pak, L".pak");
 		__int64 Result = Mount(PakPlatformFile, PakPath.c_str(), Pak.Order, nullptr, true);
@@ -704,7 +704,7 @@ namespace PakMods {
 		}
 	}
 
-	static bool CompareRank(const Mod* A, const Mod* B)
+	bool CompareRank(const Mod* A, const Mod* B)
 	{
 		return A->MountRank < B->MountRank;
 	}

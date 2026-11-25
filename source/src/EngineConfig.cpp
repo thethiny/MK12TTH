@@ -22,14 +22,14 @@ namespace EngineConfig {
 	static std::vector<LooseFile>	Loose;
 	static GameFunctions			Game = {};
 
-	static std::wstring Lower(std::wstring Text)
+	std::wstring Lower(std::wstring Text)
 	{
 		for (size_t i = 0; i < Text.size(); i++)
 			Text[i] = (wchar_t)towlower(Text[i]);
 		return Text;
 	}
 
-	static std::wstring Trim(const std::wstring& Text)
+	std::wstring Trim(const std::wstring& Text)
 	{
 		size_t Start = Text.find_first_not_of(L" \t\r\n");
 		size_t End = Text.find_last_not_of(L" \t\r\n");
@@ -37,7 +37,7 @@ namespace EngineConfig {
 	}
 
 	// Single values only: keys that show up twice in a section are lists, and so are the +, -, ., ! ones
-	static std::vector<Value> Parse(const std::wstring& Text)
+	std::vector<Value> Parse(const std::wstring& Text)
 	{
 		std::vector<Value> Values;
 		std::map<std::wstring, int> Seen; // Lowercase section \n key
@@ -73,7 +73,7 @@ namespace EngineConfig {
 		return Single;
 	}
 
-	static std::wstring ReadText(const std::wstring& Path)
+	std::wstring ReadText(const std::wstring& Path)
 	{
 		std::string Bytes;
 		std::ifstream File(Path.c_str(), std::ios::binary);
@@ -95,7 +95,7 @@ namespace EngineConfig {
 		return Text;
 	}
 
-	static const PakMods::Mod* OwnerOf(const std::wstring& ModFolder)
+	const PakMods::Mod* OwnerOf(const std::wstring& ModFolder)
 	{
 		const std::vector<PakMods::Mod>& Mods = PakMods::List();
 		for (size_t i = 0; i < Mods.size(); i++)
@@ -114,7 +114,7 @@ namespace EngineConfig {
 
 	// Every Engine.ini under Folder, folders in the order Windows lists them. A folder that can't be listed stops the
 	// whole search (bStop)
-	static void FindInis(const std::wstring& Dir, const std::wstring& Folder, std::vector<FoundIni>& Found, bool& bStop)
+	void FindInis(const std::wstring& Dir, const std::wstring& Folder, std::vector<FoundIni>& Found, bool& bStop)
 	{
 		WIN32_FIND_DATAW Data;
 		HANDLE Find = FindFirstFileW(PakMods::PathAppend(Dir, L"*").c_str(), &Data);
@@ -145,7 +145,7 @@ namespace EngineConfig {
 		FindClose(Find);
 	}
 
-	static std::vector<FoundIni> FindInis(const std::wstring& Root)
+	std::vector<FoundIni> FindInis(const std::wstring& Root)
 	{
 		std::vector<FoundIni> Found;
 		bool bStop = false;
@@ -153,7 +153,7 @@ namespace EngineConfig {
 		return Found;
 	}
 
-	static void WarnOutside(PakMods::Source From)
+	void WarnOutside(PakMods::Source From)
 	{
 		std::vector<FoundIni> Found = FindInis(PakMods::Root(From));
 		for (size_t i = 0; i < Found.size(); i++)
@@ -200,13 +200,13 @@ namespace EngineConfig {
 		Game = Functions;
 	}
 
-	static bool IsLooseFileOn(const LooseFile& File)
+	bool IsLooseFileOn(const LooseFile& File)
 	{
 		const PakMods::Mod* Owner = OwnerOf(File.ModFolder);
 		return Owner && Owner->bEnabled;
 	}
 
-	static std::wstring CurrentValue(void* Config, const Value& value)
+	std::wstring CurrentValue(void* Config, const Value& value)
 	{
 		MK12::FString Current = { nullptr, 0, 0 };
 		((GetStringType*)Game.GetString)(Config, &Current, value.Section.c_str(), value.Key.c_str(), Game.EngineIniName);
@@ -216,7 +216,7 @@ namespace EngineConfig {
 		return Text;
 	}
 
-	static int Apply(void* Config, const std::vector<Value>& Values, const std::wstring& From, std::map<std::wstring, std::wstring>& SetBy)
+	int Apply(void* Config, const std::vector<Value>& Values, const std::wstring& From, std::map<std::wstring, std::wstring>& SetBy)
 	{
 		int Applied = 0;
 		for (size_t i = 0; i < Values.size(); i++)
@@ -236,7 +236,7 @@ namespace EngineConfig {
 		return Applied;
 	}
 
-	static bool WeakerFirst(const LooseFile* A, const LooseFile* B)
+	bool WeakerFirst(const LooseFile* A, const LooseFile* B)
 	{
 		return OwnerOf(A->ModFolder)->MountRank > OwnerOf(B->ModFolder)->MountRank;
 	}

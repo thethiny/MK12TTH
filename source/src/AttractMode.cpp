@@ -31,19 +31,19 @@ namespace AttractMode {
 		static int32_t					WrittenSeconds	= -1;
 		static int32_t					RetryIn			= 0; // Frames until the next search while the wait isn't found
 
-		static bool IsNumber(const MK12::FScriptConstant& Constant)
+		bool IsNumber(const MK12::FScriptConstant& Constant)
 		{
 			return Constant.Kind != MK12::SCRIPT_CONSTANT_REFERENCE;
 		}
 
-		static bool IsGameWait(const MK12::FScriptConstant* At)
+		bool IsGameWait(const MK12::FScriptConstant* At)
 		{ // The game's own values, as the script ships them
 			return IsNumber(At[0]) && At[0].Value == GameSeconds * FRAMES_PER_SECOND
 				&& IsNumber(At[1]) && At[1].Value == 1
 				&& IsNumber(At[2]) && At[2].Value > 0 && At[2].Value < At[0].Value;
 		}
 
-		static int32_t FindWait(const MK12::TArray<MK12::FScriptConstant>& List)
+		int32_t FindWait(const MK12::TArray<MK12::FScriptConstant>& List)
 		{ // Where the wait sits in this script's list: the only place with the game's values, else -1
 			if (!List.Data || List.ElementsCount < 3 || List.ElementsCount > List.Size || List.Size > MAX_CONSTANTS)
 				return -1;
@@ -59,13 +59,13 @@ namespace AttractMode {
 			return Found;
 		}
 
-		static bool StillOurs(const MK12::TArray<MK12::FScriptConstant>& List)
+		bool StillOurs(const MK12::TArray<MK12::FScriptConstant>& List)
 		{
 			return List.Data == Data && Index >= 0 && Index + 2 < List.ElementsCount
 				&& Data[Index].Value == WrittenWait && Data[Index + 2].Value == WrittenReady;
 		}
 
-		static void Write(int32_t Delay)
+		void Write(int32_t Delay)
 		{
 			int64_t Wait = Delay == Never ? INT_MAX : (int64_t)Delay * FRAMES_PER_SECOND;
 			int64_t Ready = Delay == Never ? INT_MAX : (Wait > Lead ? Wait - Lead : 0);
@@ -83,7 +83,7 @@ namespace AttractMode {
 			}
 		}
 
-		static void LogList(const MK12::FScriptRecord* Loaded, const MK12::TArray<MK12::FScriptConstant>& List)
+		void LogList(const MK12::FScriptRecord* Loaded, const MK12::TArray<MK12::FScriptConstant>& List)
 		{ // What the loaded script holds, for the dev log: once per list the search failed on
 			if (!SettingsMgr->ShouldLogDev())
 				return;
@@ -97,7 +97,7 @@ namespace AttractMode {
 				printf("  [%d] %lld kind 0x%X\n", i, (long long)List.Data[i].Value, List.Data[i].Kind);
 		}
 
-		static void Tick()
+		void Tick()
 		{
 			MK12::FScriptRecord* Loaded = MK12::FindScript(ScriptHash);
 			if (!Loaded)
@@ -139,7 +139,7 @@ namespace AttractMode {
 		}
 	}
 
-	static bool WriteLimit(uint32_t Frames)
+	bool WriteLimit(uint32_t Frames)
 	{
 		DWORD Old;
 		if (!Limit || !VirtualProtect(Limit, sizeof(*Limit), PAGE_EXECUTE_READWRITE, &Old))

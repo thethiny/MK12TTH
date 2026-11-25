@@ -22,7 +22,7 @@ namespace FloydFight {
 	static uint32_t GameRetriesOwn = 0; // The game's value before we wrote ours
 	static bool bRetriesWritten = false; // GAME never writes: it only gives the game's value back after ours
 
-	static int ReadChoice(const char* Key, const std::vector<Option>& Options)
+	int ReadChoice(const char* Key, const std::vector<Option>& Options)
 	{
 		CIniReader ini((char*)StateFile::FileName());
 		char* Saved = ini.ReadString((char*)StateFile::LIVE, (char*)Key, (char*)Options[GAME].Value);
@@ -36,7 +36,7 @@ namespace FloydFight {
 		return Picked;
 	}
 
-	static void Build()
+	void Build()
 	{
 		if (!Levels.empty())
 			return;
@@ -87,7 +87,7 @@ namespace FloydFight {
 		return RetryChoice;
 	}
 
-	static void Save(const char* Key, const char* Value)
+	void Save(const char* Key, const char* Value)
 	{
 		CIniReader ini((char*)StateFile::FileName());
 		ini.WriteString((char*)StateFile::LIVE, (char*)Key, (char*)Value);
@@ -95,7 +95,7 @@ namespace FloydFight {
 
 	// The game reads it as a match ends and in the pause menu. GAME leaves it alone, or gives back the game's own
 	// value once after ours
-	static void ApplyRetries()
+	void ApplyRetries()
 	{
 		if (!GameRetries)
 			return;

@@ -40,7 +40,7 @@ namespace Announcer {
 	static int					Choice				= GAME;
 	static const char*			AutoItem			= nullptr; // The fight's fighter's announcer, null without one
 	static void*				LastAudioSettings	= nullptr;
-	static const char* AutoPick();
+	const char* AutoPick();
 
 	const std::vector<Option>& Options()
 	{
@@ -77,7 +77,7 @@ namespace Announcer {
 		return Choice;
 	}
 
-	static const char* Target(bool bMenus)
+	const char* Target(bool bMenus)
 	{ // Null keeps the player's setting. AUTO leaves menus alone
 		if (Choice == GAME || (Choice == AUTO && bMenus))
 			return nullptr;
@@ -86,13 +86,13 @@ namespace Announcer {
 		return Options()[Choice].Value;
 	}
 
-	static void RestorePlayerSetting()
+	void RestorePlayerSetting()
 	{
 		if (LastAudioSettings && MK12::AnnouncerSetter)
 			MK12::AnnouncerSetter(LastAudioSettings, (MK12::FString*)((char*)LastAudioSettings + AUDIO_SETTINGS_VOICE));
 	}
 
-	static void Apply(bool bMenus)
+	void Apply(bool bMenus)
 	{
 		if (!IsReady() || GameState::IsOnline())
 			return;
@@ -129,7 +129,7 @@ namespace Announcer {
 		bool					bFound;
 	};
 
-	static bool TakeHumanName(int32_t Team, char* Fighter, void* Context)
+	bool TakeHumanName(int32_t Team, char* Fighter, void* Context)
 	{ // A bad read gives up instead of crashing
 		HumanSearch* Search = (HumanSearch*)Context;
 		__try
@@ -146,14 +146,14 @@ namespace Announcer {
 	}
 
 	// The first human player's fighter name, false without one
-	static bool ReadFirstHumanName(MK12::FNameInfoStruct* Out)
+	bool ReadFirstHumanName(MK12::FNameInfoStruct* Out)
 	{
 		HumanSearch Search = { Out, false };
 		Fight::ForEachFighter(TakeHumanName, &Search);
 		return Search.bFound;
 	}
 
-	static const char* ItemFor(const char* Fighter)
+	const char* ItemFor(const char* Fighter)
 	{
 		for (size_t i = 0; i < _countof(VOICES); i++)
 		{
@@ -163,7 +163,7 @@ namespace Announcer {
 		return nullptr;
 	}
 
-	static std::string FighterName(MK12::FNameInfoStruct& NameInfo)
+	std::string FighterName(MK12::FNameInfoStruct& NameInfo)
 	{ // Short, "SubZero"
 		MK12::FName* Name = MK12::UNameTable ? MK12::NameTableIndexToFName(&NameInfo) : nullptr;
 		if (!Name)
@@ -173,7 +173,7 @@ namespace Announcer {
 		return Dot == std::string::npos ? Fighter : Fighter.substr(Dot + 1);
 	}
 
-	static const char* AutoPick()
+	const char* AutoPick()
 	{
 		MK12::FNameInfoStruct NameInfo;
 		if (!MK12::UNameTable || !ReadFirstHumanName(&NameInfo))

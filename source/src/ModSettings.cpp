@@ -114,10 +114,10 @@ namespace ModSettings {
 	};
 
 	static void Restart(const std::wstring& BeforeStart = L"");
-	static void AddSettingsRow(const Row& row);
-	static const wchar_t* Own(const std::wstring& Text);
+	void AddSettingsRow(const Row& row);
+	const wchar_t* Own(const std::wstring& Text);
 
-	static std::vector<Choice> OffOn()
+	std::vector<Choice> OffOn()
 	{
 		std::vector<Choice> Choices;
 		Choices.push_back({ L"OFF", "false" });
@@ -128,7 +128,7 @@ namespace ModSettings {
 	constexpr int32_t ON = 1;
 
 	// Shared by the saved rows (Settings) and the live ones (MODS)
-	static std::vector<Choice> AttractDelays()
+	std::vector<Choice> AttractDelays()
 	{
 		std::vector<Choice> Choices;
 		Choices.push_back({ L"GAME", "Game", L"After 30 seconds, like the game." });
@@ -140,7 +140,7 @@ namespace ModSettings {
 		return Choices;
 	}
 
-	static std::vector<Choice> LogLevels()
+	std::vector<Choice> LogLevels()
 	{
 		std::vector<Choice> Choices;
 		Choices.push_back({ L"NONE", "0", L"Results only." });
@@ -214,14 +214,14 @@ namespace ModSettings {
 	static Group InGameGroup		= { L"MK12TTH", L"MK12TTH_InGameDesc", { &InGamePage } };
 	static Group InGameDebugGroup	= { L"MK12TTH", L"MK12TTH_InGameDesc", { &InGameDebugPage } };
 
-	static std::vector<Group*> SettingsGroups()
+	std::vector<Group*> SettingsGroups()
 	{
 		std::vector<Group*> Groups;
 		Groups.push_back(&SettingsGroup);
 		return Groups;
 	}
 
-	static std::vector<Group*> MenuGroups()
+	std::vector<Group*> MenuGroups()
 	{
 		std::vector<Group*> Groups;
 		Groups.push_back(&PakModsGroup);
@@ -232,7 +232,7 @@ namespace ModSettings {
 		return Groups;
 	}
 
-	static std::vector<Group*> AllGroups()
+	std::vector<Group*> AllGroups()
 	{
 		std::vector<Group*> Groups;
 		Groups.push_back(&SettingsGroup);
@@ -248,9 +248,9 @@ namespace ModSettings {
 
 	// Without the game's page switch a group of several pages becomes an entry per page, "GROUP: PAGE"
 	static std::vector<Group*> SplitGroups;
-	static bool HasSections();
+	bool HasSections();
 
-	static std::vector<Group*> Entries(const std::vector<Group*>& Groups)
+	std::vector<Group*> Entries(const std::vector<Group*>& Groups)
 	{
 		if (HasSections())
 			return Groups;
@@ -286,7 +286,7 @@ namespace ModSettings {
 		return Out;
 	}
 
-	static std::vector<Page*> AllPages()
+	std::vector<Page*> AllPages()
 	{
 		std::vector<Page*> Pages;
 		std::vector<Group*> Groups = AllGroups();
@@ -316,7 +316,7 @@ namespace ModSettings {
 	static bool bAskNow = false; // Enter on one of our pages: ask without waiting for the screen to close
 	static std::vector<int32_t> LastAskedValues;
 
-	static int32_t ReadValue(const Row& row)
+	int32_t ReadValue(const Row& row)
 	{
 		CIniReader ini((char*)row.IniFile);
 		char* Stored = ini.ReadString((char*)row.Section, (char*)row.Key, "");
@@ -333,40 +333,40 @@ namespace ModSettings {
 		return Value;
 	}
 
-	static void WriteValue(const Row& row)
+	void WriteValue(const Row& row)
 	{
 		CIniReader ini((char*)row.IniFile);
 		ini.WriteString((char*)row.Section, (char*)row.Key, (char*)row.Choices[row.Value].IniValue);
 	}
 
-	static const wchar_t* Own(const std::wstring& Text)
+	const wchar_t* Own(const std::wstring& Text)
 	{ // Text built at runtime, kept for good
 		wchar_t* Copy = new wchar_t[Text.size() + 1];
 		wcscpy_s(Copy, Text.size() + 1, Text.c_str());
 		return Copy;
 	}
 
-	static std::wstring Upper(std::wstring Text)
+	std::wstring Upper(std::wstring Text)
 	{
 		for (size_t i = 0; i < Text.size(); i++)
 			Text[i] = (wchar_t)towupper(Text[i]);
 		return Text;
 	}
 
-	static std::wstring Colored(const wchar_t* Color, const std::wstring& Text)
+	std::wstring Colored(const wchar_t* Color, const std::wstring& Text)
 	{
 		return std::wstring(L"<FONT COLOR='") + Color + L"'>" + Text + L"</font>";
 	}
 
-	static std::wstring Red(const std::wstring& Text) { return Colored(MK_RED_COLOR, Text); }
-	static std::wstring Green(const std::wstring& Text) { return Colored(MK_GREEN_COLOR, Text); }
+	std::wstring Red(const std::wstring& Text) { return Colored(MK_RED_COLOR, Text); }
+	std::wstring Green(const std::wstring& Text) { return Colored(MK_GREEN_COLOR, Text); }
 
-	static std::wstring Widen(const std::string& Text)
+	std::wstring Widen(const std::string& Text)
 	{
 		return std::wstring(Text.begin(), Text.end());
 	}
 
-	static std::wstring OverrideList(const std::vector<PakMods::Override>& Mods)
+	std::wstring OverrideList(const std::vector<PakMods::Override>& Mods)
 	{ // "Mod (12), Other (3)"
 		std::wstring Text;
 		for (size_t i = 0; i < Mods.size(); i++)
@@ -375,7 +375,7 @@ namespace ModSettings {
 	}
 
 	// What a mod's row says about how much of it the game really uses
-	static std::wstring LoadText(const PakMods::Mod& mod)
+	std::wstring LoadText(const PakMods::Mod& mod)
 	{
 		const PakMods::LoadInfo& Load = mod.Load;
 		std::wstring Text;
@@ -400,7 +400,7 @@ namespace ModSettings {
 		return Text;
 	}
 
-	static std::wstring LoadSummary(const PakMods::Mod& mod)
+	std::wstring LoadSummary(const PakMods::Mod& mod)
 	{ // The short version, under the value while it's ON
 		const PakMods::LoadInfo& Load = mod.Load;
 		if (!Load.LostTo.empty() && Load.Lost >= Load.Files)
@@ -414,7 +414,7 @@ namespace ModSettings {
 		return L"";
 	}
 
-	static std::wstring EngineValues(const EngineConfig::LooseFile& File)
+	std::wstring EngineValues(const EngineConfig::LooseFile& File)
 	{
 		std::wstring Text;
 		for (size_t i = 0; i < File.Values.size(); i++)
@@ -422,13 +422,13 @@ namespace ModSettings {
 		return Text.empty() ? L"none" : Text;
 	}
 
-	static std::wstring WhereIs(PakMods::Source From, const std::wstring& Folder)
+	std::wstring WhereIs(PakMods::Source From, const std::wstring& Folder)
 	{
 		std::wstring Root = From == PakMods::Source::ModsFolder ? L"Content\\Mods" : L"Content\\Paks";
 		return Folder.empty() ? Root : Root + L"\\" + Folder;
 	}
 
-	static std::wstring OrderText(const PakMods::Mod& mod)
+	std::wstring OrderText(const PakMods::Mod& mod)
 	{ // How the mod's place in the load order was picked
 		if (mod.From == PakMods::Source::Paks)
 			return L"\n\n" MK_BOLD(L"Load order: ") L"the game's own, by path. Content\\Mods loads over it.";
@@ -439,14 +439,14 @@ namespace ModSettings {
 			L"the same file, the one whose name comes last wins. End its name with _P and a number to raise it.";
 	}
 
-	static const wchar_t* KindText(PakMods::Kind Type)
+	const wchar_t* KindText(PakMods::Kind Type)
 	{
 		return Type == PakMods::Kind::Pak ? L".pak only"
 			: Type == PakMods::Kind::IoStore ? L".pak, .utoc and .ucas"
 			: L".utoc and .ucas, mounted by MK12TTH since the game only looks for .pak files";
 	}
 
-	static std::wstring PakFiles(const PakMods::Mod& mod)
+	std::wstring PakFiles(const PakMods::Mod& mod)
 	{ // One pak: what it has. Several: each by name
 		if (mod.Paks.size() == 1)
 			return KindText(mod.Paks.front().Type);
@@ -459,13 +459,13 @@ namespace ModSettings {
 		return Text;
 	}
 
-	static std::wstring BackSlashes(std::wstring Path)
+	std::wstring BackSlashes(std::wstring Path)
 	{
 		std::replace(Path.begin(), Path.end(), L'/', L'\\');
 		return Path;
 	}
 
-	static std::wstring PlainText(const std::wstring& Text)
+	std::wstring PlainText(const std::wstring& Text)
 	{ // A creator's text shown as is, not as markup
 		std::wstring Out;
 		for (size_t i = 0; i < Text.size(); i++)
@@ -476,12 +476,12 @@ namespace ModSettings {
 		return Out;
 	}
 
-	static std::wstring DescriptionText(const std::wstring& Description)
+	std::wstring DescriptionText(const std::wstring& Description)
 	{
 		return Description.empty() ? L"" : L"\n\n" + PlainText(Description);
 	}
 
-	static bool IsModTitleTaken(const std::wstring& Title)
+	bool IsModTitleTaken(const std::wstring& Title)
 	{
 		for (size_t i = 0; i < ModRows.size(); i++)
 		{
@@ -491,7 +491,7 @@ namespace ModSettings {
 		return false;
 	}
 
-	static std::wstring UniqueModTitle(std::wstring Title, const std::wstring& Where)
+	std::wstring UniqueModTitle(std::wstring Title, const std::wstring& Where)
 	{ // The screen finds rows by title, two mod rows never share one
 		if (IsModTitleTaken(Title))
 			Title += L" (" + Upper(Where) + L")";
@@ -500,7 +500,7 @@ namespace ModSettings {
 		return Title;
 	}
 
-	static Row& AddModRow(Page& page, const Row& row, const std::wstring& Summary = L"")
+	Row& AddModRow(Page& page, const Row& row, const std::wstring& Summary = L"")
 	{
 		Row* Added = new Row(row);
 		Added->IniFile = StateFile::FileName();
@@ -511,7 +511,7 @@ namespace ModSettings {
 		return *Added;
 	}
 
-	static std::wstring InsideText(const PakMods::Mod& mod, const PakMods::Switch& Entry)
+	std::wstring InsideText(const PakMods::Mod& mod, const PakMods::Switch& Entry)
 	{
 		if (Entry.bFolder)
 		{
@@ -532,14 +532,14 @@ namespace ModSettings {
 			+ L"\n\nMounts only when the folders above it and its mod are on too. Turning it off keeps the game from mounting it after a restart.";
 	}
 
-	static void DescribeInside(Row& row)
+	void DescribeInside(Row& row)
 	{ // As the menu opens: paks mounted since startup bring their own description.txt
 		row.InfoText = InsideText(*row.Mod, *row.ModSwitch);
 		row.Description = row.InfoText.c_str();
 	}
 
 	// The folders and paks of a mod with several paks, each with its own switch, under the mod's row
-	static void AddInsideRows(Page& page, const PakMods::Mod& mod)
+	void AddInsideRows(Page& page, const PakMods::Mod& mod)
 	{
 		for (size_t i = 0; i < mod.Switches.size(); i++)
 		{
@@ -557,7 +557,7 @@ namespace ModSettings {
 	}
 
 	// A mod's own row. A single pak shows its description.txt, a folder of paks its folder's
-	static std::wstring ModText(const PakMods::Mod& mod)
+	std::wstring ModText(const PakMods::Mod& mod)
 	{
 		std::wstring Engine;
 		std::vector<const EngineConfig::LooseFile*> Files = EngineConfig::FilesFor(mod);
@@ -572,19 +572,19 @@ namespace ModSettings {
 			+ Engine + OrderText(mod) + LoadText(mod) + Inside + L"\n\nTurning it off keeps the game from mounting it after a restart.";
 	}
 
-	static void DescribeMod(Row& row)
+	void DescribeMod(Row& row)
 	{
 		row.InfoText = ModText(*row.Mod);
 		row.Description = row.InfoText.c_str();
 	}
 
-	static void RefreshEmpty(Row& row)
+	void RefreshEmpty(Row& row)
 	{
 		wcsncpy_s(row.InfoLabel, L"EMPTY", _TRUNCATE);
 	}
 
 	// Content\Mods and Content\Paks always show, so players know they're there
-	static void AddNoModsRow(Page& page, const wchar_t* Description)
+	void AddNoModsRow(Page& page, const wchar_t* Description)
 	{
 		Row* row = new Row;
 		row->Title = L"NO MODS YET";
@@ -596,7 +596,7 @@ namespace ModSettings {
 		page.Rows.push_back(row);
 	}
 
-	static void AddActionRow(Page& page, const wchar_t* Title, const wchar_t* Description, ActionType* Action)
+	void AddActionRow(Page& page, const wchar_t* Title, const wchar_t* Description, ActionType* Action)
 	{
 		Row* row = new Row;
 		row->Title = Title;
@@ -607,7 +607,7 @@ namespace ModSettings {
 		page.Rows.push_back(row);
 	}
 
-	static std::wstring PowerShellQuoted(const std::wstring& Text)
+	std::wstring PowerShellQuoted(const std::wstring& Text)
 	{
 		std::wstring Out = L"'";
 		for (size_t i = 0; i < Text.size(); i++)
@@ -617,7 +617,7 @@ namespace ModSettings {
 
 	// Content\Paks mods move to Content\Mods with their folder: a pak right in Paks becomes a mod of its own, a folder of
 	// paks one mod. The game has them open, they move once it closed, before it starts again
-	static std::wstring MovePaksModsScript(size_t& Moved)
+	std::wstring MovePaksModsScript(size_t& Moved)
 	{
 		static const wchar_t* Extensions[] = { L".pak", L".utoc", L".ucas", L".sig" };
 		std::wstring Script;
@@ -644,25 +644,25 @@ namespace ModSettings {
 		return Script;
 	}
 
-	static void RestartIfYes(bool bYes)
+	void RestartIfYes(bool bYes)
 	{
 		if (bYes)
 			Restart();
 	}
 
-	static void AskRestart()
+	void AskRestart()
 	{
 		GameMessageBox::Ask(L"Restart the game now?", RestartIfYes, L"MK12TTH");
 	}
 
-	static void MoveModsIfYes(bool bYes)
+	void MoveModsIfYes(bool bYes)
 	{
 		size_t Moved = 0;
 		if (bYes)
 			Restart(MovePaksModsScript(Moved));
 	}
 
-	static void AskMoveMods()
+	void AskMoveMods()
 	{
 		size_t Count = 0;
 		MovePaksModsScript(Count);
@@ -674,7 +674,7 @@ namespace ModSettings {
 		GameMessageBox::Ask(L"Move " + std::to_wstring(Count) + L" mods from Content\\Paks to Content\\Mods and restart the game?", MoveModsIfYes, L"MK12TTH");
 	}
 
-	static void AddModsActions()
+	void AddModsActions()
 	{
 		AddActionRow(ModsFolderPage, L"RESTART NOW", L"Restarts the game, so mods you turned on or off apply.", AskRestart);
 		AddActionRow(ModsFolderPage, L"MOVE MODS TO MODS FOLDER", L"Moves your mods from Content\\Paks to Content\\Mods, then restarts the game. "
@@ -682,7 +682,7 @@ namespace ModSettings {
 			L"a folder of paks becomes one mod with a switch for each pak.", AskMoveMods);
 	}
 
-	static void AddModCategory(Page& page, const wchar_t* Title)
+	void AddModCategory(Page& page, const wchar_t* Title)
 	{
 		Row* row = new Row;
 		row->Title = Title;
@@ -690,7 +690,7 @@ namespace ModSettings {
 		page.Rows.push_back(row);
 	}
 
-	static bool HasModsIn(PakMods::Source From)
+	bool HasModsIn(PakMods::Source From)
 	{
 		const std::vector<PakMods::Mod>& Mods = PakMods::List();
 		for (size_t i = 0; i < Mods.size(); i++)
@@ -703,7 +703,7 @@ namespace ModSettings {
 
 	// A row per pak mod titled with its name, with its folder when two share one. A mod with several paks has rows for its
 	// folders and paks under it
-	static void AddModRows()
+	void AddModRows()
 	{
 		const std::vector<PakMods::Mod>& Mods = PakMods::List();
 		AddModsActions();
@@ -728,7 +728,7 @@ namespace ModSettings {
 		}
 	}
 
-	static Row& AddMenuRow(Page& page, const Row& row)
+	Row& AddMenuRow(Page& page, const Row& row)
 	{
 		Row* Added = new Row(row);
 		MenuRows.push_back(Added);
@@ -736,20 +736,20 @@ namespace ModSettings {
 		return *Added;
 	}
 
-	static void AddCategory(Page& page, const wchar_t* Title)
+	void AddCategory(Page& page, const wchar_t* Title)
 	{
 		Row row = { Title };
 		AddMenuRow(page, row);
 	}
 
 	// Live on/off rows
-	static int32_t SwitchGet(Row& row) { return row.GetSwitch(row) ? ON : OFF; }
-	static void SwitchSet(Row& row, int32_t Value) { row.SetSwitch(row, Value == ON); }
-	static int32_t UnavailableGet(Row& row) { return 0; }
-	static void UnavailableSet(Row& row, int32_t Value) {}
+	int32_t SwitchGet(Row& row) { return row.GetSwitch(row) ? ON : OFF; }
+	void SwitchSet(Row& row, int32_t Value) { row.SetSwitch(row, Value == ON); }
+	int32_t UnavailableGet(Row& row) { return 0; }
+	void UnavailableSet(Row& row, int32_t Value) {}
 
 	// A live on/off row. Off when its hook isn't in, the description says what to turn on
-	static Row& AddLiveRow(Page& page, const wchar_t* Title, const wchar_t* Description, SwitchGetType* Get, SwitchSetType* Set,
+	Row& AddLiveRow(Page& page, const wchar_t* Title, const wchar_t* Description, SwitchGetType* Get, SwitchSetType* Set,
 		bool bAvailable = true, const wchar_t* Needs = nullptr)
 	{
 		Row row = { Title, Description };
@@ -773,7 +773,7 @@ namespace ModSettings {
 		return AddMenuRow(page, row);
 	}
 
-	static std::wstring NeedsText(Features::Id Which)
+	std::wstring NeedsText(Features::Id Which)
 	{ // Green when it's running, red when it isn't
 		std::wstring Text;
 		const std::vector<Features::Id>& Needs = Features::Get(Which).Needs;
@@ -785,11 +785,11 @@ namespace ModSettings {
 		return Text;
 	}
 
-	static bool FeatureGet(Row& row) { return Features::IsActive(row.Feature); }
-	static void FeatureSet(Row& row, bool bOn) { Features::SetActive(row.Feature, bOn); }
+	bool FeatureGet(Row& row) { return Features::IsActive(row.Feature); }
+	void FeatureSet(Row& row, bool bOn) { Features::SetActive(row.Feature, bOn); }
 
 	// A feature's live switch (MODS). Unavailable unless it's installed, the description says why
-	static Row& AddFeatureRow(Page& page, Features::Id Which)
+	Row& AddFeatureRow(Page& page, Features::Id Which)
 	{
 		const Features::Definition& Feature = Features::Get(Which);
 		bool bInstalled = Features::IsInstalled(Which);
@@ -801,7 +801,7 @@ namespace ModSettings {
 	}
 
 	// A feature's startup switch (Settings tab, MK12TTH.ini). The description says what it needs and how it went
-	static void AddFeatureSetting(Features::Id Which)
+	void AddFeatureSetting(Features::Id Which)
 	{
 		if (!Features::HasStartupSwitch(Which))
 			return;
@@ -824,7 +824,7 @@ namespace ModSettings {
 		AddSettingsRow(row);
 	}
 
-	static void AddSettingsCategory(const wchar_t* Title)
+	void AddSettingsCategory(const wchar_t* Title)
 	{ // A header inside the current page
 		Row* row = new Row;
 		row->Title = Title;
@@ -832,7 +832,7 @@ namespace ModSettings {
 		SettingsPages.back()->Rows.push_back(row);
 	}
 
-	static void AddSettingsPage(const wchar_t* Title)
+	void AddSettingsPage(const wchar_t* Title)
 	{ // A new page of the Settings tab, its rows follow
 		Page* page = new Page;
 		page->TabKey = Title;
@@ -841,20 +841,20 @@ namespace ModSettings {
 		SettingsGroup.Pages.push_back(page);
 	}
 
-	static void AddSettingsRow(const Row& row)
+	void AddSettingsRow(const Row& row)
 	{
 		Row* Added = new Row(row);
 		SettingsRows.push_back(Added);
 		SettingsPages.back()->Rows.push_back(Added);
 	}
 
-	static void AddSettingsRow(const wchar_t* Title, const wchar_t* Description, const char* Section, const char* Key, const std::vector<Choice>& Choices, int32_t Default)
+	void AddSettingsRow(const wchar_t* Title, const wchar_t* Description, const char* Section, const char* Key, const std::vector<Choice>& Choices, int32_t Default)
 	{
 		Row row = { Title, Description, Section, Key, Choices, Default };
 		AddSettingsRow(row);
 	}
 
-	static void AddSettingsRows()
+	void AddSettingsRows()
 	{
 		AddSettingsPage(L"GENERAL");
 		AddFeatureSetting(Features::Id::ModLoader);
@@ -904,24 +904,24 @@ namespace ModSettings {
 			"Settings.Debug.FloodToggles", "bCurl", OffOn(), OFF);
 	}
 
-	static bool FlagGet(Row& row) { return *row.Flag; }
-	static void FlagSet(Row& row, bool bOn) { *row.Flag = bOn; }
+	bool FlagGet(Row& row) { return *row.Flag; }
+	void FlagSet(Row& row, bool bOn) { *row.Flag = bOn; }
 
-	static Row& AddFlagRow(Page& page, const wchar_t* Title, const wchar_t* Description, bool& Flag, bool bAvailable = true, const wchar_t* Needs = nullptr)
+	Row& AddFlagRow(Page& page, const wchar_t* Title, const wchar_t* Description, bool& Flag, bool bAvailable = true, const wchar_t* Needs = nullptr)
 	{
 		Row& row = AddLiveRow(page, Title, Description, FlagGet, FlagSet, bAvailable, Needs);
 		row.Flag = &Flag;
 		return row;
 	}
 
-	static void SetInfo(Row& row, const std::wstring& Label, const std::wstring& Text)
+	void SetInfo(Row& row, const std::wstring& Label, const std::wstring& Text)
 	{
 		wcsncpy_s(row.InfoLabel, Label.c_str(), _TRUNCATE);
 		row.InfoText = Text;
 		row.Description = row.InfoText.c_str();
 	}
 
-	static Row& AddInfoRow(Page& page, const wchar_t* Title, RowType* Refresh)
+	Row& AddInfoRow(Page& page, const wchar_t* Title, RowType* Refresh)
 	{
 		Row Info = { Title };
 		Row& row = AddMenuRow(page, Info);
@@ -931,29 +931,29 @@ namespace ModSettings {
 		return row;
 	}
 
-	static std::wstring Widen(const char* Text)
+	std::wstring Widen(const char* Text)
 	{
 		return Text ? std::wstring(Text, Text + strlen(Text)) : std::wstring();
 	}
 
-	static std::wstring Short(const std::wstring& Text, size_t Max)
+	std::wstring Short(const std::wstring& Text, size_t Max)
 	{
 		return Text.size() > Max ? Text.substr(0, Max - 3) + L"..." : Text;
 	}
 
 	constexpr const wchar_t* NOT_READ = L"NOT READ YET";
 
-	static std::wstring FieldValue(Row& row)
+	std::wstring FieldValue(Row& row)
 	{
 		return *row.Field ? std::wstring(*row.Field) : std::wstring();
 	}
 
-	static std::wstring ReadAsYouPlay()
+	std::wstring ReadAsYouPlay()
 	{
 		return L"Not read yet, the game reads it as you play.";
 	}
 
-	static void RefreshValueRow(Row& row)
+	void RefreshValueRow(Row& row)
 	{
 		std::wstring Value = FieldValue(row);
 		std::wstring Text = row.About;
@@ -972,7 +972,7 @@ namespace ModSettings {
 	}
 
 	// A profile value read by one of our hooks. Long values show in full in the description only, private ones only there
-	static void AddValueRow(Page& page, const wchar_t* Title, const wchar_t* About, wchar_t** Field, Features::Id Source,
+	void AddValueRow(Page& page, const wchar_t* Title, const wchar_t* About, wchar_t** Field, Features::Id Source,
 		bool bPrivate = false, TextType* WhenRead = ReadAsYouPlay)
 	{
 		Row& row = AddInfoRow(page, Title, RefreshValueRow);
@@ -984,14 +984,14 @@ namespace ModSettings {
 		row.CopyValue = FieldValue;
 	}
 
-	static bool IsDone(const FloydTowerAlert::FloydStats& Stats, uint8_t Challenge)
+	bool IsDone(const FloydTowerAlert::FloydStats& Stats, uint8_t Challenge)
 	{
 		return FloydTowerAlert::IsChallengeDone(Stats, Challenge);
 	}
 
 	// Floyd's challenges for the player, sorted, with their names. Green when done, red when not, plain when the done
 	// ones aren't read yet
-	static std::wstring ChallengeList(const std::vector<uint8_t>& Challenges, const FloydTowerAlert::FloydStats& Stats)
+	std::wstring ChallengeList(const std::vector<uint8_t>& Challenges, const FloydTowerAlert::FloydStats& Stats)
 	{
 		std::vector<uint8_t> Sorted = Challenges;
 		std::sort(Sorted.begin(), Sorted.end());
@@ -1008,7 +1008,7 @@ namespace ModSettings {
 	}
 
 	// The player's challenges, or only the done ones when the game didn't pick them yet this session
-	static std::vector<uint8_t> KnownChallenges(const FloydTowerAlert::FloydStats& Stats)
+	std::vector<uint8_t> KnownChallenges(const FloydTowerAlert::FloydStats& Stats)
 	{
 		const HookMetadata::FloydCluesInfo& Floyd = HookMetadata::CurrentFloydInfo;
 		if (Features::IsActive(Features::Id::FloydTracking) && Floyd.HasClues)
@@ -1022,7 +1022,7 @@ namespace ModSettings {
 		return Done;
 	}
 
-	static int DoneCount(const std::vector<uint8_t>& Challenges, const FloydTowerAlert::FloydStats& Stats)
+	int DoneCount(const std::vector<uint8_t>& Challenges, const FloydTowerAlert::FloydStats& Stats)
 	{
 		int Count = 0;
 		for (size_t i = 0; i < Challenges.size(); i++)
@@ -1033,7 +1033,7 @@ namespace ModSettings {
 		return Count;
 	}
 
-	static std::wstring FloydTowerText(std::wstring& Label)
+	std::wstring FloydTowerText(std::wstring& Label)
 	{
 		time_t Now = time(nullptr);
 		FloydTower::Window window;
@@ -1065,12 +1065,12 @@ namespace ModSettings {
 			MK_BOLD(L"Slot: ") + Widen(FloydTower::SlotName(window.Slot));
 	}
 
-	static std::wstring NotAvailable(const wchar_t* About, Features::Id Which)
+	std::wstring NotAvailable(const wchar_t* About, Features::Id Which)
 	{
 		return std::wstring(About) + L"\n\n" MK_RED(L"Not available: ") + Features::Explain(Which);
 	}
 
-	static int32_t AttractGet(Row& row)
+	int32_t AttractGet(Row& row)
 	{
 		std::vector<Choice> Delays = AttractDelays();
 		for (int32_t i = 0; i < (int32_t)Delays.size(); i++)
@@ -1081,7 +1081,7 @@ namespace ModSettings {
 		return 0;
 	}
 
-	static void AttractSet(Row& row, int32_t Value)
+	void AttractSet(Row& row, int32_t Value)
 	{ // Saved for next time too
 		const char* Picked = AttractDelays()[Value].IniValue;
 		AttractMode::SetDelay(AttractMode::FromIni(Picked));
@@ -1089,7 +1089,7 @@ namespace ModSettings {
 		ini.WriteString((char*)"Patches", (char*)"szAttractModeDelay", (char*)Picked);
 	}
 
-	static void AddAttractRow()
+	void AddAttractRow()
 	{
 		const wchar_t* About = L"How long you idle on the title screen or the main menu before attract mode, the demo, starts.";
 		if (!AttractMode::IsReady())
@@ -1105,10 +1105,10 @@ namespace ModSettings {
 		AddMenuRow(LivePage, row);
 	}
 
-	static int32_t AnnouncerGet(Row& row) { return Announcer::Picked(); }
-	static void AnnouncerSet(Row& row, int32_t Value) { Announcer::Pick(Value); }
+	int32_t AnnouncerGet(Row& row) { return Announcer::Picked(); }
+	void AnnouncerSet(Row& row, int32_t Value) { Announcer::Pick(Value); }
 
-	static Row& AddAnnouncerRow()
+	Row& AddAnnouncerRow()
 	{
 		const wchar_t* About = L"The announcer's voice.\n"
 			L"GAME: your own setting.\n"
@@ -1127,7 +1127,7 @@ namespace ModSettings {
 	}
 
 	// A list row of FLOYD FIGHT, unavailable without its hooks
-	static void AddFloydFightRow(const wchar_t* Title, const wchar_t* About, const std::vector<FloydFight::Option>& Options,
+	void AddFloydFightRow(const wchar_t* Title, const wchar_t* About, const std::vector<FloydFight::Option>& Options,
 		LiveGetType* Get, LiveSetType* Set)
 	{
 		if (!Features::IsInstalled(Features::Id::FloydFight) || !FloydFight::IsReady())
@@ -1144,12 +1144,12 @@ namespace ModSettings {
 		AddMenuRow(LivePage, row).bInGame = true;
 	}
 
-	static int32_t FloydLevelGet(Row& row) { return FloydFight::PickedLevel(); }
-	static void FloydLevelSet(Row& row, int32_t Value) { FloydFight::PickLevel(Value); }
-	static int32_t FloydRetriesGet(Row& row) { return FloydFight::PickedRetries(); }
-	static void FloydRetriesSet(Row& row, int32_t Value) { FloydFight::PickRetries(Value); }
+	int32_t FloydLevelGet(Row& row) { return FloydFight::PickedLevel(); }
+	void FloydLevelSet(Row& row, int32_t Value) { FloydFight::PickLevel(Value); }
+	int32_t FloydRetriesGet(Row& row) { return FloydFight::PickedRetries(); }
+	void FloydRetriesSet(Row& row, int32_t Value) { FloydFight::PickRetries(Value); }
 
-	static void AddFloydFightRows()
+	void AddFloydFightRows()
 	{
 		AddFloydFightRow(L"FLOYD DIFFICULTY LEVEL", L"Floyd's AI level, from 1 to 19, higher is harder. Used from his next fight, retries included.\n"
 			L"GAME: the game's own, 13 at first and lower after each loss.",
@@ -1160,13 +1160,13 @@ namespace ModSettings {
 			FloydFight::RetryOptions(), FloydRetriesGet, FloydRetriesSet);
 	}
 
-	static void SpawnTowerNow()
+	void SpawnTowerNow()
 	{
 		FloydFight::SpawnTower();
 		GameMessageBox::Confirm(L"The Floyd Tower shows up the next time you open Living Towers.", nullptr, L"SPAWN FLOYD TOWER NOW");
 	}
 
-	static void AddSpawnTowerRow()
+	void AddSpawnTowerRow()
 	{
 		const wchar_t* TowerNow = L"Makes today's Floyd Tower show up the next time you open Living Towers, for as long as the game's own "
 			L"would. Once per press: only that visit, and gone if you restart the game first. Needs a Floyd win, like the game's own tower.\n"
@@ -1181,7 +1181,7 @@ namespace ModSettings {
 		AddActionRow(LivePage, L"SPAWN FLOYD TOWER NOW", TowerNow, SpawnTowerNow);
 	}
 
-	static void SummonIfYes(bool bYes)
+	void SummonIfYes(bool bYes)
 	{
 		if (!bYes)
 			return;
@@ -1193,12 +1193,12 @@ namespace ModSettings {
 		GameMessageBox::Confirm(Text, nullptr, L"SUMMON FLOYD");
 	}
 
-	static void AskSummon()
+	void AskSummon()
 	{
 		GameMessageBox::Ask(L"Mark all of Floyd's challenges done?", SummonIfYes, L"SUMMON FLOYD");
 	}
 
-	static void AddSummonRow()
+	void AddSummonRow()
 	{
 		if (!FloydTowerAlert::CanSummon())
 			return;
@@ -1206,12 +1206,12 @@ namespace ModSettings {
 			L"to WB's servers. Floyd shows up at the end of your next match where he can, and the game syncs as usual after you fight him.", AskSummon);
 	}
 
-	static std::wstring FloydStatText(FloydTowerAlert::Stat Which)
+	std::wstring FloydStatText(FloydTowerAlert::Stat Which)
 	{
 		return std::to_wstring(FloydTowerAlert::LastStats().Values[(size_t)Which]);
 	}
 
-	static void RefreshFloydStat(Row& row)
+	void RefreshFloydStat(Row& row)
 	{ // Floyd profile stats, read when Living Towers opens
 		const FloydTowerAlert::FloydStats& Stats = FloydTowerAlert::LastStats();
 		if (!Stats.bRead)
@@ -1224,19 +1224,19 @@ namespace ModSettings {
 		row.ShowStat(row, Stats);
 	}
 
-	static void AddFloydStatRow(const wchar_t* Title, const wchar_t* About, StatShowType* Show)
+	void AddFloydStatRow(const wchar_t* Title, const wchar_t* About, StatShowType* Show)
 	{
 		Row& row = AddInfoRow(FloydPage, Title, RefreshFloydStat);
 		row.About = About;
 		row.ShowStat = Show;
 	}
 
-	static void RefreshVersion(Row& row)
+	void RefreshVersion(Row& row)
 	{
 		SetInfo(row, ModVersion(), L"The MK12TTH version you're running.");
 	}
 
-	static void RefreshGameVersion(Row& row)
+	void RefreshGameVersion(Row& row)
 	{
 		int32_t Changelist = MK12::GetChangelist ? MK12::GetChangelist() : 0;
 		std::wstring Build = MK12::GetBuildVersion ? MK12::GetBuildVersion() : L"";
@@ -1244,17 +1244,17 @@ namespace ModSettings {
 			L"The game build MK12TTH is running on." + (Build.empty() ? L"" : L"\n\n" MK_BOLD(L"Build: ") + Build));
 	}
 
-	static void OpenAuthorPage()
+	void OpenAuthorPage()
 	{
 		ShellExecuteW(nullptr, L"open", AUTHOR_URL, nullptr, nullptr, SW_SHOWNORMAL);
 	}
 
-	static void ShowWhatsNew()
+	void ShowWhatsNew()
 	{
 		GameMessageBox::Confirm(Changelog::Current, nullptr, L"MK12TTH " + ModVersion());
 	}
 
-	static void AddAboutRows()
+	void AddAboutRows()
 	{
 		AddInfoRow(AboutPage, L"VERSION", RefreshVersion);
 		AddInfoRow(AboutPage, L"GAME VERSION", RefreshGameVersion);
@@ -1262,7 +1262,7 @@ namespace ModSettings {
 		AddActionRow(AboutPage, L"WHAT'S NEW", L"Shows what changed in this version of MK12TTH.", ShowWhatsNew);
 	}
 
-	static int32_t LogLevelGet(Row& row)
+	int32_t LogLevelGet(Row& row)
 	{
 		std::vector<Choice> Levels = LogLevels();
 		int32_t Picked = 0;
@@ -1274,12 +1274,12 @@ namespace ModSettings {
 		return Picked;
 	}
 
-	static void LogLevelSet(Row& row, int32_t Value)
+	void LogLevelSet(Row& row, int32_t Value)
 	{
 		SettingsMgr->iLogLevel = atoi(LogLevels()[Value].IniValue);
 	}
 
-	static std::wstring OnlineIdWhenRead()
+	std::wstring OnlineIdWhenRead()
 	{
 		if (OnlineIds::HasOnlineCheck() && !OnlineIds::IsOnline())
 			return std::wstring(L"Offline: the game isn't signed in to MK1's servers. It shows once it is.");
@@ -1287,12 +1287,12 @@ namespace ModSettings {
 			: L"Read from the game as it signs in online, on the main menu.");
 	}
 
-	static std::wstring PlatformIdWhenRead()
+	std::wstring PlatformIdWhenRead()
 	{
 		return std::wstring(L"Read when your save loads, or on the main menu.");
 	}
 
-	static void RefreshOnline(Row& row)
+	void RefreshOnline(Row& row)
 	{
 		std::wstring About = L"Whether the game is signed in to MK1's servers. Offline, Floyd's challenges come from your platform account alone.";
 		if (!OnlineIds::HasOnlineCheck() || !Features::IsActive(Features::Id::ProfileGetter))
@@ -1305,12 +1305,12 @@ namespace ModSettings {
 		SetInfo(row, bOnline ? L"SIGNED IN" : L"OFFLINE", About);
 	}
 
-	static std::wstring KeyValue(Row& row)
+	std::wstring KeyValue(Row& row)
 	{
 		return row.ReadValue();
 	}
 
-	static void RefreshKeyRow(Row& row)
+	void RefreshKeyRow(Row& row)
 	{ // Sign in keys, read once signed in to MK1's servers, too long to show in full
 		std::wstring Value = row.ReadValue();
 		if (!Value.empty())
@@ -1323,7 +1323,7 @@ namespace ModSettings {
 			SetInfo(row, NOT_READ, std::wstring(row.About) + L"\n\nNot read yet, it's read once you're signed in to MK1's servers.");
 	}
 
-	static void AddKeyRow(const wchar_t* Title, const wchar_t* About, TextType* Read)
+	void AddKeyRow(const wchar_t* Title, const wchar_t* About, TextType* Read)
 	{
 		Row& row = AddInfoRow(TokensPage, Title, RefreshKeyRow);
 		row.About = About;
@@ -1331,10 +1331,10 @@ namespace ModSettings {
 		row.CopyValue = KeyValue;
 	}
 
-	static std::wstring AccessToken() { return Widen(HookMetadata::sUserKeys.AccessToken.c_str()); }
-	static std::wstring PlatformTicket() { return Widen(HookMetadata::sUserKeys.PlatformTicket.c_str()); }
+	std::wstring AccessToken() { return Widen(HookMetadata::sUserKeys.AccessToken.c_str()); }
+	std::wstring PlatformTicket() { return Widen(HookMetadata::sUserKeys.PlatformTicket.c_str()); }
 
-	static void RefreshFloydTower(Row& row)
+	void RefreshFloydTower(Row& row)
 	{
 		std::wstring About = L"When the Floyd Tower shows up in Living Towers.";
 		if (!Features::IsActive(Features::Id::FloydTracking))
@@ -1347,7 +1347,7 @@ namespace ModSettings {
 		SetInfo(row, Label, About + L"\n\n" + Text);
 	}
 
-	static void RefreshFloydChallenges(Row& row)
+	void RefreshFloydChallenges(Row& row)
 	{
 		const HookMetadata::FloydCluesInfo& Floyd = HookMetadata::CurrentFloydInfo;
 		const FloydTowerAlert::FloydStats& Stats = FloydTowerAlert::LastStats();
@@ -1370,7 +1370,7 @@ namespace ModSettings {
 		SetInfo(row, Label, About + L"\n\n" + ChallengeList(Floyd.Clues, Stats) + Picked);
 	}
 
-	static void RefreshProfileHash(Row& row)
+	void RefreshProfileHash(Row& row)
 	{
 		const HookMetadata::FloydCluesInfo& Floyd = HookMetadata::CurrentFloydInfo;
 		wchar_t Hash[16];
@@ -1379,7 +1379,7 @@ namespace ModSettings {
 		SetInfo(row, bRead ? Hash : NOT_READ, L"The hash Floyd's challenges are picked from.");
 	}
 
-	static std::wstring ProfileHashValue(Row& row)
+	std::wstring ProfileHashValue(Row& row)
 	{
 		const HookMetadata::FloydCluesInfo& Floyd = HookMetadata::CurrentFloydInfo;
 		if (!Features::IsActive(Features::Id::FloydTracking) || !Floyd.HasClues)
@@ -1389,17 +1389,17 @@ namespace ModSettings {
 		return std::wstring(Hash);
 	}
 
-	static void ShowFloydWins(Row& row, const FloydTowerAlert::FloydStats& Stats)
+	void ShowFloydWins(Row& row, const FloydTowerAlert::FloydStats& Stats)
 	{
 		SetInfo(row, FloydStatText(FloydTowerAlert::Stat::Victories), L"How many times you beat Floyd. The Floyd Tower only shows up once you have.");
 	}
 
-	static void ShowTimesMet(Row& row, const FloydTowerAlert::FloydStats& Stats)
+	void ShowTimesMet(Row& row, const FloydTowerAlert::FloydStats& Stats)
 	{
 		SetInfo(row, FloydStatText(FloydTowerAlert::Stat::Encounters), L"How many times Floyd showed up.");
 	}
 
-	static void ShowChallengesDone(Row& row, const FloydTowerAlert::FloydStats& Stats)
+	void ShowChallengesDone(Row& row, const FloydTowerAlert::FloydStats& Stats)
 	{
 		std::vector<uint8_t> Challenges = KnownChallenges(Stats);
 		std::wstring Text = L"Floyd's challenges you completed, out of your 10.\n\n" + ChallengeList(Challenges, Stats);
@@ -1408,14 +1408,14 @@ namespace ModSettings {
 		SetInfo(row, std::to_wstring(DoneCount(Challenges, Stats)) + L" OF 10", Text);
 	}
 
-	static void ShowLastFight(Row& row, const FloydTowerAlert::FloydStats& Stats)
+	void ShowLastFight(Row& row, const FloydTowerAlert::FloydStats& Stats)
 	{
 		uint32_t Value = (uint32_t)Stats.Values[(size_t)FloydTowerAlert::Stat::LastBattle];
 		const wchar_t* Label = Value == 9 ? L"LOST" : Value == 12 ? L"WON" : Value == 11 ? L"DIDN'T FINISH" : L"NONE YET";
 		SetInfo(row, Label, L"How your last fight with Floyd went.");
 	}
 
-	static void ShowNextClue(Row& row, const FloydTowerAlert::FloydStats& Stats)
+	void ShowNextClue(Row& row, const FloydTowerAlert::FloydStats& Stats)
 	{
 		uint32_t Since = (uint32_t)(Stats.Values[(size_t)FloydTowerAlert::Stat::MatchesSinceSeen] % 501);
 		std::wstring Text = Since < 100
@@ -1424,7 +1424,7 @@ namespace ModSettings {
 		SetInfo(row, Since < 100 ? L"IN " + std::to_wstring(100 - Since) + L"+ FIGHTS" : L"WITHIN " + std::to_wstring(500 - Since), Text);
 	}
 
-	static void AddMenuRows()
+	void AddMenuRows()
 	{
 		AddAboutRows();
 
@@ -1486,7 +1486,7 @@ namespace ModSettings {
 		AddFloydStatRow(L"NEXT CLUE", L"When Floyd may show up again to give you a clue.", ShowNextClue);
 	}
 
-	static void RefreshInfoRows()
+	void RefreshInfoRows()
 	{
 		if (bInitialized)
 			FloydTowerAlert::Refresh(); // Floyd fights change them, read as a screen opens (never at startup)
@@ -1500,7 +1500,7 @@ namespace ModSettings {
 		}
 	}
 
-	static Row* NewHeader(const wchar_t* Title)
+	Row* NewHeader(const wchar_t* Title)
 	{
 		Row* row = new Row;
 		row->Title = Title;
@@ -1509,7 +1509,7 @@ namespace ModSettings {
 	}
 
 	// The pause menu's page: the rows marked for fights, each under its own header
-	static void AddInGamePage()
+	void AddInGamePage()
 	{
 		Row* Header = nullptr;
 		for (size_t i = 0; i < LivePage.Rows.size(); i++)
@@ -1566,14 +1566,14 @@ namespace ModSettings {
 	static Group* PendingGroup = nullptr;
 	static size_t PendingSection = 0;
 
-	static int32_t SectionGet(Row& row) { return (int32_t)row.SectionGroup->Current; }
-	static void SectionSet(Row& row, int32_t Value)
+	int32_t SectionGet(Row& row) { return (int32_t)row.SectionGroup->Current; }
+	void SectionSet(Row& row, int32_t Value)
 	{
 		PendingGroup = row.SectionGroup;
 		PendingSection = (size_t)Value;
 	}
 
-	static void AddSectionRows()
+	void AddSectionRows()
 	{
 		std::vector<Group*> Groups = AllGroups();
 		for (size_t g = 0; g < Groups.size(); g++)
@@ -1678,13 +1678,13 @@ namespace ModSettings {
 	}
 
 	// The screen calls these with our Row as the context
-	static int32_t __fastcall GetValue(void* Context, int64_t*)
+	int32_t __fastcall GetValue(void* Context, int64_t*)
 	{
 		Row& row = *(Row*)Context;
 		return row.IsLive() ? row.LiveGet(row) : row.Value;
 	}
 
-	static void __fastcall SetValue(void* Context, int32_t* Value, int64_t*)
+	void __fastcall SetValue(void* Context, int32_t* Value, int64_t*)
 	{
 		Row& row = *(Row*)Context;
 		if (!Value || *Value < 0 || *Value >= (int32_t)row.Choices.size() || (row.IsIni() && *Value == row.Value))
@@ -1703,13 +1703,13 @@ namespace ModSettings {
 			LastChangeTick = GetTickCount64();
 	}
 
-	static int32_t __fastcall GetDefault(void* Context)
+	int32_t __fastcall GetDefault(void* Context)
 	{
 		return ((Row*)Context)->Default;
 	}
 
 	// The game's rows are static objects: found without a screen, or on the screen up now
-	static MK12::FSettingsOption* FindGameRow(MK12::USettingsScreen* Screen, int32_t Type, const wchar_t* Key)
+	MK12::FSettingsOption* FindGameRow(MK12::USettingsScreen* Screen, int32_t Type, const wchar_t* Key)
 	{
 		if (MK12::FSettingsOption* Static = MK12::FindStaticOption(Key, Type))
 			return Static;
@@ -1726,7 +1726,7 @@ namespace ModSettings {
 		return nullptr;
 	}
 
-	static bool __fastcall ActivateRow(void* Context, void*)
+	bool __fastcall ActivateRow(void* Context, void*)
 	{ // Confirm on an action row, game thread while the screen ticks
 		Row& row = *(Row*)Context;
 		if (row.Action)
@@ -1740,7 +1740,7 @@ namespace ModSettings {
 		MK12::FSettingsOption* Link = nullptr; // Null when the screen has none, action rows say so instead
 	};
 
-	static MK12::FSettingsOption* BuildGameRow(Row& row, int32_t Id, const Templates& From)
+	MK12::FSettingsOption* BuildGameRow(Row& row, int32_t Id, const Templates& From)
 	{
 		GameRow* game = new GameRow;
 		GameRows.push_back(game);
@@ -1797,7 +1797,7 @@ namespace ModSettings {
 		return Option;
 	}
 
-	static bool Build(MK12::USettingsScreen* Screen)
+	bool Build(MK12::USettingsScreen* Screen)
 	{
 		Templates From;
 		From.List = FindGameRow(Screen, MK12::SettingsOptionType::List, LIST_TEMPLATE_KEY);
@@ -1824,7 +1824,7 @@ namespace ModSettings {
 
 	// Same growth the game uses: bump the count, grow when it passes the capacity, then fill the new slot
 	template <typename T>
-	static T& AddSlot(MK12::TArray<T>& Array)
+	T& AddSlot(MK12::TArray<T>& Array)
 	{
 		int32_t Index = Array.ElementsCount++;
 		if (Array.ElementsCount > Array.Size)
@@ -1832,13 +1832,13 @@ namespace ModSettings {
 		return Array.Data[Index];
 	}
 
-	static MK12::FSettingsPage GamePage(const Page& page)
+	MK12::FSettingsPage GamePage(const Page& page)
 	{
 		MK12::FSettingsPage Out = { (MK12::FSettingsOption**)page.GameRows.data(), (int32_t)page.GameRows.size(), 0 };
 		return Out;
 	}
 
-	static void AddPage(MK12::USettingsScreen* Screen, Group& group)
+	void AddPage(MK12::USettingsScreen* Screen, Group& group)
 	{
 		if (ShownGroups.empty())
 			FirstOwnPage = Screen->Pages.ElementsCount;
@@ -1857,7 +1857,7 @@ namespace ModSettings {
 	}
 
 	// Our menu shows only our pages. The game's pages point at static rows, only their description keys are freed
-	static void DropGamePages(MK12::USettingsScreen* Screen)
+	void DropGamePages(MK12::USettingsScreen* Screen)
 	{
 		for (int32_t i = 0; i < Screen->PageDescriptions.ElementsCount; i++)
 		{
@@ -1869,7 +1869,7 @@ namespace ModSettings {
 	}
 
 	// Our rows for the game, built once. Without a screen it needs the game's static rows
-	static bool EnsureBuilt(MK12::USettingsScreen* Screen)
+	bool EnsureBuilt(MK12::USettingsScreen* Screen)
 	{
 		if (!bInitialized || bBuildFailed)
 			return false;
@@ -1905,20 +1905,20 @@ namespace ModSettings {
 			AddPage(Screen, *Groups[i]);
 	}
 
-	static void ToGameText(MK12::FText* Out, const wchar_t* Text)
+	void ToGameText(MK12::FText* Out, const wchar_t* Text)
 	{
 		int32_t Count = (int32_t)wcslen(Text) + 1;
 		MK12::FString String = { (wchar_t*)Text, Count, Count };
 		MK12::TextFromString(Out, &String); // Copies it
 	}
 
-	static bool TitleMatches(const Row* row, const wchar_t* Title, size_t Length)
+	bool TitleMatches(const Row* row, const wchar_t* Title, size_t Length)
 	{
 		return wcslen(row->Title) == Length && !wcsncmp(row->Title, Title, Length);
 	}
 
 	// The screen only gives us the title. Settings and our menu share some titles, the pages showing now go first
-	static const Row* FindRow(const wchar_t* Title, size_t Length)
+	const Row* FindRow(const wchar_t* Title, size_t Length)
 	{
 		for (size_t g = 0; g < ShownGroups.size(); g++)
 		{
@@ -2011,24 +2011,24 @@ namespace ModSettings {
 			MK12::SettingsTabDestruct(&WithOurs[i]);
 	}
 
-	static bool HasSections()
+	bool HasSections()
 	{
 		return MK12::SettingsUnfocusRow && MK12::SettingsShowPage && MK12::SettingsRefreshFooter;
 	}
 
-	static MK12::USettingsScreen* ScreenUp()
+	MK12::USettingsScreen* ScreenUp()
 	{
 		return ActiveScreen && ActiveScreen->bOpen ? ActiveScreen : nullptr;
 	}
 
-	static Group* GroupOnScreen(MK12::USettingsScreen* Screen)
+	Group* GroupOnScreen(MK12::USettingsScreen* Screen)
 	{
 		int32_t Index = Screen->CurrentPage - FirstOwnPage;
 		return Index >= 0 && Index < (int32_t)ShownGroups.size() ? ShownGroups[Index] : nullptr;
 	}
 
 	// The steps of the game's own page switch: the page showing gets the section's rows
-	static void ShowSection(MK12::USettingsScreen* Screen, Group& group, size_t Section)
+	void ShowSection(MK12::USettingsScreen* Screen, Group& group, size_t Section)
 	{
 		MK12::SettingsUnfocusRow(Screen);
 		group.Current = Section;
@@ -2039,7 +2039,7 @@ namespace ModSettings {
 		MK12::SettingsRefreshFooter(Screen);
 	}
 
-	static void TickSections()
+	void TickSections()
 	{
 		Group* group = PendingGroup;
 		PendingGroup = nullptr;
@@ -2052,7 +2052,7 @@ namespace ModSettings {
 	constexpr uint32_t	COPY_INPUT		= 0x40;
 	constexpr uint8_t	COPY_INPUT_BIT	= 6;
 
-	static Row* FocusedOwnRow(MK12::USettingsScreen* Screen)
+	Row* FocusedOwnRow(MK12::USettingsScreen* Screen)
 	{ // Null on the game's pages
 		Group* group = Screen && Screen == ScreenUp() ? GroupOnScreen(Screen) : nullptr;
 		if (!group)
@@ -2062,12 +2062,12 @@ namespace ModSettings {
 		return Index >= 0 && Index < (int32_t)page.Rows.size() ? page.Rows[Index] : nullptr;
 	}
 
-	static std::wstring CopyText(Row* row)
+	std::wstring CopyText(Row* row)
 	{
 		return row && row->CopyValue ? row->CopyValue(*row) : std::wstring();
 	}
 
-	static bool ToClipboard(const std::wstring& Text)
+	bool ToClipboard(const std::wstring& Text)
 	{
 		if (!OpenClipboard(nullptr))
 			return false;
@@ -2089,7 +2089,7 @@ namespace ModSettings {
 
 	// Grows a game array by one with the game's allocator, the new slot zeroed
 	template <typename T>
-	static T* AppendRaw(MK12::TArray<T>& Array)
+	T* AppendRaw(MK12::TArray<T>& Array)
 	{
 		if (Array.ElementsCount >= Array.Size)
 		{
@@ -2125,7 +2125,7 @@ namespace ModSettings {
 		Label.Release();
 	}
 
-	static void TickCopy(MK12::FPlayerInput* Input)
+	void TickCopy(MK12::FPlayerInput* Input)
 	{
 		uint32_t Pressed = Input->Down & ~Input->Previous & COPY_INPUT;
 		if (!Pressed)
@@ -2168,7 +2168,7 @@ namespace ModSettings {
 		}
 	}
 
-	static std::vector<int32_t> RestartValues()
+	std::vector<int32_t> RestartValues()
 	{
 		std::vector<int32_t> Values;
 		for (size_t i = 0; i < AllRows.size(); i++)
@@ -2179,7 +2179,7 @@ namespace ModSettings {
 		return Values;
 	}
 
-	static bool NeedsRestart()
+	bool NeedsRestart()
 	{
 		for (size_t i = 0; i < AllRows.size(); i++)
 		{
@@ -2190,7 +2190,7 @@ namespace ModSettings {
 		return false;
 	}
 
-	static std::wstring RelaunchUrl()
+	std::wstring RelaunchUrl()
 	{ // The store the game was started from, so it comes back the same way
 		const wchar_t* CommandLine = GetCommandLineW();
 		const wchar_t* EpicApp = CommandLine ? wcsstr(CommandLine, L"-epicapp=") : nullptr;
@@ -2206,7 +2206,7 @@ namespace ModSettings {
 
 	// The restart helper's script: waits for this process to end, runs BeforeStart, starts the game again. A file, so any
 	// number of steps and any path fit. UTF-8 with a BOM, the way Windows PowerShell reads non-ASCII paths
-	static std::wstring WriteRestartScript(const std::wstring& BeforeStart)
+	std::wstring WriteRestartScript(const std::wstring& BeforeStart)
 	{
 		std::wstring Script = L"Wait-Process -Id " + std::to_wstring(GetCurrentProcessId()) + L" -ErrorAction SilentlyContinue\r\n"
 			+ BeforeStart + L"Start-Process " + PowerShellQuoted(RelaunchUrl()) + L"\r\n";
@@ -2227,7 +2227,7 @@ namespace ModSettings {
 		return bOk ? Path : L"";
 	}
 
-	static void Restart(const std::wstring& BeforeStart)
+	void Restart(const std::wstring& BeforeStart)
 	{ // Asks the game to exit, a hidden helper starts it again once this process is gone
 		std::wstring ScriptPath = MK12::lpEngineExitRequested ? WriteRestartScript(BeforeStart) : L"";
 		if (ScriptPath.empty())
@@ -2296,7 +2296,7 @@ namespace ModSettings {
 	static std::vector<OverlayChange>	OverlayChanges;
 	static ULONGLONG					OverlayAskedAt	= 0;
 
-	static std::string OverlayText(const std::wstring& Text)
+	std::string OverlayText(const std::wstring& Text)
 	{ // Markup tags dropped, our escapes undone, UTF-8
 		static const wchar_t* Escapes[][2] = { { L"&lt;", L"<" }, { L"&gt;", L">" }, { L"&amp;", L"&" } };
 		std::wstring Out;
@@ -2324,7 +2324,7 @@ namespace ModSettings {
 		return Narrow;
 	}
 
-	static OverlayRow ToOverlay(Row& row)
+	OverlayRow ToOverlay(Row& row)
 	{
 		OverlayRow Out;
 		Out.Id = &row;
@@ -2345,7 +2345,7 @@ namespace ModSettings {
 		return Out;
 	}
 
-	static void TickOverlay()
+	void TickOverlay()
 	{
 		std::vector<OverlayChange> Changes;
 		AcquireSRWLockExclusive(&OverlayLock);
